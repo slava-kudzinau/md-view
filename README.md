@@ -84,7 +84,7 @@ Add a rule to your `mc.ext` file. In mc, press F9, open the Command menu and cho
 
 ```ini
 [md]
-Regex=\.md$
+Regex=\\.md$
 View=md-view %f
 ```
 

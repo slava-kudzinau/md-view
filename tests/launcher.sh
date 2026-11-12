@@ -98,6 +98,13 @@ quote_refused() {
         grep -q 'single quote' "$d/$t.log" || fail "make $t gave no single quote message"
     done
     test ! -e "$q" || fail "a folder was made under the PREFIX with a single quote"
+    for t in install uninstall; do
+        if (cd "$d" && make -f "$root/Makefile" "$t" PREFIX=rel > "$d/rel-$t.log" 2>&1); then
+            fail "make $t accepted a relative PREFIX"
+        fi
+        grep -q 'absolute' "$d/rel-$t.log" || fail "make $t gave no absolute path message"
+    done
+    test ! -e "$d/rel" || fail "a folder was made under a relative PREFIX"
 }
 
 # uninstall_only_own: make uninstall removes the 11 installed files, and keeps the

@@ -6,7 +6,7 @@
 # usage: sh tests/browser-links-dom.sh
 #   MD_OPEN  the script under test (default lib/md-view)
 #   CHROME   the Chrome program (default: the macOS path, then google-chrome,
-#            then chromium in PATH)
+#            then chromium in PATH). A CHROME that is not executable skips all.
 #
 # Prints "ok <case>" or "FAIL <case>". With no Chrome it prints "skip all" and
 # exits 0.
@@ -33,7 +33,7 @@ if [ -z "$CHROME" ]; then
         esac
     done
 fi
-if [ -z "$CHROME" ]; then
+if [ -z "$CHROME" ] || [ ! -x "$CHROME" ]; then
     echo "skip all"
     exit 0
 fi
@@ -306,7 +306,7 @@ case_dom_image_base() {
     exit 0
 }
 
-# In one-file mode the links keep the page of story 1: the base element
+# In one-file mode the links keep the one-file page: the base element
 # resolves a relative link, and only a dangerous scheme loses its href.
 case_dom_one_file_links() {
     fresh

@@ -4,7 +4,7 @@
 
 The license text below is the `LICENSE` file of that package, copied as it is.
 
-Note: the page inlines this file in a script. It holds one `<!--` (in a regex) and no `</script`; after any upgrade, run `sh stories/markdown-browser-view/check.sh`.
+Note: the page inlines this file in a script. It holds one `<!--` (in a regex) and no `</script`; after any upgrade, run `sh tests/hostile-dom.sh`.
 
 ---
 

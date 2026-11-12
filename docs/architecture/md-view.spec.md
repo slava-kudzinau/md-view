@@ -26,7 +26,7 @@ Any tool that runs an external viewer can start md-view with the file name as th
 | Command | `md-view <file.md>`. The installed launcher `$PREFIX/bin/md-view` runs `$PREFIX/share/md-view/md-view` with `exec`. |
 | far2l | The user adds a File associations entry one time. md-view ships no entry, and no script edits the far2l `config.ini`. |
 | Entry text | `md-view --print-association` prints the far2l entry: the mask `*.md`, the command `<absolute path of the launcher> !.!` and the steps. |
-| Path | The path comes from `command -v md-view` when that is absolute. Else it is the first file that exists of the installed launcher and the checkout launcher. An absolute path works when far2l starts with a short `PATH`, for example from the Dock. |
+| Path | The path comes from `command -v md-view` when that is absolute. Else it is the first file that exists of the installed launcher, the checkout launcher and the script itself. A fallback path has no `..` part. An absolute path works when far2l starts with a short `PATH`, for example from the Dock. |
 | Quoting | `!.!` stays unquoted because far2l escapes the name before the shell reads the command. The launcher path is quoted only if the shell needs it. |
 | Midnight Commander | The user adds a rule to `mc.ext`. See the README. md-view prints no `mc.ext` text. |
 

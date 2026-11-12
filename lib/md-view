@@ -218,7 +218,7 @@ EOF
 # print_association: prints the File associations entry. Its command is the
 # absolute path of the launcher, then !.!. The path is command -v md-view when that
 # is absolute; else the first file that exists of the installed launcher, the
-# checkout launcher and this script.
+# checkout launcher and this script. A fallback path is resolved, with no "..".
 print_association() {
     exe=$(command -v md-view 2>/dev/null)
     case $exe in
@@ -226,7 +226,8 @@ print_association() {
         *)
             for exe in "$self_dir/../../bin/md-view" "$self_dir/../bin/md-view" "$self_dir/md-view"; do
                 [ -f "$exe" ] && break
-            done ;;
+            done
+            exe=$(cd "$(dirname -- "$exe")" && pwd)/md-view ;;
     esac
     # The file manager escapes the file name in !.! before the shell reads the
     # command, so !.! stays unquoted. The path is quoted only when the shell needs it.
@@ -244,7 +245,7 @@ far2l file association for Markdown (add it once):
   View command (used for Alt+F3):    $cmd
 
 far2l already escapes the file name in !.!, so the command does not quote it.
-The command above shows this copy's path; print the entry from the installed copy.
+Run md-view --print-association from the copy that far2l must use.
 
 Steps in far2l:
   1. Press F9, open the Commands menu and choose File associations.
@@ -944,7 +945,7 @@ pre.mermaid[data-processed] { text-align: center; overflow-x: auto; }
 #md-pop pre.md-paste { margin: 4px 0 8px; padding: 6px; border: 1px solid GrayText; border-radius: 4px; background: none; font: 12px/1.4 ui-monospace, Menlo, monospace; white-space: pre; overflow-x: auto }
 HTML
     # The panel CSS and markup are in tree mode only. In one-file mode the page
-    # stays the page of story 1.
+    # stays the one-file page.
     if [ "$tree_mode" = 1 ]; then
         cat <<'CSS'
 html[data-panel="open"] body { padding-left: calc(260px + 16px) }
@@ -1262,7 +1263,7 @@ HTML
   // applyLink A DIR FILEBASE PAGEBASE ENC: the link rules of the spec. A link
   // in the tree points to the page and a route. A link that does not go in the
   // tree keeps its text, loses its href and gets the note. The one-file page
-  // keeps the links of story 1: the base element resolves them, and only a
+  // keeps the links of the one-file page: the base element resolves them, and only a
   // dangerous scheme loses its href.
   function applyLink(a, dir, fileBase, pageBase, enc) {
     var href = a.getAttribute('href');
