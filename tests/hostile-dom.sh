@@ -7,7 +7,8 @@
 # usage: sh tests/hostile-dom.sh
 #   MD_OPEN  the script under test (default lib/md-view)
 #   CHROME   the Chrome program (default: the macOS path, then google-chrome,
-#            then chromium in PATH). A CHROME that is not executable skips all.
+#            then chromium in PATH). A name with no slash is looked up in PATH.
+#            A CHROME that is not executable skips all.
 #
 # Prints "ok <label>", "FAIL <label>" or "skip <label>". A row that needs the
 # mermaid CDN prints "skip" when the CDN cannot be reached. With no Chrome it
@@ -37,6 +38,11 @@ if [ -z "$CHROME" ]; then
         esac
     done
 fi
+# A name with no slash is a command in PATH: resolve it, as the shell would.
+case $CHROME in
+    */*|'') ;;
+    *) CHROME=$(command -v "$CHROME" 2>/dev/null) || CHROME= ;;
+esac
 if [ -z "$CHROME" ] || [ ! -x "$CHROME" ]; then
     echo "skip all"
     exit 0

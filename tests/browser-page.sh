@@ -419,6 +419,8 @@ case_print_association_ok() {
     done
     grep -q '^  View command (used for Alt+F3):    "\{0,1\}/.*md-view"\{0,1\} !\.!$' "$d/out" \
         || bad "the association command changed"
+    # The path in the command is tidy: no ".." segment, as the user pastes it.
+    ! grep '^  View command' "$d/out" | grep -q '/\.\./' || bad "the association path has a .. segment"
     grep -qF "$ini" "$d/out" || bad "no config.ini path"
     for w in 'width' 'theme' 'browser' '60' '80' 'light' 'dark' 'auto' 'firefox' 'chrome' 'safari'; do
         grep -q "$w" "$d/out" || bad "accepted value $w not listed"
