@@ -1,11 +1,11 @@
 ---
 description: Move the Alt-F3 Markdown browser view out of far2l into a standalone public repo md-view, with its history, its own docs and its own install.
-status: in-progress
+status: in-review
 size: M
 risk: contract, migration
 refs:
-  - docs/architecture/decisions/adr-005-browser-view-script.md
-  - docs/architecture/features/markdown/markdown-browser-view.spec.md
+  - far2l docs/architecture/decisions/adr-005-browser-view-script.md
+  - far2l docs/architecture/features/markdown/markdown-browser-view.spec.md
 ---
 
 # Story: md-view-repo
@@ -16,7 +16,7 @@ The browser view must be a tool that a user installs separately. Other tools the
 
 ## Context
 
-- [ADR-005](../../architecture/decisions/adr-005-browser-view-script.md) and [markdown-browser-view.spec.md](../../architecture/features/markdown/markdown-browser-view.spec.md) describe the script as it is now.
+- far2l ADR-005 (`docs/architecture/decisions/adr-005-browser-view-script.md`) and the far2l spec `markdown-browser-view.spec.md` describe the script as it was in far2l.
 - far2l runs an external tool on Alt-F3 through File associations (`ProcessLocalFileTypes(..., FILETYPE_ALTVIEW, ...)`, `far2l/src/panels/filelist.cpp:1520`). Midnight Commander does the same through `mc.ext`.
 - The source tree is `origin/next/2.9.1-ovr.3`.
 
@@ -30,7 +30,7 @@ The browser view must be a tool that a user installs separately. Other tools the
 | Paths kept | `far2l/bootstrap/md-open.sh`, `marked.min.js`, `highlight.min.js`, `github-markdown-light.css`, `github-markdown-dark.css`, `hljs-github.min.css`, `hljs-github-dark.min.css`, `marked.LICENSE.md`, `highlight.LICENSE.md`, `github-markdown.LICENSE.md`, `testing/markdown/browser-page.sh`, `testing/markdown/browser-links-dom.sh`, `testing/markdown/browser-page/`. `git filter-repo --path-rename` moves them to `lib/` and `tests/` in all of the history. |
 | Command | The command is `md-view`. The flags stay the same. |
 | Config and cache | The config is `${XDG_CONFIG_HOME:-$HOME/.config}/md-view/config.ini`. The cache is `${XDG_CACHE_HOME:-$HOME/.cache}/md-view/`. There is no read of the old far2l paths. |
-| Strings | No file in the repo names far2l, except: the README, `AGENTS.md` and `docs/`, the far2l text of `--print-association`, the tests of that text, the test of the old config path, and the history. |
+| Strings | Only these places name far2l: the README, `AGENTS.md`, `docs/`, the `--print-association` text and its tests, the old-config-path test, and the history. |
 | Install | A `Makefile`: `make install PREFIX=...` (default `/usr/local`), `make uninstall`, `make check`. The vendored files go beside the script, for example `$PREFIX/share/md-view/`, and `$PREFIX/bin/md-view` starts it. |
 | Docs | `README.md` (install, usage, far2l Alt-F3 association, `mc.ext` rule, config keys). `LICENSE`. `AGENTS.md` for people and agents: build, test, layout, rules, and the place of the docs. `docs/` with an ADR that carries ADR-005 forward, a spec moved from `markdown-browser-view.spec.md`, and invariants. `docs/stories/md-view-repo/` holds a copy of `story.md` and `closeout.md`, with no absolute home path. The structure follows far2l ADR-001, so that the owner can install `fde-delivery` in the repo after this story. |
 | Remote | A public GitHub repo `slava-kudzinau/md-view`. Push `main`. The owner approved this on 2026-11-12. |
