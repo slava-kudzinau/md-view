@@ -1,7 +1,7 @@
 #!/bin/sh
-# md-open.sh: show a Markdown file as a web page (far2l Alt-F3; macOS first).
+# md-view: show a Markdown file as a web page (macOS first).
 #
-#   md-open.sh [options] <file.md>
+#   md-view [options] <file.md>
 #     --out <page.html>   write the page there
 #     --no-open           make the page, do not open it
 #     --width 60|70|80    start width of the text column, in percent
@@ -10,18 +10,18 @@
 #     --no-cache          build the page again
 #     --tree on|off       show the file tree of the root folder, or one file
 #     --list-tree         print the root and the tree files, write no page
-#   md-open.sh --init-config
-#   md-open.sh --print-association
+#   md-view --init-config
+#   md-view --print-association
 #
 # Writes one page (the Markdown text and marked inline; mermaid from a pinned
 # CDN script with an SRI hash) and opens it with the system opener. The page
-# goes to ${XDG_CACHE_HOME:-$HOME/.cache}/far2l/md/<base>-<crc>.html unless --out
+# goes to ${XDG_CACHE_HOME:-$HOME/.cache}/md-view/<base>-<crc>.html unless --out
 # names another file, and is used again while no input changed. If that folder
-# cannot be used, the page goes to ${TMPDIR:-/tmp}/far2l-md-<pid>.html.
+# cannot be used, the page goes to ${TMPDIR:-/tmp}/md-view-<pid>.html.
 # marked.min.js is read from this script's folder, or from MARKED_JS. The GitHub
 # CSS and the highlight.js files are read from this script's folder too.
 #
-# Defaults come from ${XDG_CONFIG_HOME:-$HOME/.config}/far2l/settings/md-view.ini,
+# Defaults come from ${XDG_CONFIG_HOME:-$HOME/.config}/md-view/config.ini,
 # section [View], keys width, theme, browser, tree, root, tree_depth and
 # tree_max_files. A flag beats the file. No value
 # from the file or a flag is run as code; it is used only when it equals an
@@ -31,7 +31,7 @@ LC_ALL=C
 export LC_ALL
 
 self_dir=$(cd "$(dirname -- "$0")" && pwd) || exit 2
-ini=${XDG_CONFIG_HOME:-$HOME/.config}/far2l/settings/md-view.ini
+ini=${XDG_CONFIG_HOME:-$HOME/.config}/md-view/config.ini
 cr=$(printf '\r')
 nl='
 '
@@ -39,11 +39,11 @@ nl='
 old_umask=$(umask)
 
 usage() {
-    echo 'usage: md-open.sh [--out <page.html>] [--no-open] [--width 60|70|80]' >&2
-    echo '                  [--theme light|dark|auto] [--browser B] [--no-cache]' >&2
-    echo '                  [--tree on|off] [--list-tree] <file.md>' >&2
-    echo '       md-open.sh --init-config' >&2
-    echo '       md-open.sh --print-association' >&2
+    echo 'usage: md-view [--out <page.html>] [--no-open] [--width 60|70|80]' >&2
+    echo '               [--theme light|dark|auto] [--browser B] [--no-cache]' >&2
+    echo '               [--tree on|off] [--list-tree] <file.md>' >&2
+    echo '       md-view --init-config' >&2
+    echo '       md-view --print-association' >&2
     exit 2
 }
 
@@ -93,7 +93,7 @@ num_val() {
     fi
 }
 
-# read_ini: reads md-view.ini, section [View]. Sets cfg_width, cfg_theme,
+# read_ini: reads config.ini, section [View]. Sets cfg_width, cfg_theme,
 # cfg_browser, cfg_tree, cfg_root, cfg_depth and cfg_max to the last valid value
 # of each key; sets cfg_browser_bad=1 if a browser= line has a value that is not
 # accepted. Other values are ignored.
@@ -174,19 +174,19 @@ browsers_found() {
     printf '%s\n' "${found# }"
 }
 
-# init_config: writes a commented sample md-view.ini if there is no file. It
+# init_config: writes a commented sample config.ini if there is no file. It
 # never replaces a file, a link or anything else at that path.
 init_config() {
     if [ -e "$ini" ] || [ -L "$ini" ]; then
-        echo "md-open: $ini exists, not changed"
+        echo "md-view: $ini exists, not changed"
         exit 0
     fi
-    mkdir -p "$(dirname -- "$ini")" || { echo "md-open: cannot make the folder of $ini" >&2; exit 1; }
+    mkdir -p "$(dirname -- "$ini")" || { echo "md-view: cannot make the folder of $ini" >&2; exit 1; }
     list=$(browsers_found)
     # noclobber: the shell refuses to replace a file made since the test above.
     set -C
-    cat > "$ini" <<EOF || { echo "md-open: cannot write $ini" >&2; exit 1; }
-# Defaults for the far2l Markdown browser page (md-open.sh, Alt-F3).
+    cat > "$ini" <<EOF || { echo "md-view: cannot write $ini" >&2; exit 1; }
+# Defaults for md-view.
 # A flag on the command line beats a value here. A line that starts with
 # "#" or ";" is a comment. A value that is not accepted is ignored.
 #
@@ -215,16 +215,27 @@ EOF
     exit 0
 }
 
+# print_association: prints the File associations entry. Its command is the
+# absolute path of the launcher, then !.!. The path is command -v md-view when that
+# is absolute; else the first file that exists of the installed launcher, the
+# checkout launcher and this script.
 print_association() {
-    exe=$self_dir/md-open.sh
-    # far2l escapes the file name in !.! before the shell reads the command, so
-    # !.! stays unquoted. The script path is quoted only when the shell needs it.
+    exe=$(command -v md-view 2>/dev/null)
+    case $exe in
+        /*) ;;
+        *)
+            for exe in "$self_dir/../../bin/md-view" "$self_dir/../bin/md-view" "$self_dir/md-view"; do
+                [ -f "$exe" ] && break
+            done ;;
+    esac
+    # The file manager escapes the file name in !.! before the shell reads the
+    # command, so !.! stays unquoted. The path is quoted only when the shell needs it.
     case $exe in
         *[!A-Za-z0-9_./+:@%,=-]*)
             q=$(printf '%s' "$exe" | sed -e 's/["$`\\]/\\&/g')
-            cmd="sh \"$q\" !.!" ;;
+            cmd="\"$q\" !.!" ;;
         *)
-            cmd="sh $exe !.!" ;;
+            cmd="$exe !.!" ;;
     esac
     cat <<EOF
 far2l file association for Markdown (add it once):
@@ -242,7 +253,7 @@ Steps in far2l:
   4. Tick "View command (used for Alt+F3)" and type: $cmd
   5. Press OK. Alt+F3 on a .md file now opens it in the browser.
 
-Defaults file (md-open.sh --init-config writes a commented sample):
+Defaults file (md-view --init-config writes a commented sample):
   $ini
   [View]
   width=60|70|80          (default 70)
@@ -265,7 +276,7 @@ open_page() {
             *) app= ;;
         esac
         if [ -n "$app" ]; then
-            ( exec open -a "$app" "$1" ) || { echo 'md-open: open failed' >&2; exit 1; }
+            ( exec open -a "$app" "$1" ) || { echo 'md-view: open failed' >&2; exit 1; }
             return 0
         fi
     else
@@ -286,31 +297,31 @@ open_page() {
         case $b in
             auto|/*) ;;
             *)
-                ( exec "$b" "$1" ) || { echo "md-open: $b failed" >&2; exit 1; }
+                ( exec "$b" "$1" ) || { echo "md-view: $b failed" >&2; exit 1; }
                 return 0 ;;
         esac
     fi
     case $b in
         /*)
-            ( exec "$b" "$1" ) || { echo 'md-open: the browser failed' >&2; exit 1; }
+            ( exec "$b" "$1" ) || { echo 'md-view: the browser failed' >&2; exit 1; }
             return 0 ;;
     esac
     # auto: a single-word $BROWSER, then open, then xdg-open.
     if [ -n "${BROWSER:-}" ]; then
         case $BROWSER in
             -*|*[!A-Za-z0-9_./+-]*)
-                echo 'md-open: BROWSER is not a single command name, ignored' >&2 ;;
+                echo 'md-view: BROWSER is not a single command name, ignored' >&2 ;;
             *)
                 if command -v "$BROWSER" >/dev/null 2>&1; then
-                    ( exec "$BROWSER" "$1" ) || { echo 'md-open: $BROWSER failed' >&2; exit 1; }
+                    ( exec "$BROWSER" "$1" ) || { echo 'md-view: $BROWSER failed' >&2; exit 1; }
                     return 0
                 fi ;;
         esac
     fi
     if command -v open >/dev/null 2>&1; then
-        ( exec open "$1" ) || { echo 'md-open: open failed' >&2; exit 1; }
+        ( exec open "$1" ) || { echo 'md-view: open failed' >&2; exit 1; }
     elif command -v xdg-open >/dev/null 2>&1; then
-        ( exec xdg-open "$1" ) || { echo 'md-open: xdg-open failed' >&2; exit 1; }
+        ( exec xdg-open "$1" ) || { echo 'md-view: xdg-open failed' >&2; exit 1; }
     else
         echo "$1"
     fi
@@ -630,12 +641,12 @@ if [ "$flag_browser_set" = 1 ]; then
     if browser_ok "$flag_browser"; then
         browser=$flag_browser
     else
-        echo 'md-open: --browser is not auto, firefox, chrome, safari or a program path; using auto' >&2
+        echo 'md-view: --browser is not auto, firefox, chrome, safari or a program path; using auto' >&2
         browser=auto
     fi
 else
     if [ -z "$cfg_browser" ] && [ "$cfg_browser_bad" = 1 ]; then
-        echo "md-open: browser= in $ini is not accepted; using auto" >&2
+        echo "md-view: browser= in $ini is not accepted; using auto" >&2
     fi
     browser=${cfg_browser:-auto}
 fi
@@ -648,7 +659,7 @@ else
     html_attrs="lang=\"en\" data-start-width=\"$width\" data-start-theme=\"$theme\""
 fi
 if [ ! -f "$file" ] || [ ! -r "$file" ]; then
-    echo "md-open: cannot read $file" >&2
+    echo "md-view: cannot read $file" >&2
     usage
 fi
 
@@ -674,7 +685,7 @@ case $file_dir in
     *) file_dir=./$file_dir ;;
 esac
 file_name=${file##*/}
-real_of "$file_dir" || { echo "md-open: cannot read $file" >&2; exit 2; }
+real_of "$file_dir" || { echo "md-view: cannot read $file" >&2; exit 2; }
 real_dir=$rp
 home_real=
 case ${HOME:-} in
@@ -707,7 +718,7 @@ tree_count=0
 tree_capped=0
 opened_in_list=0
 if [ "$tree_mode" = 1 ]; then
-    scan_tree || { echo 'md-open: cannot read the file tree' >&2; exit 2; }
+    scan_tree || { echo 'md-view: cannot read the file tree' >&2; exit 2; }
 fi
 
 if [ "$list_tree" = 1 ]; then
@@ -731,7 +742,7 @@ else
         /*) ;;
         *) cache_home=${HOME:-}/.cache ;;
     esac
-    cache_dir=${cache_home%/}/far2l/md
+    cache_dir=${cache_home%/}/md-view
     if (umask 077; mkdir -p "$cache_dir") 2>/dev/null && [ -d "$cache_dir" ] && [ ! -L "$cache_dir" ] \
         && chmod 700 "$cache_dir" 2>/dev/null && [ -w "$cache_dir" ]; then
         # real_dir and file_name keep a newline at the end of a name, so a
@@ -741,48 +752,48 @@ else
         base=$(printf '%s\n' "$file_name" | sed 's/[^A-Za-z0-9._-]/_/g' | cut -c1-40 | sed 1q)
         case $crc in
             ''|*[!0-9]*)
-                echo 'md-open: cannot name the cache page; using a temporary page' >&2 ;;
+                echo 'md-view: cannot name the cache page; using a temporary page' >&2 ;;
             *)
                 page=$cache_dir/$base-$crc.html
                 if [ -L "$page" ] || { [ -e "$page" ] && [ ! -f "$page" ]; }; then
-                    echo "md-open: $page is not a plain file; using a temporary page" >&2
+                    echo "md-view: $page is not a plain file; using a temporary page" >&2
                     page=
                 else
                     cached=1
                 fi ;;
         esac
     else
-        echo "md-open: cannot use the cache folder $cache_dir; using a temporary page" >&2
+        echo "md-view: cannot use the cache folder $cache_dir; using a temporary page" >&2
     fi
     if [ -z "$page" ]; then
         tmp_dir=${TMPDIR:-/tmp}
         tmp_dir=${tmp_dir%/}
-        page=$tmp_dir/far2l-md-$$.html
+        page=$tmp_dir/md-view-$$.html
     fi
 fi
 if [ -d "$page" ] || [ ! -d "$(dirname -- "$page")" ]; then
-    echo "md-open: cannot write the page $page (its folder must exist)" >&2
+    echo "md-view: cannot write the page $page (its folder must exist)" >&2
     exit 2
 fi
 
 marked_js=${MARKED_JS:-$self_dir/marked.min.js}
 if [ ! -r "$marked_js" ]; then
-    echo 'md-open: cannot find marked.min.js' >&2
+    echo 'md-view: cannot find marked.min.js' >&2
     exit 3
 fi
 # The page inlines these vendored files, so each must be there before a page is written.
 for f in github-markdown-light.css github-markdown-dark.css hljs-github.min.css \
          hljs-github-dark.min.css highlight.min.js; do
     if [ ! -f "$self_dir/$f" ] || [ ! -r "$self_dir/$f" ]; then
-        echo "md-open: cannot find $f" >&2
+        echo "md-view: cannot find $f" >&2
         exit 3
     fi
 done
 
-# The page key and the state of md-view.ini go in the page head. The state is
+# The page key and the state of config.ini go in the page head. The state is
 # the size and the modification time that ls shows, or "none".
 if [ "$tree_mode" = 1 ]; then tree_word=on; else tree_word=off; fi
-key_line="<meta name=\"far2l-md-key\" content=\"w=$width;t=$theme;f=$forced;tr=$tree_word;r=$root_mode;d=$tree_depth;n=$tree_max\">"
+key_line="<meta name=\"md-view-key\" content=\"w=$width;t=$theme;f=$forced;tr=$tree_word;r=$root_mode;d=$tree_depth;n=$tree_max\">"
 ini_state=none
 if [ -f "$ini" ]; then
     ini_state=$(ls -lnLd -- "$ini" 2>/dev/null \
@@ -790,7 +801,7 @@ if [ -f "$ini" ]; then
         | sed -e 's/[^A-Za-z0-9 :.]/_/g' -e 1q)
     [ -n "$ini_state" ] || ini_state=unknown
 fi
-ini_line="<!-- far2l-md-ini: $ini_state -->"
+ini_line="<!-- md-view-ini: $ini_state -->"
 
 # In tree mode the head has the tree state: the cksum of the --list-tree output
 # and the number of tree files up to the cap. The html element gets the tree
@@ -799,10 +810,10 @@ tree_line=
 if [ "$tree_mode" = 1 ]; then
     tree_sum=$(list_tree_text | cksum | sed 's/ .*//')
     case $tree_sum$tree_count in
-        ''|*[!0-9]*) echo 'md-open: cannot read the file tree' >&2; exit 2 ;;
+        ''|*[!0-9]*) echo 'md-view: cannot read the file tree' >&2; exit 2 ;;
     esac
     [ "$tree_capped" = 1 ] || tree_capped=0
-    tree_line="<!-- far2l-md-tree: $tree_sum $tree_count -->"
+    tree_line="<!-- md-view-tree: $tree_sum $tree_count -->"
     root_enc=$(enc_path "${tree_root##*/}")
     html_attrs="$html_attrs data-tree=\"on\" data-root=\"$root_enc\" data-files=\"$tree_count\" data-cap=\"$tree_capped\""
 else
@@ -1008,9 +1019,9 @@ HTML
   var forced = root.getAttribute('data-forced') === '1';
   var WIDTHS = ['60', '70', '80'];
   var THEMES = ['light', 'dark', 'auto'];
-  var KEY_WIDTH = 'far2l-md-width';
-  var KEY_THEME = 'far2l-md-theme';
-  var KEY_TREE = 'far2l-md-tree';
+  var KEY_WIDTH = 'md-view-width';
+  var KEY_THEME = 'md-view-theme';
+  var KEY_TREE = 'md-view-tree';
   var narrow = window.matchMedia('(max-width: 699px)');
   var treePanel = document.getElementById('md-tree-panel');
   var treeToggle = document.getElementById('md-tree-toggle');
@@ -1405,7 +1416,7 @@ HTML
   function storageRemove(key) {
     try { window.localStorage.removeItem(key); } catch (e) { storageBlocked = true; }
   }
-  // The start values come from md-view.ini or a flag. Each is used only if accepted.
+  // The start values come from config.ini or a flag. Each is used only if accepted.
   var startWidth = accepted(root.getAttribute('data-start-width'), WIDTHS, '70');
   var startTheme = accepted(root.getAttribute('data-start-theme'), THEMES, 'auto');
   // Sets the used width and theme: the saved choice, unless data-forced is 1, then the start value.
@@ -1627,7 +1638,7 @@ HTML
     buttons.forEach(function (b) { row.appendChild(b); });
     return row;
   }
-  // The three lines of md-view.ini for the current choice.
+  // The three lines of config.ini for the current choice.
   function pasteText() {
     return ['[View]', 'width=' + root.getAttribute('data-width'), 'theme=' + themeSetting()].join('\n');
   }
@@ -1695,7 +1706,7 @@ HTML
       pop.appendChild(off);
     }
     var label = document.createElement('p');
-    label.textContent = 'Paste into md-view.ini:';
+    label.textContent = 'Paste into config.ini:';
     pop.appendChild(label);
     paste = document.createElement('pre');
     paste.className = 'md-paste';
@@ -1709,7 +1720,7 @@ HTML
     if (why === 'flag') return 'File tree: off (--tree off)';
     if (why === 'home') return 'File tree: off (the root is the home folder)';
     if (why === 'slash') return 'File tree: off (the root is /)';
-    return 'File tree: off (tree=off in md-view.ini)';
+    return 'File tree: off (tree=off in config.ini)';
   }
   // The gear, a click outside the popover, and the keys.
   function wireControls() {
@@ -1745,10 +1756,10 @@ HTML
 })();
 JS
     printf '</script>\n</body>\n</html>\n'
-} > "$dest" || { echo "md-open: cannot write $page" >&2; exit 1; }
+} > "$dest" || { echo "md-view: cannot write $page" >&2; exit 1; }
 if [ -n "$tmpf" ]; then
     set +C
-    mv -f "$tmpf" "$page" || { echo "md-open: cannot write $page" >&2; exit 1; }
+    mv -f "$tmpf" "$page" || { echo "md-view: cannot write $page" >&2; exit 1; }
     trap - EXIT
 fi
 umask "$old_umask"

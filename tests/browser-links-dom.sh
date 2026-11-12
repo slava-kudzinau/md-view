@@ -1,11 +1,10 @@
 #!/bin/sh
-# Test of the page script of far2l/bootstrap/md-open.sh in headless Chrome
-# (story markdown-browser-tree-panel): the hash route, the link rules, images,
-# heading ids and anchors. Each case builds a page with md-open.sh --out, then
-# dumps the DOM of its file:// URL with Chrome.
+# Test of the page script of lib/md-view in headless Chrome: the hash route, the
+# link rules, images, heading ids and anchors. Each case builds a page with
+# md-view --out, then dumps the DOM of its file:// URL with Chrome.
 #
-# usage: sh testing/markdown/browser-links-dom.sh
-#   MD_OPEN  the script under test (default far2l/bootstrap/md-open.sh)
+# usage: sh tests/browser-links-dom.sh
+#   MD_OPEN  the script under test (default lib/md-view)
 #   CHROME   the Chrome program (default: the macOS path, then google-chrome,
 #            then chromium in PATH)
 #
@@ -16,8 +15,8 @@ LC_ALL=C
 export LC_ALL
 
 here=$(cd "$(dirname -- "$0")" && pwd) || exit 1
-root=$(cd "$here/../.." && pwd) || exit 1
-md_open=${MD_OPEN:-$root/far2l/bootstrap/md-open.sh}
+root=$(cd "$here/.." && pwd) || exit 1
+md_open=${MD_OPEN:-$root/lib/md-view}
 case $md_open in
     /*) ;;
     *) md_open=$(pwd)/$md_open ;;
@@ -64,7 +63,7 @@ fresh() {
     PATH=$d/stub:$PATH
     export HOME XDG_CONFIG_HOME XDG_CACHE_HOME TMPDIR PATH
     page=$d/page.html
-    ini=$d/config/far2l/settings/md-view.ini
+    ini=$d/config/md-view/config.ini
     cd "$proj" || bad "cd"
 }
 
@@ -81,12 +80,12 @@ repeat() {
 
 # build [ARGS...]: builds $page from the last argument, which is the file.
 build() {
-    sh "$md_open" --no-open --out "$page" "$@" > "$d/out" 2> "$d/err" || bad "md-open exit $?: $(cat "$d/err")"
+    sh "$md_open" --no-open --out "$page" "$@" > "$d/out" 2> "$d/err" || bad "md-view exit $?: $(cat "$d/err")"
     [ -s "$page" ] || bad "no page"
     cp "$page" "$d/base.html" || bad "cp"
 }
 
-# file_url PATH: the file:// URL of PATH, with the escapes of md-open.sh.
+# file_url PATH: the file:// URL of PATH, with the escapes of md-view.
 file_url() {
     printf 'file://%s' "$(printf '%s' "$1" | sed -e 's/%/%25/g' -e 's/ /%20/g' -e 's/#/%23/g' \
         -e 's/?/%3F/g' -e 's/"/%22/g' -e "s/'/%27/g" -e 's/</%3C/g' -e 's/>/%3E/g' -e 's/&/%26/g')"
@@ -550,7 +549,7 @@ case_dom_panel_off_notice() {
     write_ini '[View]' 'tree=off'
     build o.md
     dom > "$d/dom2"
-    grep -qF '<p class="md-notice">File tree: off (tree=off in md-view.ini)</p>' "$d/dom2" || bad "no ini notice"
+    grep -qF '<p class="md-notice">File tree: off (tree=off in config.ini)</p>' "$d/dom2" || bad "no ini notice"
     # The home folder as the root: one-file mode, with the home notice.
     fresh homeh
     rm -f "$ini"

@@ -1,12 +1,12 @@
 #!/bin/sh
-# Test of far2l/bootstrap/md-open.sh (story markdown-browser-github-look).
-# Checks the flags, the defaults file md-view.ini, the browser launch, hostile
+# Test of lib/md-view.
+# Checks the flags, the defaults file config.ini, the browser launch, hostile
 # file names and config values, the vendored files, the page template and the
 # stable cache page and its reuse. It needs only sh and
-# common tools (openssl for the sha384 case). It does not need the far2l binary.
+# common tools (openssl for the sha384 case). It needs no build.
 #
-# usage: sh testing/markdown/browser-page.sh
-#   MD_OPEN     the script under test (default far2l/bootstrap/md-open.sh)
+# usage: sh tests/browser-page.sh
+#   MD_OPEN     the script under test (default lib/md-view)
 #   VENDOR_DIR  the folder of the vendored files (default: the folder of MD_OPEN)
 #
 # Each case runs in a subshell with a fresh HOME, XDG_CONFIG_HOME,
@@ -19,8 +19,8 @@ LC_ALL=C
 export LC_ALL
 
 here=$(cd "$(dirname -- "$0")" && pwd) || exit 1
-root=$(cd "$here/../.." && pwd) || exit 1
-md_open=${MD_OPEN:-$root/far2l/bootstrap/md-open.sh}
+root=$(cd "$here/.." && pwd) || exit 1
+md_open=${MD_OPEN:-$root/lib/md-view}
 case $md_open in
     /*) ;;
     *) md_open=$(pwd)/$md_open ;;
@@ -67,7 +67,7 @@ fresh() {
     export HOME XDG_CONFIG_HOME XDG_CACHE_HOME TMPDIR OPEN_LOG PATH
     unset BROWSER OPEN_RC
     page=$d/page.html
-    ini=$XDG_CONFIG_HOME/far2l/settings/md-view.ini
+    ini=$XDG_CONFIG_HOME/md-view/config.ini
     cd "$d/work" || bad "cd"
 }
 
@@ -77,7 +77,7 @@ md() {
     rc=$?
 }
 
-# write_ini LINE...: writes md-view.ini, one argument per line.
+# write_ini LINE...: writes config.ini, one argument per line.
 write_ini() {
     mkdir -p "$(dirname -- "$ini")" || bad "mkdir ini folder"
     printf '%s\n' "$@" > "$ini" || bad "write ini"
@@ -109,7 +109,7 @@ no_pwned() {
 # expect_usage: exit 2, usage on stderr, no page.
 expect_usage() {
     [ "$rc" = 2 ] || bad "exit $rc, want 2 for: $*"
-    grep -q '^usage: md-open.sh' "$d/err" || bad "no usage on stderr for: $*"
+    grep -q '^usage: md-view' "$d/err" || bad "no usage on stderr for: $*"
     [ ! -e "$page" ] || bad "page made for: $*"
 }
 
@@ -204,7 +204,7 @@ case_flag_width_missing() {
     exit 0
 }
 
-# --- md-view.ini ------------------------------------------------------------
+# --- config.ini ------------------------------------------------------------
 
 case_ini_valid() {
     fresh
@@ -280,7 +280,7 @@ case_ini_missing() {
     [ "$rc" = 0 ] || bad "exit $rc"
     [ ! -s "$d/err" ] || bad "stderr: $(cat "$d/err")"
     expect_tag 70 auto 0
-    [ ! -e "$ini" ] || bad "a normal run made md-view.ini"
+    [ ! -e "$ini" ] || bad "a normal run made config.ini"
     # An ini that is a folder, or that cannot be read, gives the defaults too.
     mkdir -p "$ini" || bad "mkdir"
     rm -f "$page"
@@ -297,6 +297,28 @@ case_ini_missing() {
         expect_tag 70 auto 0
     fi
     chmod 600 "$ini"
+    exit 0
+}
+
+# old config path is ignored: a config in the old far2l path has no effect, and
+# the same text in config.ini sets the width.
+case_old_config_path_ignored() {
+    fresh
+    old_ini=$XDG_CONFIG_HOME/far2l/settings/md-view.ini
+    mkdir -p "$(dirname -- "$old_ini")" || bad "mkdir"
+    printf '[View]\nwidth=80\n' > "$old_ini" || bad "write the old config"
+    md --no-open --out "$page" "$sample"
+    [ "$rc" = 0 ] || bad "exit $rc"
+    expect_tag 70 auto 0
+    grep -qxF '<meta name="md-view-key" content="w=70;t=auto;f=0;tr=on;r=dir;d=6;n=500">' "$page" \
+        || bad "the old config path set the width"
+    write_ini '[View]' 'width=80'
+    rm -f "$page"
+    md --no-open --out "$page" "$sample"
+    [ "$rc" = 0 ] || bad "exit $rc with config.ini"
+    expect_tag 80 auto 0
+    grep -qxF '<meta name="md-view-key" content="w=80;t=auto;f=0;tr=on;r=dir;d=6;n=500">' "$page" \
+        || bad "config.ini did not set the width"
     exit 0
 }
 
@@ -395,9 +417,9 @@ case_print_association_ok() {
              '  5. Press OK. Alt+F3 on a .md file now opens it in the browser.'; do
         grep -qxF "$l" "$d/out" || bad "old line missing: $l"
     done
-    grep -q '^  View command (used for Alt+F3):    sh .*md-open.sh"\{0,1\} !\.!$' "$d/out" \
+    grep -q '^  View command (used for Alt+F3):    "\{0,1\}/.*md-view"\{0,1\} !\.!$' "$d/out" \
         || bad "the association command changed"
-    grep -qF "$ini" "$d/out" || bad "no md-view.ini path"
+    grep -qF "$ini" "$d/out" || bad "no config.ini path"
     for w in 'width' 'theme' 'browser' '60' '80' 'light' 'dark' 'auto' 'firefox' 'chrome' 'safari'; do
         grep -q "$w" "$d/out" || bad "accepted value $w not listed"
     done
@@ -589,16 +611,16 @@ case_page_has_github_css() {
              hljs-github-dark.min.css highlight.min.js; do
         rm -rf "$d/missing"
         mkdir "$d/missing" || bad "mkdir"
-        cp "$md_open" "$d/missing/md-open.sh" || bad "cp script"
+        cp "$md_open" "$d/missing/md-view" || bad "cp script"
         for g in marked.min.js github-markdown-light.css github-markdown-dark.css \
                  hljs-github.min.css hljs-github-dark.min.css highlight.min.js; do
             [ "$g" = "$f" ] || cp "$vendor/$g" "$d/missing/" || bad "cp $g"
         done
         rm -f "$page"
-        sh "$d/missing/md-open.sh" --no-open --out "$page" "$sample" > "$d/out" 2> "$d/err"
+        sh "$d/missing/md-view" --no-open --out "$page" "$sample" > "$d/out" 2> "$d/err"
         rc=$?
         [ "$rc" = 3 ] || bad "exit $rc without $f, want 3"
-        [ "$(cat "$d/err")" = "md-open: cannot find $f" ] || bad "stderr without $f: $(cat "$d/err")"
+        [ "$(cat "$d/err")" = "md-view: cannot find $f" ] || bad "stderr without $f: $(cat "$d/err")"
         [ ! -e "$page" ] || bad "a page was written without $f"
     done
     exit 0
@@ -622,20 +644,20 @@ case_page_start_values() {
     md --no-open --out "$page" "$sample"
     [ "$rc" = 0 ] || bad "exit $rc"
     expect_tag 70 auto 0
-    grep -qxF '<meta name="far2l-md-key" content="w=70;t=auto;f=0;tr=on;r=dir;d=6;n=500">' "$page" \
+    grep -qxF '<meta name="md-view-key" content="w=70;t=auto;f=0;tr=on;r=dir;d=6;n=500">' "$page" \
         || bad "no page key for the defaults"
     rm -f "$page"
     md --width 60 --theme light --no-open --out "$page" "$sample"
     [ "$rc" = 0 ] || bad "exit $rc for a flag run"
     expect_tag 60 light 1
-    grep -qxF '<meta name="far2l-md-key" content="w=60;t=light;f=1;tr=on;r=dir;d=6;n=500">' "$page" \
+    grep -qxF '<meta name="md-view-key" content="w=60;t=light;f=1;tr=on;r=dir;d=6;n=500">' "$page" \
         || bad "no page key for a forced run"
     rm -f "$page"
     write_ini '[View]' 'width=80' 'theme=dark'
     md --no-open --out "$page" "$sample"
     [ "$rc" = 0 ] || bad "exit $rc with ini"
     expect_tag 80 dark 0
-    grep -qxF '<meta name="far2l-md-key" content="w=80;t=dark;f=0;tr=on;r=dir;d=6;n=500">' "$page" \
+    grep -qxF '<meta name="md-view-key" content="w=80;t=dark;f=0;tr=on;r=dir;d=6;n=500">' "$page" \
         || bad "no page key from the ini file"
     grep -qF "getAttribute('data-start-width')" "$page" || bad "the page script does not read data-start-width"
     grep -qF "getAttribute('data-start-theme')" "$page" || bad "the page script does not read data-start-theme"
@@ -779,7 +801,7 @@ case_page_storage_try_catch() {
     md --tree off --no-open --out "$page" "$sample"
     [ "$rc" = 0 ] || bad "exit $rc"
     iife > "$d/script" || bad "no script"
-    for k in far2l-md-width far2l-md-theme; do
+    for k in md-view-width md-view-theme; do
         grep -qF "'$k'" "$d/script" || bad "no saved key [$k]"
     done
     n=$(grep -c -F 'localStorage' "$d/script")
@@ -900,7 +922,7 @@ cache_page() {
     creal=${rpath%/}/${1##*/}
     ccrc=$(printf '%s' "$creal" | cksum | sed 's/ .*//')
     cbase=$(printf '%s\n' "${1##*/}" | sed 's/[^A-Za-z0-9._-]/_/g' | cut -c1-40 | sed 1q)
-    cpage=${XDG_CACHE_HOME:-$HOME/.cache}/far2l/md/$cbase-$ccrc.html
+    cpage=${XDG_CACHE_HOME:-$HOME/.cache}/md-view/$cbase-$ccrc.html
 }
 
 # old FILE... and future FILE...: set the modification time far back or far ahead.
@@ -922,7 +944,7 @@ marked() {
 
 # cache_files: the number of entries in the cache folder.
 cache_files() {
-    ls -A "$XDG_CACHE_HOME/far2l/md" | wc -l | tr -d ' '
+    ls -A "$XDG_CACHE_HOME/md-view" | wc -l | tr -d ' '
 }
 
 # no_tmp: no temporary page is left in the cache folder or in TMPDIR.
@@ -934,11 +956,11 @@ no_tmp() {
 # scratch: a copy of the script and every vendored file in $d/s; md then runs it.
 scratch() {
     mkdir -p "$d/s" || bad "mkdir scratch"
-    cp "$md_open" "$d/s/md-open.sh" || bad "cp script"
+    cp "$md_open" "$d/s/md-view" || bad "cp script"
     for g in $vendored; do
         cp "$vendor/$g" "$d/s/" || bad "cp $g"
     done
-    md_open=$d/s/md-open.sh
+    md_open=$d/s/md-view
 }
 
 case_cache_path_stable() {
@@ -951,9 +973,9 @@ case_cache_path_stable() {
     [ ! -s "$d/err" ] || bad "stderr: $(cat "$d/err")"
     [ -f "$cpage" ] || bad "no page at $cpage"
     expect_open "$cpage"
-    [ "$(cache_files)" = 1 ] || bad "want one file in the cache folder, got $(ls -A "$XDG_CACHE_HOME/far2l/md")"
+    [ "$(cache_files)" = 1 ] || bad "want one file in the cache folder, got $(ls -A "$XDG_CACHE_HOME/md-view")"
     [ -z "$(ls -A "$TMPDIR")" ] || bad "a page was made in TMPDIR: $(ls -A "$TMPDIR")"
-    grep -qxF '<meta name="far2l-md-key" content="w=70;t=auto;f=0;tr=on;r=dir;d=6;n=500">' "$cpage" || bad "no page key"
+    grep -qxF '<meta name="md-view-key" content="w=70;t=auto;f=0;tr=on;r=dir;d=6;n=500">' "$cpage" || bad "no page key"
     # The same file by an absolute path, by another relative path and through a
     # linked folder gives the same page.
     md --no-cache --no-open "$d/work/s.md"
@@ -966,13 +988,13 @@ case_cache_path_stable() {
     md --no-cache "$d/link/s.md"
     [ "$rc" = 0 ] || bad "exit $rc for the linked folder"
     expect_open "$cpage"
-    [ "$(cache_files)" = 1 ] || bad "one file gave more pages: $(ls -A "$XDG_CACHE_HOME/far2l/md")"
+    [ "$(cache_files)" = 1 ] || bad "one file gave more pages: $(ls -A "$XDG_CACHE_HOME/md-view")"
     # With no XDG_CACHE_HOME, the folder is under HOME.
     unset XDG_CACHE_HOME
     cd "$d/work" || bad "cd"
     cache_page s.md
     case $cpage in
-        "$HOME/.cache/far2l/md/s.md-"*.html) ;;
+        "$HOME/.cache/md-view/s.md-"*.html) ;;
         *) bad "page without XDG_CACHE_HOME is $cpage" ;;
     esac
     md --no-open s.md
@@ -994,7 +1016,7 @@ case_cache_two_files() {
     cache_page a/note.md; pa=$cpage
     cache_page b/note.md; pb=$cpage
     [ "$pa" != "$pb" ] || bad "two files have one page name $pa"
-    [ "$(cache_files)" = 2 ] || bad "want two pages, got $(ls -A "$XDG_CACHE_HOME/far2l/md")"
+    [ "$(cache_files)" = 2 ] || bad "want two pages, got $(ls -A "$XDG_CACHE_HOME/md-view")"
     grep -qF 'alpha-text' "$pa" || bad "the page of a/note.md does not hold its text"
     grep -qF 'beta-text' "$pb" || bad "the page of b/note.md does not hold its text"
     if grep -qF 'beta-text' "$pa"; then bad "the page of a/note.md holds the text of b/note.md"; fi
@@ -1021,10 +1043,10 @@ case_cache_reuse() {
     mark
     cp "$cpage" "$d/before" || bad "cp"
     # The folder cannot take a new file now, so a write fails the run.
-    chmod 500 "$XDG_CACHE_HOME/far2l/md" || bad "chmod"
+    chmod 500 "$XDG_CACHE_HOME/md-view" || bad "chmod"
     md s.md
     st=$rc
-    chmod 700 "$XDG_CACHE_HOME/far2l/md" || bad "chmod back"
+    chmod 700 "$XDG_CACHE_HOME/md-view" || bad "chmod back"
     [ "$st" = 0 ] || bad "exit $st for a reuse: $(cat "$d/err")"
     [ ! -s "$d/err" ] || bad "stderr for a reuse: $(cat "$d/err")"
     expect_open "$cpage"
@@ -1033,7 +1055,7 @@ case_cache_reuse() {
     md --no-open s.md
     [ "$rc" = 0 ] || bad "exit $rc for a reuse with --no-open"
     marked || bad "the page was built again with --no-open"
-    [ "$(cache_files)" = 1 ] || bad "want one page, got $(ls -A "$XDG_CACHE_HOME/far2l/md")"
+    [ "$(cache_files)" = 1 ] || bad "want one page, got $(ls -A "$XDG_CACHE_HOME/md-view")"
     no_tmp
     exit 0
 }
@@ -1043,12 +1065,12 @@ case_cache_rebuild_on_edit() {
     scratch
     cp "$sample" s.md || bad "cp"
     cache_page s.md
-    for f in s.md "$d/s/md-open.sh" $vendored; do
+    for f in s.md "$d/s/md-view" $vendored; do
         case $f in
             /*|s.md) ;;
             *) f=$d/s/$f ;;
         esac
-        old s.md "$d/s/md-open.sh"
+        old s.md "$d/s/md-view"
         for g in $vendored; do old "$d/s/$g"; done
         md --no-open s.md
         [ "$rc" = 0 ] || bad "exit $rc before an edit of $f"
@@ -1083,7 +1105,7 @@ case_cache_rebuild_on_flag() {
     md --width 80 --no-open s.md
     [ "$rc" = 0 ] || bad "exit $rc for --width 80"
     if marked; then bad "the page was not built again for --width 80"; fi
-    grep -qxF '<meta name="far2l-md-key" content="w=80;t=auto;f=1;tr=on;r=dir;d=6;n=500">' "$cpage" || bad "no key for --width 80"
+    grep -qxF '<meta name="md-view-key" content="w=80;t=auto;f=1;tr=on;r=dir;d=6;n=500">' "$cpage" || bad "no key for --width 80"
     expect_tag_at "$cpage" 80 auto 1
     mark
     md --width 80 --no-open s.md
@@ -1097,7 +1119,7 @@ case_cache_rebuild_on_flag() {
     mark
     md --no-open s.md
     if marked; then bad "the page was not built again for no flag after a forced run"; fi
-    grep -qxF '<meta name="far2l-md-key" content="w=70;t=auto;f=0;tr=on;r=dir;d=6;n=500">' "$cpage" || bad "no key for no flag"
+    grep -qxF '<meta name="md-view-key" content="w=70;t=auto;f=0;tr=on;r=dir;d=6;n=500">' "$cpage" || bad "no key for no flag"
     exit 0
 }
 
@@ -1120,7 +1142,7 @@ case_cache_rebuild_on_ini() {
     old "$ini"
     md --no-open s.md
     [ "$rc" = 0 ] || bad "exit $rc with a new ini"
-    if marked; then bad "the page was not built again when md-view.ini was added"; fi
+    if marked; then bad "the page was not built again when config.ini was added"; fi
     mark
     md --no-open s.md
     marked || bad "no reuse with the same ini"
@@ -1128,12 +1150,12 @@ case_cache_rebuild_on_ini() {
     write_ini '[View]' 'browser=safari'
     old "$ini"
     md --no-open s.md
-    if marked; then bad "the page was not built again when md-view.ini changed size"; fi
+    if marked; then bad "the page was not built again when config.ini changed size"; fi
     mark
     # A newer ini.
     future "$ini"
     md --no-open s.md
-    if marked; then bad "the page was not built again for a newer md-view.ini"; fi
+    if marked; then bad "the page was not built again for a newer config.ini"; fi
     old "$ini"
     md --no-open s.md
     mark
@@ -1143,7 +1165,7 @@ case_cache_rebuild_on_ini() {
     rm -f "$ini"
     md --no-open s.md
     [ "$rc" = 0 ] || bad "exit $rc after the ini was deleted"
-    if marked; then bad "the page was not built again when md-view.ini was deleted"; fi
+    if marked; then bad "the page was not built again when config.ini was deleted"; fi
     mark
     md --no-open s.md
     marked || bad "no reuse with no ini"
@@ -1151,7 +1173,7 @@ case_cache_rebuild_on_ini() {
     write_ini '[View]' 'width=60'
     old "$ini"
     md --no-open s.md
-    grep -qxF '<meta name="far2l-md-key" content="w=60;t=auto;f=0;tr=on;r=dir;d=6;n=500">' "$cpage" || bad "no key from the new ini"
+    grep -qxF '<meta name="md-view-key" content="w=60;t=auto;f=0;tr=on;r=dir;d=6;n=500">' "$cpage" || bad "no key from the new ini"
     exit 0
 }
 
@@ -1166,7 +1188,7 @@ case_cache_no_cache_flag() {
     [ "$rc" = 0 ] || bad "exit $rc for --no-cache"
     [ -f "$cpage" ] || bad "no page at the cache path after --no-cache"
     if marked; then bad "--no-cache did not build the page again"; fi
-    [ "$(cache_files)" = 1 ] || bad "want one page, got $(ls -A "$XDG_CACHE_HOME/far2l/md")"
+    [ "$(cache_files)" = 1 ] || bad "want one page, got $(ls -A "$XDG_CACHE_HOME/md-view")"
     mark
     # --out builds its own page and leaves the cache page.
     md --no-open --out "$page" s.md
@@ -1188,23 +1210,23 @@ case_cache_dir_mode() {
     cache_page s.md
     md --no-open s.md
     [ "$rc" = 0 ] || bad "exit $rc"
-    case $(ls -ld "$XDG_CACHE_HOME/far2l/md") in
+    case $(ls -ld "$XDG_CACHE_HOME/md-view") in
         drwx------*) ;;
-        *) bad "folder mode: $(ls -ld "$XDG_CACHE_HOME/far2l/md")" ;;
+        *) bad "folder mode: $(ls -ld "$XDG_CACHE_HOME/md-view")" ;;
     esac
     case $(ls -l "$cpage") in
         -rw-------*) ;;
         *) bad "page mode: $(ls -l "$cpage")" ;;
     esac
     # An old folder with a wider mode gets 700.
-    rm -rf "$XDG_CACHE_HOME/far2l"
-    mkdir -p "$XDG_CACHE_HOME/far2l/md" || bad "mkdir"
-    chmod 755 "$XDG_CACHE_HOME/far2l/md" || bad "chmod"
+    rm -rf "$XDG_CACHE_HOME/md-view"
+    mkdir -p "$XDG_CACHE_HOME/md-view" || bad "mkdir"
+    chmod 755 "$XDG_CACHE_HOME/md-view" || bad "chmod"
     md --no-open s.md
     [ "$rc" = 0 ] || bad "exit $rc with an old folder"
-    case $(ls -ld "$XDG_CACHE_HOME/far2l/md") in
+    case $(ls -ld "$XDG_CACHE_HOME/md-view") in
         drwx------*) ;;
-        *) bad "old folder mode: $(ls -ld "$XDG_CACHE_HOME/far2l/md")" ;;
+        *) bad "old folder mode: $(ls -ld "$XDG_CACHE_HOME/md-view")" ;;
     esac
     case $(ls -l "$cpage") in
         -rw-------*) ;;
@@ -1221,7 +1243,7 @@ expect_tmp_page() {
     got=$(sed -n 2p "$OPEN_LOG")
     [ "$(sed -n 1p "$OPEN_LOG")" = 1 ] || bad "opener got [$(cat "$OPEN_LOG")] for [$1]"
     case $got in
-        "$TMPDIR/far2l-md-"*.html) ;;
+        "$TMPDIR/md-view-"*.html) ;;
         *) bad "opened [$got] for [$1], want a page in TMPDIR" ;;
     esac
     [ -s "$got" ] || bad "no page at $got for [$1]"
@@ -1238,15 +1260,15 @@ case_cache_dir_fallback() {
     expect_tmp_page "cache home is a file"
     # The folder is a link to another folder: nothing is written there.
     XDG_CACHE_HOME=$d/cache
-    mkdir -p "$d/elsewhere" "$XDG_CACHE_HOME/far2l" || bad "mkdir"
-    ln -s "$d/elsewhere" "$XDG_CACHE_HOME/far2l/md" || bad "ln"
+    mkdir -p "$d/elsewhere" || bad "mkdir"
+    ln -s "$d/elsewhere" "$XDG_CACHE_HOME/md-view" || bad "ln"
     md s.md
     expect_tmp_page "folder is a link"
     [ -z "$(ls -A "$d/elsewhere")" ] || bad "a file was written through the folder link"
-    [ -L "$XDG_CACHE_HOME/far2l/md" ] || bad "the folder link was replaced"
-    rm -f "$XDG_CACHE_HOME/far2l/md"
+    [ -L "$XDG_CACHE_HOME/md-view" ] || bad "the folder link was replaced"
+    rm -f "$XDG_CACHE_HOME/md-view"
     # The page path is a link: it is not written through or replaced.
-    mkdir "$XDG_CACHE_HOME/far2l/md" || bad "mkdir"
+    mkdir "$XDG_CACHE_HOME/md-view" || bad "mkdir"
     cache_page s.md
     printf 'victim\n' > "$d/victim" || bad "write"
     ln -s "$d/victim" "$cpage" || bad "ln"
@@ -1317,7 +1339,7 @@ case_out_direct_write() {
     chmod 640 "$page" || bad "chmod"
     md --no-open --out "$page" s.md
     [ "$rc" = 0 ] || bad "exit $rc for an existing file: $(cat "$d/err")"
-    grep -qF '<meta name="far2l-md-key"' "$page" || bad "the existing file was not written"
+    grep -qF '<meta name="md-view-key"' "$page" || bad "the existing file was not written"
     case $(ls -l "$page") in
         -rw-r-----*) ;;
         *) bad "the existing file lost its mode: $(ls -l "$page")" ;;
@@ -1328,11 +1350,11 @@ case_out_direct_write() {
     md --no-open --out "$page" s.md
     [ "$rc" = 0 ] || bad "exit $rc for a link: $(cat "$d/err")"
     [ -L "$page" ] || bad "the --out link was replaced"
-    grep -qF '<meta name="far2l-md-key"' "$d/target" || bad "the page was not written through the link"
+    grep -qF '<meta name="md-view-key"' "$d/target" || bad "the page was not written through the link"
     md --no-open --out /dev/stdout s.md
     [ "$rc" = 0 ] || bad "exit $rc for --out /dev/stdout: $(cat "$d/err")"
-    grep -qF '<meta name="far2l-md-key"' "$d/out" || bad "--out /dev/stdout printed no page"
-    [ ! -d "$XDG_CACHE_HOME/far2l" ] || bad "--out made the cache folder"
+    grep -qF '<meta name="md-view-key"' "$d/out" || bad "--out /dev/stdout printed no page"
+    [ ! -d "$XDG_CACHE_HOME/md-view" ] || bad "--out made the cache folder"
     no_tmp
     exit 0
 }
@@ -1391,7 +1413,7 @@ case_cache_tmp_removed_on_error() {
     exit 0
 }
 
-# --- tree settings, root and scan (story markdown-browser-tree-panel) --------
+# --- tree settings, root and scan -------------------------------------------
 
 tnl='
 '
@@ -1410,7 +1432,7 @@ md_wd() {
     [ ! -e "$d/killed" ] || bad "the watchdog killed the run of: $*"
 }
 
-# lt FILE [ARGS...]: md-open.sh --list-tree under the watchdog. It must exit 0
+# lt FILE [ARGS...]: md-view --list-tree under the watchdog. It must exit 0
 # with an empty stderr and write no page.
 lt() {
     f=$1
@@ -1975,7 +1997,7 @@ page sub/b.md"
     exit 0
 }
 
-# --- the page in tree mode, and reuse (story markdown-browser-tree-panel) ----
+# --- the page in tree mode, and reuse --------------------------------------
 
 # tpage ARGS...: a page at $page (--out, --no-open) under the watchdog. It must
 # exit 0 with an empty stderr.
@@ -2004,7 +2026,7 @@ tree_index() {
     sed -n '/^<script type="text\/plain" id="md-tree">$/,/^<\/script>$/p' "${1:-$page}" | sed -e 1d -e '$d'
 }
 
-# head_of PAGE: the head of PAGE, as md-open.sh reads it.
+# head_of PAGE: the head of PAGE, as md-view reads it.
 head_of() {
     sed -n '1,/^<\/head>$/p' "$1"
 }
@@ -2016,7 +2038,7 @@ state_line() {
     lt "$@"
     ssum=$(cksum < "$d/out" | sed 's/ .*//')
     scount=$(body | awk '$1 == "cap" { c = $2; next } { n++ } END { print (c != "" ? c : n) + 0 }')
-    sline="<!-- far2l-md-tree: $ssum $scount -->"
+    sline="<!-- md-view-tree: $ssum $scount -->"
 }
 
 # mklong NAME BYTES: a file of BYTES bytes, in lines of 100 bytes.
@@ -2198,25 +2220,27 @@ case_tree_page_names_hostile() {
 case_tree_off_same_page() {
     fresh
     mkdir -p "$d/base" || bad "mkdir"
-    (cd "$root" && git show 7f6523ad5:far2l/bootstrap/md-open.sh) > "$d/base/md-open.sh" || bad "git show"
+    # The script before the tree feature, with its old names, as the base.
+    (cd "$root" && git show 651d91114e45edee2614ac6d15ee2da335c890e7:lib/md-view) > "$d/base/md-view" || bad "git show"
     for g in $vendored; do
         cp "$vendor/$g" "$d/base/" || bad "cp $g"
     done
     cp "$sample" s.md || bad "cp"
     : > other.md
-    sh "$d/base/md-open.sh" --no-open --out "$d/base.html" s.md 2> "$d/err" || bad "the BASE script failed: $(cat "$d/err")"
+    sh "$d/base/md-view" --no-open --out "$d/old.html" s.md 2> "$d/err" || bad "the BASE script failed: $(cat "$d/err")"
+    sed 's/far2l-md-/md-view-/g' "$d/old.html" > "$d/base.html" || bad "sed"
     tpage --tree off s.md
     # Only the html line, the key line and the page script may differ.
     strip() {
-        sed -e '/^<html /d' -e '/^<meta name="far2l-md-key" /d' -e '/^(function () {$/,/^})();$/d' "$1"
+        sed -e '/^<html /d' -e '/^<meta name="md-view-key" /d' -e '/^(function () {$/,/^})();$/d' "$1"
     }
     strip "$d/base.html" > "$d/a"
     strip "$page" > "$d/b"
     cmp -s "$d/a" "$d/b" || bad "the pages differ: $(diff "$d/a" "$d/b" | head -20)"
     [ "$(html_tag)" = "$(grep '^<html ' "$d/base.html" | sed 's/>$//') data-tree=\"off\" data-tree-why=\"flag\">" ] \
         || bad "html line is $(html_tag)"
-    [ "$(grep '^<meta name="far2l-md-key" ' "$page")" = "$(grep '^<meta name="far2l-md-key" ' "$d/base.html" | sed 's/">$//');tr=off;r=dir;d=6;n=500\">" ] \
-        || bad "key line is $(grep '^<meta name="far2l-md-key" ' "$page")"
+    [ "$(grep '^<meta name="md-view-key" ' "$page")" = "$(grep '^<meta name="md-view-key" ' "$d/base.html" | sed 's/">$//');tr=off;r=dir;d=6;n=500\">" ] \
+        || bad "key line is $(grep '^<meta name="md-view-key" ' "$page")"
     # The page script is there in both.
     [ "$(grep -c '^(function () {$' "$page")" = 1 ] || bad "no page script"
     [ "$(head_of "$page" | wc -l)" = "$(head_of "$d/base.html" | wc -l)" ] || bad "the head has new lines"
@@ -2228,28 +2252,28 @@ case_tree_key_line() {
     mkdir -p proj/.git proj/sub || bad "mkdir"
     : > proj/a.md; : > proj/sub/o.md
     tpage proj/sub/o.md
-    key='<meta name="far2l-md-key" content="w=70;t=auto;f=0;tr=on;r=dir;d=6;n=500">'
-    grep -qxF "$key" "$page" || bad "key: $(grep far2l-md-key "$page")"
+    key='<meta name="md-view-key" content="w=70;t=auto;f=0;tr=on;r=dir;d=6;n=500">'
+    grep -qxF "$key" "$page" || bad "key: $(grep md-view-key "$page")"
     # The tree state goes after the ini comment, in the head.
     state_line proj/sub/o.md
-    [ "$sline" = '<!-- far2l-md-tree: '"$ssum"' 1 -->' ] || bad "count in [$sline]"
-    head_of "$page" | grep -A1 -xF '<!-- far2l-md-ini: none -->' | sed -n 2p > "$d/next"
+    [ "$sline" = '<!-- md-view-tree: '"$ssum"' 1 -->' ] || bad "count in [$sline]"
+    head_of "$page" | grep -A1 -xF '<!-- md-view-ini: none -->' | sed -n 2p > "$d/next"
     [ "$(cat "$d/next")" = "$sline" ] || bad "after the ini line: [$(cat "$d/next")], want [$sline]"
-    [ "$(grep -c 'far2l-md-tree:' "$page")" = 1 ] || bad "want one tree state line"
+    [ "$(grep -c 'md-view-tree:' "$page")" = 1 ] || bad "want one tree state line"
     write_ini '[View]' 'root=repo' 'tree_depth=3' 'tree_max_files=7'
     tpage proj/sub/o.md
-    grep -qxF '<meta name="far2l-md-key" content="w=70;t=auto;f=0;tr=on;r=repo;d=3;n=7">' "$page" \
-        || bad "key with ini: $(grep far2l-md-key "$page")"
+    grep -qxF '<meta name="md-view-key" content="w=70;t=auto;f=0;tr=on;r=repo;d=3;n=7">' "$page" \
+        || bad "key with ini: $(grep md-view-key "$page")"
     state_line proj/sub/o.md
-    [ "$sline" = '<!-- far2l-md-tree: '"$ssum"' 2 -->' ] || bad "count in [$sline]"
+    [ "$sline" = '<!-- md-view-tree: '"$ssum"' 2 -->' ] || bad "count in [$sline]"
     head_of "$page" | grep -qxF "$sline" || bad "no tree state [$sline] for root=repo"
     write_ini '[View]' 'tree_depth=99' 'tree_max_files=99999'
     tpage proj/sub/o.md
-    grep -qxF '<meta name="far2l-md-key" content="w=70;t=auto;f=0;tr=on;r=dir;d=12;n=2000">' "$page" \
-        || bad "key with ceilings: $(grep far2l-md-key "$page")"
+    grep -qxF '<meta name="md-view-key" content="w=70;t=auto;f=0;tr=on;r=dir;d=12;n=2000">' "$page" \
+        || bad "key with ceilings: $(grep md-view-key "$page")"
     write_ini '[View]' 'tree_depth=<script>' 'tree_max_files=-1' 'root=x"y'
     tpage proj/sub/o.md
-    grep -qxF "$key" "$page" || bad "key with hostile values: $(grep far2l-md-key "$page")"
+    grep -qxF "$key" "$page" || bad "key with hostile values: $(grep md-view-key "$page")"
     if grep -qF 'x"y' "$page"; then bad "a hostile value is in the page"; fi
     rm -f "$ini"
     # With the cap, the count is the files up to the cap.
@@ -2260,9 +2284,9 @@ case_tree_key_line() {
     head_of "$page" | grep -qxF "$sline" || bad "no capped tree state [$sline]"
     rm -f "$ini"
     tpage --tree off proj/sub/o.md
-    grep -qxF '<meta name="far2l-md-key" content="w=70;t=auto;f=0;tr=off;r=dir;d=6;n=500">' "$page" \
-        || bad "--tree off key: $(grep far2l-md-key "$page")"
-    if grep -qF 'far2l-md-tree:' "$page"; then bad "a one-file page has a tree state"; fi
+    grep -qxF '<meta name="md-view-key" content="w=70;t=auto;f=0;tr=off;r=dir;d=6;n=500">' "$page" \
+        || bad "--tree off key: $(grep md-view-key "$page")"
+    if grep -qF 'md-view-tree:' "$page"; then bad "a one-file page has a tree state"; fi
     exit 0
 }
 
@@ -2282,13 +2306,13 @@ case_cache_tree_reuse() {
     tree_proj
     md_wd --no-open proj/o.md
     [ "$rc" = 0 ] || bad "exit $rc"
-    grep -qF 'far2l-md-tree:' "$cpage" || bad "the cache page is not a tree page"
+    grep -qF 'md-view-tree:' "$cpage" || bad "the cache page is not a tree page"
     mark
     cp "$cpage" "$d/before" || bad "cp"
-    chmod 500 "$XDG_CACHE_HOME/far2l/md" || bad "chmod"
+    chmod 500 "$XDG_CACHE_HOME/md-view" || bad "chmod"
     md_wd proj/o.md
     st=$rc
-    chmod 700 "$XDG_CACHE_HOME/far2l/md" || bad "chmod back"
+    chmod 700 "$XDG_CACHE_HOME/md-view" || bad "chmod back"
     [ "$st" = 0 ] || bad "exit $st for a reuse: $(cat "$d/err")"
     [ ! -s "$d/err" ] || bad "stderr for a reuse: $(cat "$d/err")"
     expect_open "$cpage"
@@ -2300,7 +2324,7 @@ case_cache_tree_reuse() {
     mkdir -p proj/node_modules && : > proj/node_modules/x.md
     md_wd --no-open proj/o.md
     marked || bad "the page was built again for a file outside the tree"
-    [ "$(cache_files)" = 1 ] || bad "want one page, got $(ls -A "$XDG_CACHE_HOME/far2l/md")"
+    [ "$(cache_files)" = 1 ] || bad "want one page, got $(ls -A "$XDG_CACHE_HOME/md-view")"
     no_tmp
     exit 0
 }
@@ -2436,8 +2460,8 @@ case_cache_tree_no_cache() {
     [ "$rc" = 0 ] || bad "exit $rc for --no-cache"
     [ -f "$cpage" ] || bad "no page at the cache path after --no-cache"
     if marked; then bad "--no-cache did not build the page again"; fi
-    grep -qF 'far2l-md-tree:' "$cpage" || bad "the --no-cache page is not a tree page"
-    [ "$(cache_files)" = 1 ] || bad "want one page, got $(ls -A "$XDG_CACHE_HOME/far2l/md")"
+    grep -qF 'md-view-tree:' "$cpage" || bad "the --no-cache page is not a tree page"
+    [ "$(cache_files)" = 1 ] || bad "want one page, got $(ls -A "$XDG_CACHE_HOME/md-view")"
     no_tmp
     exit 0
 }
@@ -2469,7 +2493,7 @@ case_page_tree_storage_try() {
     printf '# A\n' > proj/o.md || bad "write"
     tpage proj/o.md
     iife > "$d/script" || bad "no script"
-    grep -qF 'far2l-md-tree' "$d/script" || bad "no saved key far2l-md-tree"
+    grep -qF 'md-view-tree' "$d/script" || bad "no saved key md-view-tree"
     n=$(grep -c -F 'localStorage' "$d/script")
     [ "$n" -ge 3 ] || bad "want localStorage read, write and remove, got $n lines"
     bare=$(grep -F 'localStorage' "$d/script" | grep -v -F 'try {')
@@ -2506,7 +2530,7 @@ case_page_tree_narrow_rule() {
 }
 
 for c in flags_ok flag_width_bad flag_theme_bad flag_width_missing \
-         ini_valid ini_hostile ini_missing ini_browser_bad ini_browser_app_dir \
+         ini_valid ini_hostile ini_missing old_config_path_ignored ini_browser_bad ini_browser_app_dir \
          init_config_writes init_config_keeps print_association_ok \
          browser_no_shell browser_env_dash file_name_hostile \
          page_has_github_css page_width_rules page_start_values page_policy_unchanged \
