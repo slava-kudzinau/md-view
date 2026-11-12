@@ -1,0 +1,6 @@
+#!/bin/sh
+# Launcher of the md-view checkout. It runs lib/md-view of this repo with the
+# same arguments. It finds lib/ from the folder of this file and does not resolve
+# symlinks, so put this bin folder on PATH. Do not link to this file.
+dir=$(dirname -- "$0")
+exec "$dir/../lib/md-view" "$@"
