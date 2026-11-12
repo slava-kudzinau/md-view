@@ -24,16 +24,22 @@ check:
 	sh tests/hostile-dom.sh
 	sh tests/launcher.sh
 
+# install writes the launcher to a temp file, then install replaces BINDIR/md-view.
+# A symlink at BINDIR/md-view is replaced, and its target is not written.
 install:
 	@$(PREFIX_CHECK)
 	install -d '$(SHAREDIR)' '$(BINDIR)'
 	install -m 755 lib/md-view '$(SHAREDIR)/md-view'
 	install -m 644 $(VENDORED:%=lib/%) '$(SHAREDIR)/'
-	printf '#!/bin/sh\n' > '$(BINDIR)/md-view'
-	printf "exec '%s' \"\$$@\"\n" '$(SHAREDIR)/md-view' >> '$(BINDIR)/md-view'
-	chmod 755 '$(BINDIR)/md-view'
+	t=$$(mktemp "$${TMPDIR:-/tmp}/md-view.XXXXXX") || exit 1; \
+	printf '#!/bin/sh\n' > "$$t" && \
+	printf "exec '%s' \"\$$@\"\n" '$(SHAREDIR)/md-view' >> "$$t" && \
+	install -m 755 "$$t" '$(BINDIR)/md-view'; \
+	s=$$?; rm -f "$$t"; exit $$s
 
+# addprefix and addsuffix, not a pattern substitution: a % in PREFIX would be
+# replaced by a file name.
 uninstall:
 	@$(PREFIX_CHECK)
-	rm -f '$(BINDIR)/md-view' '$(SHAREDIR)/md-view' $(VENDORED:%='$(SHAREDIR)/%')
+	rm -f '$(BINDIR)/md-view' '$(SHAREDIR)/md-view' $(addsuffix ',$(addprefix '$(SHAREDIR)/,$(VENDORED)))
 	rmdir '$(SHAREDIR)' 2>/dev/null || true

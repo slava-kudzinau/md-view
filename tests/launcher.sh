@@ -2,7 +2,8 @@
 # Test of the launchers and of the install and uninstall targets of the Makefile.
 # A file name with a space must reach lib/md-view unchanged, through the checkout
 # launcher bin/md-view and through the installed launcher. make install and
-# make uninstall must refuse a PREFIX with a single quote. Each case runs in a
+# make uninstall must refuse a PREFIX with a single quote. make install must replace
+# a symlink at bin/md-view and must not write through it. Each case runs in a
 # subshell with a fresh HOME, XDG folders and TMPDIR under one temporary folder.
 #
 # usage: sh tests/launcher.sh
@@ -115,6 +116,30 @@ uninstall_only_own() {
     test -f "$pre/share/md-view/keep.txt" || fail "keep.txt was removed"
 }
 
+# uninstall_empty_folder: after a plain install, make uninstall removes bin/md-view and
+# the folder share/md-view, which then holds nothing.
+uninstall_empty_folder() {
+    fresh uninstall_empty_folder
+    pre="$d/pre"
+    make_run install "$pre"
+    make_run uninstall "$pre"
+    test ! -e "$pre/bin/md-view" || fail "bin/md-view stays after uninstall"
+    test ! -e "$pre/share/md-view" || fail "share/md-view stays after uninstall"
+}
+
+# install_over_symlink: a symlink at bin/md-view that points to another file is replaced.
+# make install leaves that file unchanged and makes bin/md-view a regular file of mode 755.
+install_over_symlink() {
+    fresh install_over_symlink
+    pre="$d/pre"
+    mkdir -p "$pre/bin" || fail "mkdir bin"
+    printf 'scratch\n' > "$d/scratch" || fail "write scratch"
+    ln -s "$d/scratch" "$pre/bin/md-view" || fail "make the symlink"
+    make_run install "$pre"
+    [ "$(cat "$d/scratch")" = scratch ] || fail "make install wrote through the symlink"
+    mode_is "$pre/bin/md-view" -rwxr-xr-x || fail "bin/md-view is not a regular file of mode 755"
+}
+
 # run CASE: runs one case in a subshell and prints its result.
 run() {
     if ( "$1" ) > "$tmp/$1.log" 2>&1; then
@@ -126,7 +151,7 @@ run() {
     fi
 }
 
-for c in checkout_space installed_space quote_refused uninstall_only_own; do
+for c in checkout_space installed_space quote_refused uninstall_only_own uninstall_empty_folder install_over_symlink; do
     run "$c"
 done
 
