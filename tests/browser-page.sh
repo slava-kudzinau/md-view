@@ -88,11 +88,11 @@ html_tag() {
     grep '^<html' "$page"
 }
 
-# expect_tag W T F: the page starts at width W and theme T; F is 1 when forced.
+# expect_tag W T P F: the page starts at width W, theme T and palette P; F is 1 when forced.
 # The tree attributes (from data-tree on) are not part of this check.
 expect_tag() {
-    want="<html lang=\"en\" data-start-width=\"$1\" data-start-theme=\"$2\">"
-    [ "$3" = 1 ] && want="<html lang=\"en\" data-start-width=\"$1\" data-start-theme=\"$2\" data-forced=\"1\">"
+    want="<html lang=\"en\" data-start-width=\"$1\" data-start-theme=\"$2\" data-start-palette=\"$3\">"
+    [ "$4" = 1 ] && want="<html lang=\"en\" data-start-width=\"$1\" data-start-theme=\"$2\" data-start-palette=\"$3\" data-forced=\"1\">"
     got=$(html_tag | sed 's/ data-tree=.*>$/>/')
     [ "$got" = "$want" ] || bad "html tag is [$got], want [$want]"
 }
@@ -139,29 +139,29 @@ case_flags_ok() {
     [ -s "$page" ] || bad "no page"
     [ ! -s "$d/out" ] || bad "--no-open printed: $(cat "$d/out")"
     [ ! -s "$d/err" ] || bad "stderr: $(cat "$d/err")"
-    expect_tag 70 auto 0
+    expect_tag 70 auto github 0
     for w in 60 70 80; do
         for t in light dark auto; do
             rm -f "$page"
             md --width "$w" --theme "$t" --no-open --out "$page" "$sample"
             [ "$rc" = 0 ] || bad "exit $rc for --width $w --theme $t"
-            expect_tag "$w" "$t" 1
+            expect_tag "$w" "$t" github 1
         done
     done
     rm -f "$page"
     md --theme dark --no-open --no-cache --browser firefox --out "$page" "$sample"
     [ "$rc" = 0 ] || bad "exit $rc for --theme dark --no-cache --browser firefox"
     [ ! -s "$d/err" ] || bad "stderr: $(cat "$d/err")"
-    expect_tag 70 dark 1
+    expect_tag 70 dark github 1
     rm -f "$page"
     md --width 80 --no-open --out "$page" "$sample"
-    expect_tag 80 auto 1
+    expect_tag 80 auto github 1
     # The flag beats the file.
     write_ini '[View]' 'width=60' 'theme=light'
     rm -f "$page"
     md --width 80 --no-open --out "$page" "$sample"
     [ "$rc" = 0 ] || bad "exit $rc with ini"
-    expect_tag 80 light 1
+    expect_tag 80 light github 1
     exit 0
 }
 
@@ -204,6 +204,67 @@ case_flag_width_missing() {
     exit 0
 }
 
+# --- palette ----------------------------------------------------------------
+
+case_palette_setting() {
+    fresh
+    md --palette tokyo --no-open --out "$page" "$sample"
+    [ "$rc" = 0 ] || bad "exit $rc for --palette tokyo"
+    [ ! -s "$d/err" ] || bad "stderr: $(cat "$d/err")"
+    expect_tag 70 auto tokyo 1
+    rm -f "$page"
+    md --palette github --no-open --out "$page" "$sample"
+    [ "$rc" = 0 ] || bad "exit $rc for --palette github"
+    expect_tag 70 auto github 1
+    rm -f "$page"
+    md --no-open --out "$page" "$sample"
+    [ "$rc" = 0 ] || bad "exit $rc with no palette"
+    expect_tag 70 auto github 0
+    # palette= in config.ini sets the start palette without forcing it.
+    write_ini '[View]' 'palette=tokyo'
+    rm -f "$page"
+    md --no-open --out "$page" "$sample"
+    [ "$rc" = 0 ] || bad "exit $rc with palette=tokyo in config.ini"
+    expect_tag 70 auto tokyo 0
+    # The flag beats the file.
+    rm -f "$page"
+    md --palette github --no-open --out "$page" "$sample"
+    [ "$rc" = 0 ] || bad "exit $rc for --palette github with config.ini"
+    expect_tag 70 auto github 1
+    # The last valid value wins. A value that is not accepted is ignored, so
+    # the page keeps tokyo and does not fall back to the default github.
+    write_ini '[View]' 'palette=github' 'palette=tokyo' 'palette=Tokyo'
+    rm -f "$page"
+    md --no-open --out "$page" "$sample"
+    [ "$rc" = 0 ] || bad "exit $rc for the last valid palette="
+    expect_tag 70 auto tokyo 0
+    # A hostile palette= value in config.ini is ignored, and runs nothing.
+    write_ini '[View]' 'palette=$(touch PWNED)' 'palette=`touch PWNED`' \
+        'palette="><script>alert(1)</script>' 'palette=tokyo;touch PWNED'
+    rm -f "$page"
+    md --no-open --out "$page" "$sample"
+    [ "$rc" = 0 ] || bad "exit $rc for a hostile palette="
+    [ ! -s "$d/err" ] || bad "stderr for a hostile palette=: $(cat "$d/err")"
+    expect_tag 70 auto github 0
+    if grep -q 'alert(1)' "$page"; then bad "a config value reached the page"; fi
+    if grep -q 'touch PWNED' "$page"; then bad "a config value reached the page"; fi
+    no_pwned
+    # A bad word for the flag gives usage, exit 2 and no page.
+    for v in Tokyo TOKYO '' 'tokyo ' 'tokyo;x' '"tokyo"' '<tokyo>' '$(touch PWNED)' \
+             '`touch PWNED`' night github,tokyo; do
+        rm -f "$page"
+        md --palette "$v" --no-open --out "$page" "$sample"
+        expect_usage "--palette [$v]"
+    done
+    no_pwned
+    grep -qF '[--palette github|tokyo]' "$d/err" || bad "usage does not list [--palette github|tokyo]"
+    # --palette with no value gives usage too.
+    rm -f "$page"
+    md --no-open --out "$page" "$sample" --palette
+    expect_usage "--palette with no value"
+    exit 0
+}
+
 # --- config.ini ------------------------------------------------------------
 
 case_ini_valid() {
@@ -229,19 +290,19 @@ case_ini_valid() {
     md --no-open --out "$page" "$sample"
     [ "$rc" = 0 ] || bad "exit $rc"
     [ ! -s "$d/err" ] || bad "stderr: $(cat "$d/err")"
-    expect_tag 80 light 0
+    expect_tag 80 light github 0
     # The last valid line of a key wins; a final line with no newline counts.
     printf '[View]\nwidth=80\nwidth=60\ntheme=dark' > "$ini"
     rm -f "$page"
     md --no-open --out "$page" "$sample"
     [ "$rc" = 0 ] || bad "exit $rc"
-    expect_tag 60 dark 0
+    expect_tag 60 dark github 0
     # An empty file gives the defaults.
     : > "$ini"
     rm -f "$page"
     md --no-open --out "$page" "$sample"
     [ "$rc" = 0 ] || bad "exit $rc for an empty ini"
-    expect_tag 70 auto 0
+    expect_tag 70 auto github 0
     exit 0
 }
 
@@ -258,7 +319,7 @@ case_ini_hostile() {
         'browser=`touch PWNED`'
     md --no-open --out "$page" "$sample"
     [ "$rc" = 0 ] || bad "exit $rc"
-    expect_tag 70 auto 0
+    expect_tag 70 auto github 0
     if grep -q 'alert(1)' "$page"; then bad "a config value reached the page"; fi
     if grep -q 'touch PWNED' "$page"; then bad "a config value reached the page"; fi
     [ "$(stderr_lines)" = 1 ] || bad "want one stderr line, got: $(cat "$d/err")"
@@ -268,7 +329,7 @@ case_ini_hostile() {
     rm -f "$page"
     md --no-open --out "$page" "$sample"
     [ "$rc" = 0 ] || bad "exit $rc for a binary ini"
-    expect_tag 70 auto 0
+    expect_tag 70 auto github 0
     no_pwned
     exit 0
 }
@@ -279,14 +340,14 @@ case_ini_missing() {
     md --no-open --out "$page" "$sample"
     [ "$rc" = 0 ] || bad "exit $rc"
     [ ! -s "$d/err" ] || bad "stderr: $(cat "$d/err")"
-    expect_tag 70 auto 0
+    expect_tag 70 auto github 0
     [ ! -e "$ini" ] || bad "a normal run made config.ini"
     # An ini that is a folder, or that cannot be read, gives the defaults too.
     mkdir -p "$ini" || bad "mkdir"
     rm -f "$page"
     md --no-open --out "$page" "$sample"
     [ "$rc" = 0 ] || bad "exit $rc for an ini folder"
-    expect_tag 70 auto 0
+    expect_tag 70 auto github 0
     rmdir "$ini" || bad "rmdir"
     write_ini '[View]' 'width=80'
     chmod 000 "$ini" || bad "chmod"
@@ -294,7 +355,7 @@ case_ini_missing() {
         rm -f "$page"
         md --no-open --out "$page" "$sample"
         [ "$rc" = 0 ] || bad "exit $rc for an unreadable ini"
-        expect_tag 70 auto 0
+        expect_tag 70 auto github 0
     fi
     chmod 600 "$ini"
     exit 0
@@ -309,15 +370,15 @@ case_old_config_path_ignored() {
     printf '[View]\nwidth=80\n' > "$old_ini" || bad "write the old config"
     md --no-open --out "$page" "$sample"
     [ "$rc" = 0 ] || bad "exit $rc"
-    expect_tag 70 auto 0
-    grep -qxF '<meta name="md-view-key" content="w=70;t=auto;f=0;tr=on;r=dir;d=6;n=500">' "$page" \
+    expect_tag 70 auto github 0
+    grep -qxF '<meta name="md-view-key" content="w=70;t=auto;p=github;f=0;tr=on;r=dir;d=6;n=500">' "$page" \
         || bad "the old config path set the width"
     write_ini '[View]' 'width=80'
     rm -f "$page"
     md --no-open --out "$page" "$sample"
     [ "$rc" = 0 ] || bad "exit $rc with config.ini"
-    expect_tag 80 auto 0
-    grep -qxF '<meta name="md-view-key" content="w=80;t=auto;f=0;tr=on;r=dir;d=6;n=500">' "$page" \
+    expect_tag 80 auto github 0
+    grep -qxF '<meta name="md-view-key" content="w=80;t=auto;p=github;f=0;tr=on;r=dir;d=6;n=500">' "$page" \
         || bad "config.ini did not set the width"
     exit 0
 }
@@ -334,7 +395,7 @@ case_ini_browser_bad() {
         [ -s "$page" ] || bad "no page for browser=[$v]"
         [ "$(stderr_lines)" = 1 ] || bad "want one stderr line for browser=[$v], got: $(cat "$d/err")"
         grep -q 'browser' "$d/err" || bad "stderr does not name the browser for [$v]"
-        expect_tag 70 auto 0
+        expect_tag 70 auto github 0
     done
     # Accepted values give no message.
     for v in auto firefox chrome safari /bin/sh; do
@@ -374,18 +435,19 @@ case_init_config_writes() {
     [ "$rc" = 0 ] || bad "exit $rc"
     [ -f "$ini" ] || bad "no file at $ini"
     grep -qxF "$ini" "$d/out" || bad "path not printed: $(cat "$d/out")"
-    for l in '[View]' 'width=70' 'theme=auto' 'browser=auto' 'tree=on' 'root=dir' 'tree_depth=6' 'tree_max_files=500'; do
+    for l in '[View]' 'width=70' 'theme=auto' 'palette=github' 'browser=auto' 'tree=on' 'root=dir' 'tree_depth=6' 'tree_max_files=500'; do
         grep -qxF "$l" "$ini" || bad "sample has no line $l"
     done
     grep -q '^# .*found' "$ini" || bad "sample has no line with the browsers found"
+    grep -q '^# palette: .*github.*tokyo' "$ini" || bad "sample has no comment for palette"
     # Every other line is a comment or empty.
-    others=$(grep -v -x -e '\[View\]' -e 'width=70' -e 'theme=auto' -e 'browser=auto' -e 'tree=on' -e 'root=dir' -e 'tree_depth=6' -e 'tree_max_files=500' -e '' -e '[#;].*' "$ini")
+    others=$(grep -v -x -e '\[View\]' -e 'width=70' -e 'theme=auto' -e 'palette=github' -e 'browser=auto' -e 'tree=on' -e 'root=dir' -e 'tree_depth=6' -e 'tree_max_files=500' -e '' -e '[#;].*' "$ini")
     [ -z "$others" ] || bad "sample has lines that are not comments: $others"
     # The sample gives the defaults and no message.
     md --no-open --out "$page" "$sample"
     [ "$rc" = 0 ] || bad "exit $rc with the sample"
     [ ! -s "$d/err" ] || bad "stderr with the sample: $(cat "$d/err")"
-    expect_tag 70 auto 0
+    expect_tag 70 auto github 0
     exit 0
 }
 
@@ -558,7 +620,7 @@ case_file_name_hostile() {
         grep -qxF "<title>$title</title>" "$page" || bad "title not escaped for [$n]"
         if grep -qF '<script>alert(1)' "$page"; then bad "the name reached the page raw for [$n]"; fi
         if grep -qF '<zq>' "$page"; then bad "a raw <zq> reached the page for [$n]"; fi
-        expect_tag 70 auto 0
+        expect_tag 70 auto github 0
     done
     # The same names in the work folder, given as relative paths.
     cd "$d/a dir \"<zq>\$(touch PWNED)" || bad "cd"
@@ -645,21 +707,21 @@ case_page_start_values() {
     fresh
     md --no-open --out "$page" "$sample"
     [ "$rc" = 0 ] || bad "exit $rc"
-    expect_tag 70 auto 0
-    grep -qxF '<meta name="md-view-key" content="w=70;t=auto;f=0;tr=on;r=dir;d=6;n=500">' "$page" \
+    expect_tag 70 auto github 0
+    grep -qxF '<meta name="md-view-key" content="w=70;t=auto;p=github;f=0;tr=on;r=dir;d=6;n=500">' "$page" \
         || bad "no page key for the defaults"
     rm -f "$page"
     md --width 60 --theme light --no-open --out "$page" "$sample"
     [ "$rc" = 0 ] || bad "exit $rc for a flag run"
-    expect_tag 60 light 1
-    grep -qxF '<meta name="md-view-key" content="w=60;t=light;f=1;tr=on;r=dir;d=6;n=500">' "$page" \
+    expect_tag 60 light github 1
+    grep -qxF '<meta name="md-view-key" content="w=60;t=light;p=github;f=1;tr=on;r=dir;d=6;n=500">' "$page" \
         || bad "no page key for a forced run"
     rm -f "$page"
     write_ini '[View]' 'width=80' 'theme=dark'
     md --no-open --out "$page" "$sample"
     [ "$rc" = 0 ] || bad "exit $rc with ini"
-    expect_tag 80 dark 0
-    grep -qxF '<meta name="md-view-key" content="w=80;t=dark;f=0;tr=on;r=dir;d=6;n=500">' "$page" \
+    expect_tag 80 dark github 0
+    grep -qxF '<meta name="md-view-key" content="w=80;t=dark;p=github;f=0;tr=on;r=dir;d=6;n=500">' "$page" \
         || bad "no page key from the ini file"
     grep -qF "getAttribute('data-start-width')" "$page" || bad "the page script does not read data-start-width"
     grep -qF "getAttribute('data-start-theme')" "$page" || bad "the page script does not read data-start-theme"
@@ -977,7 +1039,7 @@ case_cache_path_stable() {
     expect_open "$cpage"
     [ "$(cache_files)" = 1 ] || bad "want one file in the cache folder, got $(ls -A "$XDG_CACHE_HOME/md-view")"
     [ -z "$(ls -A "$TMPDIR")" ] || bad "a page was made in TMPDIR: $(ls -A "$TMPDIR")"
-    grep -qxF '<meta name="md-view-key" content="w=70;t=auto;f=0;tr=on;r=dir;d=6;n=500">' "$cpage" || bad "no page key"
+    grep -qxF '<meta name="md-view-key" content="w=70;t=auto;p=github;f=0;tr=on;r=dir;d=6;n=500">' "$cpage" || bad "no page key"
     # The same file by an absolute path, by another relative path and through a
     # linked folder gives the same page.
     md --no-cache --no-open "$d/work/s.md"
@@ -1107,8 +1169,8 @@ case_cache_rebuild_on_flag() {
     md --width 80 --no-open s.md
     [ "$rc" = 0 ] || bad "exit $rc for --width 80"
     if marked; then bad "the page was not built again for --width 80"; fi
-    grep -qxF '<meta name="md-view-key" content="w=80;t=auto;f=1;tr=on;r=dir;d=6;n=500">' "$cpage" || bad "no key for --width 80"
-    expect_tag_at "$cpage" 80 auto 1
+    grep -qxF '<meta name="md-view-key" content="w=80;t=auto;p=github;f=1;tr=on;r=dir;d=6;n=500">' "$cpage" || bad "no key for --width 80"
+    expect_tag_at "$cpage" 80 auto github 1
     mark
     md --width 80 --no-open s.md
     marked || bad "no reuse for the same flag"
@@ -1121,15 +1183,38 @@ case_cache_rebuild_on_flag() {
     mark
     md --no-open s.md
     if marked; then bad "the page was not built again for no flag after a forced run"; fi
-    grep -qxF '<meta name="md-view-key" content="w=70;t=auto;f=0;tr=on;r=dir;d=6;n=500">' "$cpage" || bad "no key for no flag"
+    grep -qxF '<meta name="md-view-key" content="w=70;t=auto;p=github;f=0;tr=on;r=dir;d=6;n=500">' "$cpage" || bad "no key for no flag"
     exit 0
 }
 
-# expect_tag_at PAGE W T F: as expect_tag, for another page.
+# expect_tag_at PAGE W T P F: as expect_tag, for another page.
 expect_tag_at() {
     page=$1
     shift
     expect_tag "$@"
+}
+
+case_palette_cache() {
+    fresh
+    cp "$sample" s.md || bad "cp"
+    old s.md
+    cache_page s.md
+    # Both runs are forced to the same theme, so only the palette differs.
+    md --palette github --theme dark --no-open s.md
+    [ "$rc" = 0 ] || bad "exit $rc"
+    mark
+    md --palette tokyo --theme dark --no-open s.md
+    [ "$rc" = 0 ] || bad "exit $rc for --palette tokyo"
+    if marked; then bad "the github cache page was reused for tokyo"; fi
+    expect_tag_at "$cpage" 70 dark tokyo 1
+    mark
+    md --palette tokyo --theme dark --no-open s.md
+    marked || bad "no reuse of the tokyo cache page"
+    md --palette github --theme dark --no-open s.md
+    if marked; then bad "the tokyo cache page was reused for github"; fi
+    expect_tag_at "$cpage" 70 dark github 1
+    no_tmp
+    exit 0
 }
 
 case_cache_rebuild_on_ini() {
@@ -1175,7 +1260,7 @@ case_cache_rebuild_on_ini() {
     write_ini '[View]' 'width=60'
     old "$ini"
     md --no-open s.md
-    grep -qxF '<meta name="md-view-key" content="w=60;t=auto;f=0;tr=on;r=dir;d=6;n=500">' "$cpage" || bad "no key from the new ini"
+    grep -qxF '<meta name="md-view-key" content="w=60;t=auto;p=github;f=0;tr=on;r=dir;d=6;n=500">' "$cpage" || bad "no key from the new ini"
     exit 0
 }
 
@@ -2129,14 +2214,14 @@ case_tree_page_attrs() {
     mkdir -p 'my proj' || bad "mkdir"
     : > 'my proj/a.md'; : > 'my proj/b.md'
     tpage 'my proj/b.md'
-    want='<html lang="en" data-start-width="70" data-start-theme="auto" data-tree="on" data-root="my%20proj" data-files="2" data-cap="0">'
+    want='<html lang="en" data-start-width="70" data-start-theme="auto" data-start-palette="github" data-tree="on" data-root="my%20proj" data-files="2" data-cap="0">'
     [ "$(html_tag)" = "$want" ] || bad "html is $(html_tag)"
     # 600 files, the opened file is file 550: 500 files and the cap.
     mkdir big || bad "mkdir"
     many big 600
     printf '# file-550-zq\n' > big/f550.md || bad "write"
     tpage big/f550.md
-    want='<html lang="en" data-start-width="70" data-start-theme="auto" data-tree="on" data-root="big" data-files="500" data-cap="1">'
+    want='<html lang="en" data-start-width="70" data-start-theme="auto" data-start-palette="github" data-tree="on" data-root="big" data-files="500" data-cap="1">'
     [ "$(html_tag)" = "$want" ] || bad "html is $(html_tag)"
     [ "$(file_tags | sed -n 1p)" = '<script type="text/markdown" id="md" data-path="f550.md">' ] \
         || bad "the opened file is not first: $(file_tags | sed -n 1p)"
@@ -2145,16 +2230,16 @@ case_tree_page_attrs() {
     [ "$(tree_index | wc -l | tr -d ' ')" = 501 ] || bad "index has $(tree_index | wc -l) lines"
     # One-file mode: data-tree="off" and the reason.
     tpage --tree off 'my proj/a.md'
-    [ "$(html_tag)" = '<html lang="en" data-start-width="70" data-start-theme="auto" data-tree="off" data-tree-why="flag">' ] \
+    [ "$(html_tag)" = '<html lang="en" data-start-width="70" data-start-theme="auto" data-start-palette="github" data-tree="off" data-tree-why="flag">' ] \
         || bad "--tree off html is $(html_tag)"
     write_ini '[View]' 'tree=off'
     tpage 'my proj/a.md'
-    [ "$(html_tag)" = '<html lang="en" data-start-width="70" data-start-theme="auto" data-tree="off" data-tree-why="ini">' ] \
+    [ "$(html_tag)" = '<html lang="en" data-start-width="70" data-start-theme="auto" data-start-palette="github" data-tree="off" data-tree-why="ini">' ] \
         || bad "tree=off html is $(html_tag)"
     rm -f "$ini"
     printf '# home\n' > "$HOME/h.md" || bad "write"
     tpage "$HOME/h.md"
-    [ "$(html_tag)" = '<html lang="en" data-start-width="70" data-start-theme="auto" data-tree="off" data-tree-why="home">' ] \
+    [ "$(html_tag)" = '<html lang="en" data-start-width="70" data-start-theme="auto" data-start-palette="github" data-tree="off" data-tree-why="home">' ] \
         || bad "home html is $(html_tag)"
     exit 0
 }
@@ -2239,9 +2324,9 @@ case_tree_off_same_page() {
     strip "$d/base.html" > "$d/a"
     strip "$page" > "$d/b"
     cmp -s "$d/a" "$d/b" || bad "the pages differ: $(diff "$d/a" "$d/b" | head -20)"
-    [ "$(html_tag)" = "$(grep '^<html ' "$d/base.html" | sed 's/>$//') data-tree=\"off\" data-tree-why=\"flag\">" ] \
+    [ "$(html_tag)" = "$(grep '^<html ' "$d/base.html" | sed 's/>$//') data-start-palette=\"github\" data-tree=\"off\" data-tree-why=\"flag\">" ] \
         || bad "html line is $(html_tag)"
-    [ "$(grep '^<meta name="md-view-key" ' "$page")" = "$(grep '^<meta name="md-view-key" ' "$d/base.html" | sed 's/">$//');tr=off;r=dir;d=6;n=500\">" ] \
+    [ "$(grep '^<meta name="md-view-key" ' "$page")" = "$(grep '^<meta name="md-view-key" ' "$d/base.html" | sed -e 's/;f=/;p=github;f=/' -e 's/">$//');tr=off;r=dir;d=6;n=500\">" ] \
         || bad "key line is $(grep '^<meta name="md-view-key" ' "$page")"
     # The page script is there in both.
     [ "$(grep -c '^(function () {$' "$page")" = 1 ] || bad "no page script"
@@ -2254,7 +2339,7 @@ case_tree_key_line() {
     mkdir -p proj/.git proj/sub || bad "mkdir"
     : > proj/a.md; : > proj/sub/o.md
     tpage proj/sub/o.md
-    key='<meta name="md-view-key" content="w=70;t=auto;f=0;tr=on;r=dir;d=6;n=500">'
+    key='<meta name="md-view-key" content="w=70;t=auto;p=github;f=0;tr=on;r=dir;d=6;n=500">'
     grep -qxF "$key" "$page" || bad "key: $(grep md-view-key "$page")"
     # The tree state goes after the ini comment, in the head.
     state_line proj/sub/o.md
@@ -2264,14 +2349,14 @@ case_tree_key_line() {
     [ "$(grep -c 'md-view-tree:' "$page")" = 1 ] || bad "want one tree state line"
     write_ini '[View]' 'root=repo' 'tree_depth=3' 'tree_max_files=7'
     tpage proj/sub/o.md
-    grep -qxF '<meta name="md-view-key" content="w=70;t=auto;f=0;tr=on;r=repo;d=3;n=7">' "$page" \
+    grep -qxF '<meta name="md-view-key" content="w=70;t=auto;p=github;f=0;tr=on;r=repo;d=3;n=7">' "$page" \
         || bad "key with ini: $(grep md-view-key "$page")"
     state_line proj/sub/o.md
     [ "$sline" = '<!-- md-view-tree: '"$ssum"' 2 -->' ] || bad "count in [$sline]"
     head_of "$page" | grep -qxF "$sline" || bad "no tree state [$sline] for root=repo"
     write_ini '[View]' 'tree_depth=99' 'tree_max_files=99999'
     tpage proj/sub/o.md
-    grep -qxF '<meta name="md-view-key" content="w=70;t=auto;f=0;tr=on;r=dir;d=12;n=2000">' "$page" \
+    grep -qxF '<meta name="md-view-key" content="w=70;t=auto;p=github;f=0;tr=on;r=dir;d=12;n=2000">' "$page" \
         || bad "key with ceilings: $(grep md-view-key "$page")"
     write_ini '[View]' 'tree_depth=<script>' 'tree_max_files=-1' 'root=x"y'
     tpage proj/sub/o.md
@@ -2286,7 +2371,7 @@ case_tree_key_line() {
     head_of "$page" | grep -qxF "$sline" || bad "no capped tree state [$sline]"
     rm -f "$ini"
     tpage --tree off proj/sub/o.md
-    grep -qxF '<meta name="md-view-key" content="w=70;t=auto;f=0;tr=off;r=dir;d=6;n=500">' "$page" \
+    grep -qxF '<meta name="md-view-key" content="w=70;t=auto;p=github;f=0;tr=off;r=dir;d=6;n=500">' "$page" \
         || bad "--tree off key: $(grep md-view-key "$page")"
     if grep -qF 'md-view-tree:' "$page"; then bad "a one-file page has a tree state"; fi
     exit 0
@@ -2531,7 +2616,7 @@ case_page_tree_narrow_rule() {
     exit 0
 }
 
-for c in flags_ok flag_width_bad flag_theme_bad flag_width_missing \
+for c in flags_ok flag_width_bad flag_theme_bad flag_width_missing palette_setting \
          ini_valid ini_hostile ini_missing old_config_path_ignored ini_browser_bad ini_browser_app_dir \
          init_config_writes init_config_keeps print_association_ok \
          browser_no_shell browser_env_dash file_name_hostile \
@@ -2540,7 +2625,7 @@ for c in flags_ok flag_width_bad flag_theme_bad flag_width_missing \
          page_gear_markup page_print_hidden page_storage_try_catch page_keys_guard page_paste_line \
          vendor_no_close_tag vendor_sha384 \
          cache_path_stable cache_two_files cache_reuse cache_rebuild_on_edit cache_rebuild_on_flag \
-         cache_rebuild_on_ini cache_no_cache_flag cache_dir_mode cache_dir_fallback cache_name_safe \
+         cache_rebuild_on_ini palette_cache cache_no_cache_flag cache_dir_mode cache_dir_fallback cache_name_safe \
          out_direct_write cache_umask_restored cache_tmp_removed_on_error \
          tree_ini_keys tree_ini_ceiling tree_ini_hostile tree_flag tree_off_no_scan \
          root_dir root_repo root_repo_none root_home_off \
