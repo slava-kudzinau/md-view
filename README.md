@@ -41,6 +41,7 @@ md-view [options] <file.md>
 | `--no-open` | Write the page and do not start a browser. |
 | `--width 60\|70\|80` | Start width of the text column, in percent. |
 | `--theme light\|dark\|auto` | Start theme. `auto` follows the system. |
+| `--palette github\|tokyo` | Start palette. See [Palettes](#palettes). |
 | `--browser auto\|firefox\|chrome\|safari\|<path>` | The browser. A path is an absolute path to a program. |
 | `--tree on\|off` | Show the file tree of the root folder, or one file only. |
 | `--list-tree` | Print the root and the tree files. Write no page. |
@@ -48,9 +49,17 @@ md-view [options] <file.md>
 | `--init-config` | Write a commented sample `config.ini`, and print its path. |
 | `--print-association` | Print the far2l File associations entry. |
 
-The page goes to `${XDG_CACHE_HOME:-$HOME/.cache}/md-view/` and md-view reuses it while no input changed. In the page, press `t` to change the theme and `w` to change the width. Press `b` to open or close the file tree. Press `?` for help.
+The page goes to `${XDG_CACHE_HOME:-$HOME/.cache}/md-view/` and md-view reuses it while no input changed. In the page, press `t` to change the theme, `s` to change the palette and `w` to change the width. Press `b` to open or close the file tree. Press `?` for help.
 
 A diagram needs internet, because mermaid loads from a CDN. Without it, the page shows the source of the diagram.
+
+## Palettes
+
+A palette is a set of colors for the page, the code blocks and the diagrams. The default is `github`, the GitHub look. The palette `tokyo` has two versions: Tokyo Night, a dark version, and Tokyo Day, a light version. The theme picks the version. The theme `dark` gives Tokyo Night. The theme `light` gives Tokyo Day. The theme `auto` follows the system and changes with it.
+
+To pick a palette, use `--palette tokyo`, or write `palette=tokyo` in the section `[View]` of `config.ini`. In the page, press `s`, or use the row Style in the settings. The page remembers your choice.
+
+The `tokyo` colors come from [folke/tokyonight.nvim](https://github.com/folke/tokyonight.nvim), commit `cdc07ac78467a233fd62c493de29a17e0cf2b2b6`, files `extras/lua/tokyonight_night.lua` and `extras/lua/tokyonight_day.lua`. That project has the Apache License 2.0. md-view uses the color values only, and no code of the project.
 
 ## Configuration
 
@@ -60,6 +69,7 @@ The file is `${XDG_CONFIG_HOME:-$HOME/.config}/md-view/config.ini`. Run `md-view
 |---|---|---|
 | `width` | `60`, `70`, `80` | `70` |
 | `theme` | `light`, `dark`, `auto` | `auto` |
+| `palette` | `github`, `tokyo` | `github` |
 | `browser` | `auto`, `firefox`, `chrome`, `safari`, or an absolute path to a program | `auto` |
 | `tree` | `on`, `off` | `on` |
 | `root` | `dir` is the folder of the file. `repo` is the nearest folder upward with `.git`. | `dir` |
