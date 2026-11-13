@@ -941,6 +941,12 @@ HTML
     printf '\n</style>\n<style id="hl-dark" media="not all">\n'
     cat "$self_dir/hljs-github-dark.min.css"
     printf '\n</style>\n'
+    # The page style ends with the palette layer: the lines that start with
+    # html[data-palette]. They set colors only, from the --p- variables, and only
+    # when html has the attribute, so the github look does not change. Each one
+    # takes the selector of the vendored rule that sets the same property and adds
+    # the prefix, so it is the more specific one. The tree rules of the layer are
+    # in the tree block below.
     cat <<'HTML'
 <style id="page">
 body { margin: 0; padding: 2em 16px; }
@@ -966,6 +972,45 @@ pre.mermaid[data-processed] { text-align: center; overflow-x: auto; }
 #md-pop button[aria-pressed="true"] { border-width: 2px; font-weight: 600 }
 #md-pop .md-notice { color: #cf222e; color: light-dark(#cf222e, #ff7b72) }
 #md-pop pre.md-paste { margin: 4px 0 8px; padding: 6px; border: 1px solid GrayText; border-radius: 4px; background: none; font: 12px/1.4 ui-monospace, Menlo, monospace; white-space: pre; overflow-x: auto }
+html[data-palette] body, html[data-palette] .markdown-body { background-color: var(--p-bg); color: var(--p-fg) }
+html[data-palette] .markdown-body a { color: var(--p-cyan) }
+html[data-palette] .markdown-body h1, html[data-palette] .markdown-body h2, html[data-palette] .markdown-body h3, html[data-palette] .markdown-body h4, html[data-palette] .markdown-body h5, html[data-palette] .markdown-body h6 { color: var(--p-blue) }
+html[data-palette] .markdown-body h1, html[data-palette] .markdown-body h2 { border-bottom-color: var(--p-border) }
+html[data-palette] .markdown-body hr { background-color: var(--p-border) }
+html[data-palette] .markdown-body blockquote { color: var(--p-fg-dark); border-left-color: var(--p-border) }
+html[data-palette] .markdown-body table th, html[data-palette] .markdown-body table td { border-color: var(--p-border) }
+html[data-palette] .markdown-body table tr { background-color: var(--p-bg); border-top-color: var(--p-border) }
+html[data-palette] .markdown-body table tr:nth-child(2n) { background-color: var(--p-bg-dark) }
+html[data-palette] .markdown-body code { background-color: var(--p-bg-hl); color: var(--p-orange) }
+html[data-palette] .markdown-body pre { background-color: var(--p-bg-dark); border-color: var(--p-border) }
+html[data-palette] .markdown-body pre.mermaid { background: none }
+html[data-palette] .markdown-body pre code { background: none; color: var(--p-fg) }
+html[data-palette] .markdown-body kbd { background-color: var(--p-bg-hl); border-color: var(--p-border); color: var(--p-fg) }
+html[data-palette] .markdown-body mark { background-color: var(--p-bg-visual); color: var(--p-fg) }
+html[data-palette] ::selection { background-color: var(--p-bg-visual) }
+html[data-palette] #md-gear { background-color: var(--p-bg-dark); color: var(--p-fg-dark); border-color: var(--p-border) }
+html[data-palette] #md-pop { background-color: var(--p-bg-dark); color: var(--p-fg); border-color: var(--p-border) }
+html[data-palette] #md-pop button { background-color: var(--p-bg-hl); color: var(--p-fg); border-color: var(--p-border) }
+html[data-palette] #md-pop button[aria-pressed="true"] { border-color: var(--p-blue) }
+html[data-palette] #md-pop .md-notice { color: var(--p-red) }
+html[data-palette] .mermaid-error { color: var(--p-red) }
+html[data-palette] #md-pop pre.md-paste { color: var(--p-fg-dark); border-color: var(--p-border) }
+html[data-palette] .hljs { color: var(--p-fg); background: none }
+html[data-palette] .hljs-comment, html[data-palette] .hljs-quote { color: var(--p-comment); font-style: italic }
+html[data-palette] .hljs-keyword, html[data-palette] .hljs-selector-tag { color: var(--p-purple) }
+html[data-palette] .hljs-built_in, html[data-palette] .hljs-type, html[data-palette] .hljs-title.class_ { color: var(--p-blue1) }
+html[data-palette] .hljs-title, html[data-palette] .hljs-title.function_, html[data-palette] .hljs-section { color: var(--p-blue) }
+html[data-palette] .hljs-string, html[data-palette] .hljs-regexp, html[data-palette] .hljs-addition { color: var(--p-green) }
+html[data-palette] .hljs-number, html[data-palette] .hljs-literal, html[data-palette] .hljs-symbol, html[data-palette] .hljs-bullet { color: var(--p-orange) }
+html[data-palette] .hljs-variable, html[data-palette] .hljs-template-variable, html[data-palette] .hljs-params, html[data-palette] .hljs-subst { color: var(--p-fg) }
+html[data-palette] .hljs-attr, html[data-palette] .hljs-attribute, html[data-palette] .hljs-property { color: var(--p-green1) }
+html[data-palette] .hljs-name, html[data-palette] .hljs-tag, html[data-palette] .hljs-deletion { color: var(--p-red) }
+html[data-palette] .hljs-operator, html[data-palette] .hljs-punctuation { color: var(--p-blue5) }
+html[data-palette] .hljs-meta, html[data-palette] .hljs-selector-class, html[data-palette] .hljs-selector-id, html[data-palette] .hljs-selector-attr, html[data-palette] .hljs-selector-pseudo { color: var(--p-cyan) }
+html[data-palette] .hljs-doctag, html[data-palette] .hljs-template-tag { color: var(--p-purple) }
+html[data-palette] .hljs-code, html[data-palette] .hljs-formula { color: var(--p-fg) }
+html[data-palette] .hljs-emphasis { font-style: italic; color: inherit }
+html[data-palette] .hljs-strong { font-weight: bold; color: inherit }
 HTML
     # The panel CSS and markup are in tree mode only. In one-file mode the page
     # stays the one-file page.
@@ -984,6 +1029,11 @@ html[data-panel="closed"] #md-tree-toggle { left: 8px }
 #md-tree-panel a[aria-current="page"] { font-weight: 600; background: Highlight; color: HighlightText }
 #md-tree-panel a.md-off { opacity: .5 }
 #md-tree-panel .md-cap { margin-top: 6px; font-style: italic; opacity: .7 }
+html[data-palette] #md-tree-panel { background-color: var(--p-bg-dark); color: var(--p-fg-dark); border-color: var(--p-border) }
+html[data-palette] #md-tree-panel .md-root { color: var(--p-fg) }
+html[data-palette] #md-tree-panel a:hover, html[data-palette] #md-tree-panel a:focus { color: var(--p-blue) }
+html[data-palette] #md-tree-panel a[aria-current="page"] { background-color: var(--p-bg-visual); color: var(--p-fg) }
+html[data-palette] #md-tree-toggle { background-color: var(--p-bg-dark); color: var(--p-fg-dark); border-color: var(--p-border) }
 @media (max-width: 699px) {
   html[data-panel] body { padding-left: 16px }
   #md-tree-panel, #md-tree-toggle { display: none }

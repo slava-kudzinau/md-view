@@ -2317,9 +2317,10 @@ case_tree_off_same_page() {
     sh "$d/base/md-view" --no-open --out "$d/old.html" s.md 2> "$d/err" || bad "the BASE script failed: $(cat "$d/err")"
     sed 's/far2l-md-/md-view-/g' "$d/old.html" > "$d/base.html" || bad "sed"
     tpage --tree off s.md
-    # Only the html line, the key line and the page script may differ.
+    # Only the html line, the key line, the lines of the palette layer and the
+    # page script may differ.
     strip() {
-        sed -e '/^<html /d' -e '/^<meta name="md-view-key" /d' -e '/^(function () {$/,/^})();$/d' "$1"
+        sed -e '/^<html /d' -e '/^<meta name="md-view-key" /d' -e '/^html\[data-palette\] /d' -e '/^(function () {$/,/^})();$/d' "$1"
     }
     strip "$d/base.html" > "$d/a"
     strip "$page" > "$d/b"
@@ -2330,7 +2331,7 @@ case_tree_off_same_page() {
         || bad "key line is $(grep '^<meta name="md-view-key" ' "$page")"
     # The page script is there in both.
     [ "$(grep -c '^(function () {$' "$page")" = 1 ] || bad "no page script"
-    [ "$(head_of "$page" | wc -l)" = "$(head_of "$d/base.html" | wc -l)" ] || bad "the head has new lines"
+    [ "$(head_of "$page" | grep -v '^html\[data-palette\] ' | wc -l)" = "$(head_of "$d/base.html" | wc -l)" ] || bad "the head has new lines"
     exit 0
 }
 
@@ -2616,6 +2617,128 @@ case_page_tree_narrow_rule() {
     exit 0
 }
 
+# --- the color layer of the palette ----------------------------------------
+
+# layer_rows FILE: reads rows from stdin, each "SELECTORS|DECLARATIONS". FILE
+# holds the layer, one rule on each line. The rule with exactly these
+# selectors, each one after the prefix html[data-palette], must hold each
+# declaration. A declaration is "property:key" (the value is var(--p-key)) or
+# "property:word" for none, inherit, italic and bold.
+layer_rows() {
+    while IFS='|' read -r sels decls; do
+        [ -n "$sels" ] || continue
+        head="html[data-palette] $(printf '%s' "$sels" | sed 's/, /, html[data-palette] /g')"
+        n=$(sed 's/ { .*//' "$1" | grep -n -x -F -- "$head" | cut -d: -f1)
+        [ "$(printf '%s\n' "$n" | grep -c .)" = 1 ] || bad "want one layer rule for [$sels]"
+        rule=$(sed -n "${n}p" "$1")
+        for t in $decls; do
+            prop=${t%%:*}
+            val=${t#*:}
+            case $val in
+                none|inherit|italic|bold) decl="$prop: $val" ;;
+                *) decl="$prop: var(--p-$val)" ;;
+            esac
+            case $rule in
+                *"{ $decl;"*|*"{ $decl }"*|*"; $decl;"*|*"; $decl }"*) ;;
+                *) bad "the rule for [$sels] has no [$decl]: $rule" ;;
+            esac
+        done
+    done
+}
+
+# layer_common FILE: the rows of "Themed parts" and "Code tokens" that every
+# page has. The row for pre.mermaid keeps a diagram off the code block color.
+layer_common() {
+    layer_rows "$1" <<'ROWS'
+body, .markdown-body|background-color:bg color:fg
+.markdown-body a|color:cyan
+.markdown-body h1, .markdown-body h2, .markdown-body h3, .markdown-body h4, .markdown-body h5, .markdown-body h6|color:blue
+.markdown-body h1, .markdown-body h2|border-bottom-color:border
+.markdown-body hr|background-color:border
+.markdown-body blockquote|color:fg-dark border-left-color:border
+.markdown-body table th, .markdown-body table td|border-color:border
+.markdown-body table tr|background-color:bg border-top-color:border
+.markdown-body table tr:nth-child(2n)|background-color:bg-dark
+.markdown-body code|background-color:bg-hl color:orange
+.markdown-body pre|background-color:bg-dark border-color:border
+.markdown-body pre.mermaid|background:none
+.markdown-body pre code|background:none color:fg
+.markdown-body kbd|background-color:bg-hl border-color:border color:fg
+.markdown-body mark|background-color:bg-visual color:fg
+::selection|background-color:bg-visual
+#md-gear|background-color:bg-dark color:fg-dark border-color:border
+#md-pop|background-color:bg-dark color:fg border-color:border
+#md-pop button|background-color:bg-hl color:fg border-color:border
+#md-pop button[aria-pressed="true"]|border-color:blue
+#md-pop .md-notice|color:red
+.mermaid-error|color:red
+#md-pop pre.md-paste|color:fg-dark border-color:border
+.hljs|color:fg background:none
+.hljs-comment, .hljs-quote|color:comment font-style:italic
+.hljs-keyword, .hljs-selector-tag|color:purple
+.hljs-built_in, .hljs-type, .hljs-title.class_|color:blue1
+.hljs-title, .hljs-title.function_, .hljs-section|color:blue
+.hljs-string, .hljs-regexp, .hljs-addition|color:green
+.hljs-number, .hljs-literal, .hljs-symbol, .hljs-bullet|color:orange
+.hljs-variable, .hljs-template-variable, .hljs-params, .hljs-subst|color:fg
+.hljs-attr, .hljs-attribute, .hljs-property|color:green1
+.hljs-name, .hljs-tag, .hljs-deletion|color:red
+.hljs-operator, .hljs-punctuation|color:blue5
+.hljs-meta, .hljs-selector-class, .hljs-selector-id, .hljs-selector-attr, .hljs-selector-pseudo|color:cyan
+.hljs-doctag, .hljs-template-tag|color:purple
+.hljs-code, .hljs-formula|color:fg
+.hljs-emphasis|font-style:italic color:inherit
+.hljs-strong|font-weight:bold color:inherit
+ROWS
+}
+
+# The layer of the palette. Every rule starts with html[data-palette], so a
+# page with palette github (no attribute) cannot match one. The page text is
+# the test: it holds one rule for each row of "Themed parts" and "Code tokens"
+# of the story spec, with the keys of the spec. The cascade itself (that the
+# layer wins over the vendored rules) is checked in a browser by hand, not here.
+case_palette_layer() {
+    fresh
+    mkdir proj || bad "mkdir"
+    printf '# A\n' > proj/o.md || bad "write"
+    md --tree off --no-open --out "$page" "$sample"
+    [ "$rc" = 0 ] || bad "exit $rc"
+    sed -n '/^<style id="page">$/,/^<\/style>$/p' "$page" | grep '^html\[data-palette\]' > "$d/layer1"
+    tpage proj/o.md
+    sed -n '/^<style id="page">$/,/^<\/style>$/p' "$page" | grep '^html\[data-palette\]' > "$d/layer2"
+    [ -s "$d/layer1" ] || bad "no layer rule in the one-file page"
+    for f in "$d/layer1" "$d/layer2"; do
+        layer_common "$f"
+        # Each selector of each list starts with the prefix.
+        sed 's/ { .*//' "$f" | sed 's/, /\
+/g' | grep -v '^html\[data-palette\] ' > "$d/stray"
+        [ ! -s "$d/stray" ] || bad "a layer selector has no prefix: $(cat "$d/stray")"
+        # Colors only: no !important, no hex color, no layout property, and
+        # only the keys of the palette.
+        ! grep -q '!important' "$f" || bad "a layer rule has !important"
+        ! sed 's/^[^{]*{//' "$f" | grep -q -E '#[0-9a-fA-F]{3,8}([^0-9a-zA-Z_-]|$)' || bad "a layer rule has a hex color"
+        ! sed 's/^[^{]*{//' "$f" | grep -q -E '(^|[ ;{])(display|position|width|padding[a-z-]*|margin[a-z-]*|top|left|right|bottom):' \
+            || bad "a layer rule sets a layout property"
+        grep -o 'var(--p-[a-zA-Z0-9-]*)' "$f" | sort -u | sed 's/^var(--p-//; s/)$//' > "$d/used"
+        for k in $(cat "$d/used"); do
+            case $k in
+                bg|bg-dark|bg-hl|bg-visual|fg|fg-dark|border|comment|blue|blue1|blue5|cyan|green|green1|magenta|orange|purple|red|yellow) ;;
+                *) bad "the layer uses the unknown key [$k]" ;;
+            esac
+        done
+    done
+    # The tree rules exist only in tree mode.
+    ! grep -q 'md-tree' "$d/layer1" || bad "the one-file page has a tree rule in the layer"
+    layer_rows "$d/layer2" <<'ROWS'
+#md-tree-panel|background-color:bg-dark color:fg-dark border-color:border
+#md-tree-panel .md-root|color:fg
+#md-tree-panel a:hover, #md-tree-panel a:focus|color:blue
+#md-tree-panel a[aria-current="page"]|background-color:bg-visual color:fg
+#md-tree-toggle|background-color:bg-dark color:fg-dark border-color:border
+ROWS
+    exit 0
+}
+
 for c in flags_ok flag_width_bad flag_theme_bad flag_width_missing palette_setting \
          ini_valid ini_hostile ini_missing old_config_path_ignored ini_browser_bad ini_browser_app_dir \
          init_config_writes init_config_keeps print_association_ok \
@@ -2635,7 +2758,8 @@ for c in flags_ok flag_width_bad flag_theme_bad flag_width_missing palette_setti
          tree_off_same_page tree_key_line cache_tree_reuse cache_tree_changed_file \
          cache_tree_added_file cache_tree_deleted_file cache_tree_head_only cache_tree_no_cache \
          cache_tree_renamed_file tree_page_long_lines \
-         page_tree_key_guard page_tree_storage_try page_tree_print_hidden page_tree_narrow_rule; do
+         page_tree_key_guard page_tree_storage_try page_tree_print_hidden page_tree_narrow_rule \
+         palette_layer; do
     run "$c"
 done
 
