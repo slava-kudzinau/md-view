@@ -1,8 +1,9 @@
 #!/bin/sh
 # Hostile-input check of md-view in headless Chrome: escapes, raw HTML as text,
 # blocked remote images, the source of a broken diagram, the CSP, the page
-# written with --out, and the File associations command with a hostile file
-# name. Each row runs in a subshell with a fresh HOME, XDG folders and TMPDIR.
+# written with --out, the File associations command with a hostile file name,
+# and the mermaid diagrams on a tokyo page. Each row runs in a subshell with a
+# fresh HOME, XDG folders and TMPDIR.
 #
 # usage: sh tests/hostile-dom.sh
 #   MD_OPEN  the script under test (default lib/md-view)
@@ -118,20 +119,29 @@ strip_scripts() {
     }'
 }
 
-# mermaid_has_svg <dom>: the text between class="mermaid" and the next </pre>
-# holds an <svg>.
-mermaid_has_svg() {
-    awk '{
+# mermaid_has <dom> <text>: the text between class="mermaid" and the next </pre>
+# holds <text>.
+mermaid_has() {
+    awk -v want="$2" '{
         s = $0
         while ((i = index(s, "class=\"mermaid\"")) > 0) {
             t = substr(s, i)
             j = index(t, "</pre>")
             seg = (j > 0) ? substr(t, 1, j) : t
-            if (index(seg, "<svg") > 0) found = 1
+            if (index(seg, want) > 0) found = 1
             s = substr(t, 2)
         }
         exit (found ? 0 : 1)
     }' "$1"
+}
+
+# mermaid_has_svg <dom>: a diagram block holds an <svg>.
+mermaid_has_svg() { mermaid_has "$1" '<svg'; }
+
+# with_script <page> <out> <script>: writes <out> as <page> with <script> added
+# before </body>, so it runs after the page script. <script> holds no backslash.
+with_script() {
+    awk -v s="$3" '{ i = index($0, "</body>"); if (i) print substr($0, 1, i - 1) s substr($0, i); else print }' "$1" > "$2"
 }
 
 # render <page> <name>: headless Chrome dumps the page to $tmp/<name>.dom, and
@@ -312,6 +322,56 @@ check "broken diagram: Chrome renders the page" broken_page
 check "broken diagram: its source text shows" grep -F -q 'this is not a diagram' "$tmp/broken.dom"
 net_check "broken diagram: the mermaid error shows in the block" grep -F -q 'class="mermaid-error"' "$tmp/broken.dom"
 net_check "broken diagram: the next diagram still draws" mermaid_has_svg "$tmp/broken.dom"
+
+# Rows: a tokyo page. The diagrams draw in both modes, with the colors of the
+# palette (the bg-hl of Tokyo Night and of Tokyo Day), and the init call keeps
+# securityLevel strict. The colors and the init call come from mermaid, so these
+# rows need the CDN.
+# palette_page <name> <script|-> <args...>: diagram.md as a page with <args>, and
+# <script> added before </body> unless it is "-". The DOM goes to $tmp/<name>.dom.
+palette_page() {
+    n=$1
+    js=$2
+    shift 2
+    sh "$md_open" "$fix/diagram.md" "$@" --out "$tmp/$n.html" --no-open > /dev/null 2>&1 || return 1
+    if [ "$js" != - ]; then
+        with_script "$tmp/$n.html" "$tmp/$n.html.js" "<script>$js</script>" &&
+            mv "$tmp/$n.html.js" "$tmp/$n.html" || return 1
+    fi
+    render "$tmp/$n.html" "$n"
+}
+# A script is WHEN_DRAWN, some code and WHEN_DRAWN_END. It runs the code when the
+# first diagram has its svg.
+WHEN_DRAWN="(function w(){var p=document.querySelector('pre.mermaid');if(p&&p.querySelector('svg')){"
+WHEN_DRAWN_END="}else setTimeout(w,50);})();"
+tokyo_strict() {
+    palette_page tokyo-strict "${WHEN_DRAWN}document.title='level='+mermaid.mermaidAPI.getConfig().securityLevel;$WHEN_DRAWN_END" --palette tokyo --theme dark &&
+        grep -F -q '<title>level=strict</title>' "$tmp/tokyo-strict.dom" &&
+        one_cdn_script "$tmp/tokyo-strict.html"
+}
+tokyo_draws() {
+    palette_page "tokyo-$1" - --palette tokyo --theme "$1" &&
+        mermaid_has_svg "$tmp/tokyo-$1.dom" &&
+        mermaid_has "$tmp/tokyo-$1.dom" "$2"
+}
+net_check "palette: tokyo strict" tokyo_strict
+net_check "palette: tokyo dark draws svg" tokyo_draws dark '#292e42'
+net_check "palette: tokyo light draws svg" tokyo_draws light '#c4c8da'
+
+# Row: a github dark page with a diagram. The key s changes the palette to tokyo
+# once the diagram has drawn, and the diagram then draws again in the colors of
+# Tokyo Night. The same page without the key keeps the github colors.
+redraw_pages() {
+    palette_page redraw-key "${WHEN_DRAWN}document.dispatchEvent(new KeyboardEvent('keydown',{key:'s'}));$WHEN_DRAWN_END" --palette github --theme dark &&
+        palette_page redraw-still - --palette github --theme dark
+}
+redraw_check() {
+    redraw_pages &&
+        mermaid_has "$tmp/redraw-key.dom" '#292e42' &&
+        mermaid_has_svg "$tmp/redraw-still.dom" &&
+        ! mermaid_has "$tmp/redraw-still.dom" '#292e42'
+}
+net_check "palette: mermaid redraw" redraw_check
 
 # Row: a BOM and CRLF are accepted.
 bom_page() {

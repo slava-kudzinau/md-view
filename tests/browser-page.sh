@@ -798,14 +798,14 @@ case_page_mermaid_theme_hook() {
         'mermaid.run(' \
         "themeQuery.addEventListener('change', onSystemTheme);" \
         "if (themeSetting() === 'auto') applyTheme();" \
-        'if (mermaidReady && usedTheme() !== drawnTheme) redraw(items);' \
+        'if (mermaidReady && paletteMode() !== drawnTheme) redraw(items);' \
         'var drawChain = Promise.resolve();' \
         'var drawQueued = false;' \
         'drawChain = drawChain.then(function () {' \
         'if (drawQueued) return;' \
         'drawQueued = false;' \
         'var drawnTheme = null;' \
-        'drawnTheme = usedTheme();' \
+        'drawnTheme = paletteMode();' \
         'function withTimeout(p, ms, onTimeout) {' \
         'var MERMAID_TIMEOUT = 10000;' \
         'if (!good.length || batch.cancelled) return;'; do

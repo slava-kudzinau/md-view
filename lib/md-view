@@ -1082,9 +1082,10 @@ HTML
   var items = [];
   var mermaidReady = false;
   // Mermaid draws one batch at a time. drawChain runs the batches in order, and
-  // drawQueued is set while a batch waits and has not read the theme yet.
-  // drawnTheme is the theme of the last batch that started. A batch that does not
-  // settle in MERMAID_TIMEOUT ms shows its source, and the chain goes on.
+  // drawQueued is set while a batch waits and has not read the palette yet.
+  // drawnTheme is the palette and the used mode of the last batch that started,
+  // as one word such as tokyo:dark. A batch that does not settle in
+  // MERMAID_TIMEOUT ms shows its source, and the chain goes on.
   var drawChain = Promise.resolve();
   var drawQueued = false;
   var drawnTheme = null;
@@ -1595,12 +1596,44 @@ HTML
       root.style.setProperty('--p-' + k, colors[k]);
     });
   }
+  // The mermaid variables that take the color of a palette key (spec: Mermaid).
+  var MERMAID_KEYS = {
+    'bg': ['background', 'edgeLabelBackground'],
+    'bg-hl': ['primaryColor', 'actorBkg'],
+    'fg': ['primaryTextColor', 'secondaryTextColor', 'tertiaryTextColor', 'textColor', 'titleColor',
+      'actorTextColor', 'signalTextColor', 'labelTextColor', 'noteTextColor'],
+    'blue': ['primaryBorderColor', 'actorBorder', 'pie1'],
+    'fg-dark': ['lineColor', 'actorLineColor', 'signalColor'],
+    'bg-dark': ['secondaryColor', 'tertiaryColor', 'clusterBkg', 'labelBoxBkgColor'],
+    'border': ['secondaryBorderColor', 'tertiaryBorderColor', 'clusterBorder', 'labelBoxBorderColor', 'noteBorderColor'],
+    'bg-visual': ['noteBkgColor'],
+    'green': ['pie2'],
+    'magenta': ['pie3'],
+    'orange': ['pie4'],
+    'cyan': ['pie5'],
+    'red': ['pie6']
+  };
+  // The mermaid themeVariables of a color map of the used mode, such as
+  // PALETTES.tokyo.dark. darkMode follows the used mode.
+  function mermaidVars(colors) {
+    var vars = { darkMode: usedTheme() === 'dark' };
+    Object.keys(MERMAID_KEYS).forEach(function (k) {
+      MERMAID_KEYS[k].forEach(function (name) { vars[name] = colors[k]; });
+    });
+    return vars;
+  }
+  // The palette and the used mode as one word, such as tokyo:dark. The diagrams
+  // draw again when it changes.
+  function paletteMode() {
+    return paletteSetting() + ':' + usedTheme();
+  }
   function setMedia(id, value) {
     var el = document.getElementById(id);
     if (el) el.setAttribute('media', value);
   }
   // Enables the GitHub style and the highlight theme of the used theme, sets
-  // color-scheme and the palette colors, and draws the diagrams again in that theme.
+  // color-scheme and the palette colors, and draws the diagrams again when the
+  // palette or the used mode changed.
   function applyTheme() {
     var dark = usedTheme() === 'dark';
     setMedia('gh-light', dark ? 'not all' : 'all');
@@ -1609,7 +1642,7 @@ HTML
     setMedia('hl-dark', dark ? 'all' : 'not all');
     root.style.colorScheme = dark ? 'dark' : 'light';
     applyPalette();
-    if (mermaidReady && usedTheme() !== drawnTheme) redraw(items);
+    if (mermaidReady && paletteMode() !== drawnTheme) redraw(items);
   }
   function onSystemTheme() {
     if (themeSetting() === 'auto') applyTheme();
@@ -1714,7 +1747,15 @@ HTML
   }
 
   function drawDiagrams(list, batch) {
-    mermaid.initialize({ startOnLoad: false, securityLevel: 'strict', theme: usedTheme() === 'dark' ? 'dark' : 'default' });
+    // Github keeps the mermaid dark and default themes. Another palette uses the
+    // base theme with the colors of the palette.
+    var cfg = { startOnLoad: false, securityLevel: 'strict', theme: usedTheme() === 'dark' ? 'dark' : 'default' };
+    var p = paletteSetting();
+    if (p !== 'github') {
+      cfg.theme = 'base';
+      cfg.themeVariables = mermaidVars(PALETTES[p][usedTheme()]);
+    }
+    mermaid.initialize(cfg);
     // Each diagram is parsed alone first, so a broken one shows its error and the
     // others still draw.
     var parsed = list.map(function (it) {
@@ -1735,10 +1776,11 @@ HTML
     }).catch(function (e) { console.error(e); });
   }
 
-  // Draws each diagram again in the used theme. The batches run one after the
-  // other, so a call that overlaps waits for the one before it. A batch that is
-  // waiting and has not started is not added again: it reads the theme when it
-  // runs. A batch gets the source text back and loses its earlier drawing.
+  // Draws each diagram again in the used palette and mode. The batches run one
+  // after the other, so a call that overlaps waits for the one before it. A batch
+  // that is waiting and has not started is not added again: it reads the palette
+  // and the mode when it runs. A batch gets the source text back and loses its
+  // earlier drawing.
   function redraw(list) {
     if (drawQueued) return;
     drawQueued = true;
@@ -1749,7 +1791,7 @@ HTML
         it.pre.removeAttribute('data-processed');
         it.pre.textContent = it.src;
       });
-      drawnTheme = usedTheme();
+      drawnTheme = paletteMode();
       var batch = { cancelled: false };
       return withTimeout(drawDiagrams(list, batch), MERMAID_TIMEOUT, function () {
         // A batch that is late does not draw any more; its source is shown.
