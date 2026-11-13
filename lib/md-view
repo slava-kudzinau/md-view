@@ -1043,8 +1043,59 @@ HTML
   var forced = root.getAttribute('data-forced') === '1';
   var WIDTHS = ['60', '70', '80'];
   var THEMES = ['light', 'dark', 'auto'];
+  // The palettes except github, which has no colors: the page keeps its own look.
+  // Each palette has a dark and a light map with the same keys. A color reaches
+  // the page as the CSS variable --p-<key>. A new palette is one new entry.
+  var PALETTES = {
+    tokyo: {
+      dark: {
+        'bg': '#1a1b26',
+        'bg-dark': '#16161e',
+        'bg-hl': '#292e42',
+        'bg-visual': '#283457',
+        'fg': '#c0caf5',
+        'fg-dark': '#a9b1d6',
+        'border': '#3b4261',
+        'comment': '#565f89',
+        'blue': '#7aa2f7',
+        'blue1': '#2ac3de',
+        'blue5': '#89ddff',
+        'cyan': '#7dcfff',
+        'green': '#9ece6a',
+        'green1': '#73daca',
+        'magenta': '#bb9af7',
+        'orange': '#ff9e64',
+        'purple': '#9d7cd8',
+        'red': '#f7768e',
+        'yellow': '#e0af68'
+      },
+      light: {
+        'bg': '#e1e2e7',
+        'bg-dark': '#d0d5e3',
+        'bg-hl': '#c4c8da',
+        'bg-visual': '#b7c1e3',
+        'fg': '#3760bf',
+        'fg-dark': '#6172b0',
+        'border': '#a8aecb',
+        'comment': '#848cb5',
+        'blue': '#2e7de9',
+        'blue1': '#188092',
+        'blue5': '#006a83',
+        'cyan': '#007197',
+        'green': '#587539',
+        'green1': '#387068',
+        'magenta': '#9854f1',
+        'orange': '#b15c00',
+        'purple': '#7847bd',
+        'red': '#f52a65',
+        'yellow': '#8c6c3e'
+      }
+    }
+  };
+  var PALETTE_WORDS = ['github'].concat(Object.keys(PALETTES));
   var KEY_WIDTH = 'md-view-width';
   var KEY_THEME = 'md-view-theme';
+  var KEY_PALETTE = 'md-view-palette';
   var KEY_TREE = 'md-view-tree';
   var narrow = window.matchMedia('(max-width: 699px)');
   var treePanel = document.getElementById('md-tree-panel');
@@ -1055,6 +1106,7 @@ HTML
   var pop = document.getElementById('md-pop');
   var widthButtons = {};
   var themeButtons = {};
+  var paletteButtons = {};
   var notice = null;
   var paste = null;
   function esc(s) {
@@ -1443,16 +1495,25 @@ HTML
   // The start values come from config.ini or a flag. Each is used only if accepted.
   var startWidth = accepted(root.getAttribute('data-start-width'), WIDTHS, '70');
   var startTheme = accepted(root.getAttribute('data-start-theme'), THEMES, 'auto');
-  // Sets the used width and theme: the saved choice, unless data-forced is 1, then the start value.
+  var startPalette = accepted(root.getAttribute('data-start-palette'), PALETTE_WORDS, 'github');
+  // The palette in use is the attribute data-palette. The word github has no attribute.
+  function setPaletteWord(p) {
+    if (p === 'github') root.removeAttribute('data-palette');
+    else root.setAttribute('data-palette', p);
+  }
+  // Sets the used width, theme and palette: the saved choice, unless data-forced is 1, then the start value.
   function load() {
     var w = startWidth;
     var t = startTheme;
+    var p = startPalette;
     if (!forced) {
       w = accepted(storageGet(KEY_WIDTH), WIDTHS, startWidth);
       t = accepted(storageGet(KEY_THEME), THEMES, startTheme);
+      p = accepted(storageGet(KEY_PALETTE), PALETTE_WORDS, startPalette);
     }
     root.setAttribute('data-width', w);
     root.setAttribute('data-theme', t);
+    setPaletteWord(p);
   }
   load();
   // The choice in data-theme: light, dark or auto.
@@ -1466,12 +1527,30 @@ HTML
     if (t === 'auto') return themeQuery.matches ? 'dark' : 'light';
     return t;
   }
+  // The choice in data-palette: a word of PALETTES, or github when there is no attribute.
+  function paletteSetting() {
+    return accepted(root.getAttribute('data-palette'), PALETTE_WORDS, 'github');
+  }
+  // Removes the --p- variables of every palette from html, then sets the ones of
+  // the used palette and theme. Github has no variables. It sets colors only.
+  function applyPalette() {
+    var p = paletteSetting();
+    var colors = p === 'github' ? {} : PALETTES[p][usedTheme()];
+    Object.keys(PALETTES).forEach(function (w) {
+      Object.keys(PALETTES[w].dark).forEach(function (k) {
+        root.style.removeProperty('--p-' + k);
+      });
+    });
+    Object.keys(colors).forEach(function (k) {
+      root.style.setProperty('--p-' + k, colors[k]);
+    });
+  }
   function setMedia(id, value) {
     var el = document.getElementById(id);
     if (el) el.setAttribute('media', value);
   }
   // Enables the GitHub style and the highlight theme of the used theme, sets
-  // color-scheme, and draws the diagrams again in that theme.
+  // color-scheme and the palette colors, and draws the diagrams again in that theme.
   function applyTheme() {
     var dark = usedTheme() === 'dark';
     setMedia('gh-light', dark ? 'not all' : 'all');
@@ -1479,6 +1558,7 @@ HTML
     setMedia('hl-light', dark ? 'not all' : 'all');
     setMedia('hl-dark', dark ? 'all' : 'not all');
     root.style.colorScheme = dark ? 'dark' : 'light';
+    applyPalette();
     if (mermaidReady && usedTheme() !== drawnTheme) redraw(items);
   }
   function onSystemTheme() {
@@ -1662,15 +1742,17 @@ HTML
     buttons.forEach(function (b) { row.appendChild(b); });
     return row;
   }
-  // The three lines of config.ini for the current choice.
+  // The lines of config.ini for the current choice.
   function pasteText() {
-    return ['[View]', 'width=' + root.getAttribute('data-width'), 'theme=' + themeSetting()].join('\n');
+    return ['[View]', 'width=' + root.getAttribute('data-width'), 'theme=' + themeSetting(), 'palette=' + paletteSetting()].join('\n');
   }
   // Shows the current choice on the buttons, the notice and the paste block.
   function refresh() {
     var w = root.getAttribute('data-width');
     var t = themeSetting();
+    var p = paletteSetting();
     WIDTHS.forEach(function (v) { widthButtons[v].setAttribute('aria-pressed', v === w ? 'true' : 'false'); });
+    PALETTE_WORDS.forEach(function (v) { paletteButtons[v].setAttribute('aria-pressed', v === p ? 'true' : 'false'); });
     THEMES.forEach(function (v) { themeButtons[v].setAttribute('aria-pressed', v === t ? 'true' : 'false'); });
     notice.hidden = !storageBlocked;
     paste.textContent = pasteText();
@@ -1686,12 +1768,22 @@ HTML
     applyTheme();
     refresh();
   }
+  // Sets the palette to a word of PALETTE_WORDS and saves it. Any other word is ignored.
+  function setPalette(p) {
+    if (PALETTE_WORDS.indexOf(p) < 0) return;
+    save(KEY_PALETTE, p);
+    setPaletteWord(p);
+    applyTheme();
+    refresh();
+  }
   // Reset removes the saved choice and applies the start values, in place.
   function resetChoice() {
     storageRemove(KEY_WIDTH);
     storageRemove(KEY_THEME);
+    storageRemove(KEY_PALETTE);
     root.setAttribute('data-width', startWidth);
     root.setAttribute('data-theme', startTheme);
+    setPaletteWord(startPalette);
     applyTheme();
     refresh();
   }
@@ -1712,11 +1804,13 @@ HTML
   }
   function buildPopover() {
     WIDTHS.forEach(function (v) { widthButtons[v] = makeButton(v, function () { setWidth(v); }); });
+    PALETTE_WORDS.forEach(function (v) { paletteButtons[v] = makeButton(v, function () { setPalette(v); }); });
     THEMES.forEach(function (v) { themeButtons[v] = makeButton(v, function () { setTheme(v); }); });
     pop.appendChild(makeRow('Width', WIDTHS.map(function (v) { return widthButtons[v]; })));
+    pop.appendChild(makeRow('Style', PALETTE_WORDS.map(function (v) { return paletteButtons[v]; })));
     pop.appendChild(makeRow('Theme', THEMES.map(function (v) { return themeButtons[v]; })));
     var help = document.createElement('p');
-    help.textContent = treeMode ? 'Keys: t theme, w width, b tree, ? help' : 'Keys: t theme, w width, ? help';
+    help.textContent = treeMode ? 'Keys: t theme, s style, w width, b tree, ? help' : 'Keys: t theme, s style, w width, ? help';
     pop.appendChild(help);
     notice = document.createElement('p');
     notice.className = 'md-notice';
@@ -1772,6 +1866,7 @@ HTML
         if (!pop.hidden) { closePop(); gear.focus(); }
       }
       else if (e.key === 't') setTheme(nextWord(THEMES, themeSetting()));
+      else if (e.key === 's') setPalette(nextWord(PALETTE_WORDS, paletteSetting()));
       else if (e.key === 'w') setWidth(nextWord(WIDTHS, root.getAttribute('data-width')));
       else if (e.key === 'b') toggleTree();
       else if (e.key === '?') openPop();

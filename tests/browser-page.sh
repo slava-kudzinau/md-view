@@ -915,14 +915,14 @@ case_page_paste_line() {
     fresh
     md --tree off --no-open --out "$page" "$sample"
     [ "$rc" = 0 ] || bad "exit $rc"
-    line_of "return ['[View]', 'width=' + root.getAttribute('data-width'), 'theme=' + themeSetting()].join('\\n');"
+    line_of "return ['[View]', 'width=' + root.getAttribute('data-width'), 'theme=' + themeSetting(), 'palette=' + paletteSetting()].join('\\n');"
     line_of 'paste.textContent = pasteText();'
     line_of 'notice.hidden = true;'
     line_of 'pop.appendChild(notice);'; n1=$ln
     line_of 'pop.appendChild(paste);'; n2=$ln
     [ "$n1" -lt "$n2" ] || bad "the notice is not above the paste block"
     line_of "makeButton('Reset', resetChoice)"
-    line_of "'Keys: t theme, w width, ? help'"
+    line_of "'Keys: t theme, s style, w width, ? help'"
     exit 0
 }
 

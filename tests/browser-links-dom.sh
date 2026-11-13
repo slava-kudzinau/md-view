@@ -551,7 +551,7 @@ case_dom_panel_off_notice() {
     if grep -qF '<nav id="md-tree-panel"' "$d/dom"; then bad "the panel is on a tree=off page"; fi
     if grep -qF 'id="md-tree-toggle"' "$d/dom"; then bad "the toggle is on a tree=off page"; fi
     grep -qF '<p class="md-notice">File tree: off (--tree off)</p>' "$d/dom" || bad "no flag notice"
-    grep -qF '<p>Keys: t theme, w width, ? help</p>' "$d/dom" || bad "the keys line of a one-file page: $(grep -o '<p>Keys:[^<]*' "$d/dom")"
+    grep -qF '<p>Keys: t theme, s style, w width, ? help</p>' "$d/dom" || bad "the keys line of a one-file page: $(grep -o '<p>Keys:[^<]*' "$d/dom")"
     write_ini '[View]' 'tree=off'
     build o.md
     dom > "$d/dom2"
@@ -568,7 +568,7 @@ case_dom_panel_off_notice() {
     printf '# A-OPEN\n' > o.md || bad "write"
     build o.md
     dom > "$d/dom4"
-    grep -qF '<p>Keys: t theme, w width, b tree, ? help</p>' "$d/dom4" || bad "the tree keys line: $(grep -o '<p>Keys:[^<]*' "$d/dom4")"
+    grep -qF '<p>Keys: t theme, s style, w width, b tree, ? help</p>' "$d/dom4" || bad "the tree keys line: $(grep -o '<p>Keys:[^<]*' "$d/dom4")"
     exit 0
 }
 
@@ -692,6 +692,105 @@ case_dom_panel_narrow() {
     exit 0
 }
 
+# --- palette ----------------------------------------------------------------
+
+# PAL: a script that defines pal(), the palette state of html as one word:
+# data-palette, the number of --p- variables and the value of --p-bg.
+# A github page gives null/0/ and a tokyo page gives tokyo/19/<color>.
+PAL="function pal(){var h=document.documentElement,s=h.style,n=0,i;for(i=0;i<s.length;i++)if(s[i].indexOf('--p-')===0)n++;return h.getAttribute('data-palette')+'/'+n+'/'+s.getPropertyValue('--p-bg').trim();}"
+# KEY_S and KEY_T: the script of a press of the key s or t on the document.
+KEY_S="document.dispatchEvent(new KeyboardEvent('keydown',{key:'s'}));"
+KEY_T="document.dispatchEvent(new KeyboardEvent('keydown',{key:'t'}));"
+
+# title_is WANT: the title of the dumped page $d/dom is WANT.
+title_is() {
+    grep -qxF "<title>$1</title>" "$d/dom" || bad "want title [$1], got: $(grep -o '<title>[^<]*</title>' "$d/dom")"
+}
+
+# html_has ATTR: the html tag of the dumped page $d/dom has ATTR, with a space before it.
+html_has() {
+    grep -o '<html[^>]*>' "$d/dom" | grep -qF " $1" || bad "the html tag has no [$1]: $(grep -o '<html[^>]*>' "$d/dom")"
+}
+
+# seed WORD: a script that saves WORD as the palette once, then reloads the page.
+# The page script reads the saved word only at the start, so it needs the reload.
+seed() {
+    printf "if(!sessionStorage.getItem('seeded')){sessionStorage.setItem('seeded','1');localStorage.setItem('md-view-palette','%s');location.reload();}" "$1"
+}
+
+# The start word and the mode come from flags, which fix the page.
+case_dom_palette_start() {
+    fresh
+    printf '# A-OPEN\n' > o.md || bad "write"
+    build --palette tokyo --theme dark o.md
+    measured "<script>$PAL document.title=pal();</script>" > "$d/dom"
+    title_is 'tokyo/19/#1a1b26'
+    page=$d/page.html
+    build --palette tokyo --theme light o.md
+    measured "<script>$PAL document.title=pal();</script>" > "$d/dom"
+    title_is 'tokyo/19/#e1e2e7'
+    page=$d/page.html
+    build --palette github --theme dark o.md
+    measured "<script>$PAL document.title=pal();</script>" > "$d/dom"
+    title_is 'null/0/'
+    exit 0
+}
+
+# A change of the mode changes the colors at once.
+case_dom_palette_mode() {
+    fresh
+    printf '# A-OPEN\n' > o.md || bad "write"
+    build --palette tokyo --theme light o.md
+    measured "<script>$PAL var r=[pal()];$KEY_T r.push(pal());document.title=r.join(' ');</script>" > "$d/dom"
+    title_is 'tokyo/19/#e1e2e7 tokyo/19/#1a1b26'
+    exit 0
+}
+
+# The key s goes github, tokyo, github. A key with Ctrl and a key in a form field do nothing.
+# Back at github, html has no data-palette and no --p- variable.
+case_dom_palette_key_s() {
+    fresh
+    printf '# A-OPEN\n' > o.md || bad "write"
+    build --theme dark o.md
+    measured "<script>$PAL var r=[pal()];document.dispatchEvent(new KeyboardEvent('keydown',{key:'s',ctrlKey:true}));r.push(pal());var i=document.createElement('input');document.body.appendChild(i);i.dispatchEvent(new KeyboardEvent('keydown',{key:'s',bubbles:true}));r.push(pal());$KEY_S r.push(pal());$KEY_S r.push(pal());document.title=r.join(' ');</script>" > "$d/dom"
+    title_is 'null/0/ null/0/ null/0/ tokyo/19/#1a1b26 null/0/'
+    exit 0
+}
+
+# The Style row is between Width and Theme. Its buttons show the word and set it.
+# The paste block always shows palette=.
+case_dom_palette_popover() {
+    fresh
+    printf '# A-OPEN\n' > o.md || bad "write"
+    build o.md
+    measured "<script>var rows=document.querySelectorAll('#md-pop .md-row'),l=[],i;for(i=0;i<rows.length;i++)l.push(rows[i].firstChild.textContent);var b=rows[1].querySelectorAll('button');function st(){var o=[],j;for(j=0;j<b.length;j++)o.push(b[j].textContent+'='+b[j].getAttribute('aria-pressed'));return o.join(',')+'|'+document.querySelector('#md-pop pre.md-paste').textContent.split(String.fromCharCode(10)).filter(function(x){return x.indexOf('palette=')===0;})[0];}var r=[l.join(','),st()];b[1].click();r.push(st());b[0].click();r.push(st());document.title=r.join(';');</script>" > "$d/dom"
+    title_is 'Width,Style,Theme;github=true,tokyo=false|palette=github;github=false,tokyo=true|palette=tokyo;github=true,tokyo=false|palette=github'
+    exit 0
+}
+
+# The saved word is used when no flag fixes the page.
+case_dom_palette_saved() {
+    fresh
+    printf '# A-OPEN\n' > o.md || bad "write"
+    build o.md
+    measured "<script>$(seed tokyo)</script>" > "$d/dom"
+    html_has 'data-start-palette="github"'
+    html_has 'data-palette="tokyo"'
+    exit 0
+}
+
+# A saved word that is not accepted does not replace the start word.
+case_dom_palette_bad_saved() {
+    fresh
+    printf '# A-OPEN\n' > o.md || bad "write"
+    write_ini '[View]' 'palette=tokyo'
+    build o.md
+    measured "<script>$(seed evil)</script>" > "$d/dom"
+    html_has 'data-start-palette="tokyo"'
+    html_has 'data-palette="tokyo"'
+    exit 0
+}
+
 for c in dom_start_file dom_route_file dom_route_unknown \
          dom_link_in_tree dom_link_not_in_tree dom_link_out_of_root \
          dom_link_out_of_root_query dom_link_out_of_root_backslash \
@@ -703,7 +802,8 @@ for c in dom_start_file dom_route_file dom_route_unknown \
          dom_panel_root_name dom_panel_cap_note dom_panel_big_style \
          dom_panel_toggle_markup dom_panel_off_notice dom_panel_width_rule \
          dom_panel_gear_fixed dom_panel_names_hostile dom_panel_link_click dom_panel_focus \
-         dom_panel_narrow; do
+         dom_panel_narrow dom_palette_start dom_palette_mode dom_palette_key_s \
+         dom_palette_popover dom_palette_saved dom_palette_bad_saved; do
     run "$c"
 done
 
