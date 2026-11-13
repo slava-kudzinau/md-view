@@ -24,3 +24,4 @@ Rules that always hold for md-view. Format: `- **[area]**: rule (Learned from: s
 ## Tests
 
 - **[tests]**: A test with no Chrome or no network prints `skip` lines and exits 0. A pass with `skip` lines proves less, so read them before you trust a pass. (Learned from: story md-view-repo, spec, 2026-11-12)
+- **[palette]**: The Tokyo color layer sets colors only. Each rule starts with `html[data-palette]`, so it wins over the vendored styles by specificity. It has no `!important` and no `display` rule. The vendored files stay unmodified. (Learned from: story themes-tokyo-night, spec)

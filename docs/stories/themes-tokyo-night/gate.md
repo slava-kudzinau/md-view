@@ -85,13 +85,29 @@ _Fixed after the read: the worktree row now says what measures the cost, and the
 ## At merge
 
 ### What was built
-_Written at close-out._
+All five planned tasks are done. The build matches the plan.
+- **T1:** The `--palette` flag and the `palette=` key. The `data-start-palette` attribute, the `p=` cache key and the usage text.
+- **T2:** The palette table in the page script, the `Style` popover row, the key `s` and the saved word `md-view-palette`.
+- **T3:** The color layer for page text, code, tree, gear and popover.
+- **T4:** Mermaid draws with `theme:'base'` and the palette colors. `securityLevel:'strict'` stays.
+- **T5:** The README and six screenshots in `.build/shots/`.
+The durable spec and the invariants are updated. `make check` passes with no `skip` line.
 
 ### Decisions changed during the build
-_Written at close-out._
+No decision of "Before build" was reversed. The build added these details:
+- The layer has two extra color rules: `pre.mermaid` keeps `background: none`, and `.hljs-emphasis` and `.hljs-strong` get `color: inherit`.
+- The row for the tree button and the gear is split in two. The gear is in the main style block. The tree button is in the tree block.
+- The redraw state is one string, `palette:mode`, for example `tokyo:dark`.
 
 ### What the reviews caught
-_Written at close-out._
+The three critical task reviews and the final review found no Critical and no Important defect. They found 10 Minor points. The main ones:
+- No test proves that the layer wins the cascade. A hand check in Chrome covered 108 elements.
+- Some mermaid colors are weak: the gantt section band in Night, and the pie labels in Day.
+- Some rows are weaker than a full mutation check (the bad saved word row, the tokyo draw rows).
+The two plan verifications before the build found 17 defects in the docs. They were fixed before the build.
 
 ### Run it
-_Written at close-out._
+1. `sh lib/md-view --palette tokyo --theme dark --no-open --out /tmp/t.html tests/browser-page/sample.md`, then open `/tmp/t.html`. Press `s` for GitHub and `t` for the mode.
+2. Open the six screenshots in `.build/shots/`: `sample-tokyo-dark.png`, `sample-tokyo-light.png`, `sample-github-dark.png`, `diagrams-tokyo-dark.png`, `diagrams-tokyo-light.png`, `diagrams-github-dark.png`.
+3. `make check` ends with `all checks pass`.
+4. Confirm that commit `4c719e1` (the worktree rule in `AGENTS.md` and `.gitignore`) belongs in this PR.

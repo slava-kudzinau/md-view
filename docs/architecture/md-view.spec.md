@@ -36,7 +36,7 @@ The script can also run alone from any folder.
 
 ```
 md-view [--out <page.html>] [--no-open] [--width 60|70|80]
-        [--theme light|dark|auto] [--browser B] [--no-cache]
+        [--theme light|dark|auto] [--palette github|tokyo] [--browser B] [--no-cache]
         [--tree on|off] [--list-tree] <file.md>
 md-view --init-config
 md-view --print-association
@@ -48,6 +48,7 @@ md-view --print-association
 | `--no-open` | Writes the page and does not start a browser. |
 | `--width 60\|70\|80` | The start width of the text column, in percent. A flag also makes the page ignore the saved page choice. |
 | `--theme light\|dark\|auto` | The start theme. Same rule for the saved page choice. |
+| `--palette github\|tokyo` | The start palette. `github` is the look of the vendored styles. `tokyo` is Tokyo Night in dark mode and Tokyo Day in light mode. Same rule for the saved page choice. |
 | `--browser B` | Replaces the `browser=` key for this run. `B` is `auto`, `firefox`, `chrome`, `safari`, or an absolute path to a program. A value that is not accepted gives one line on stderr, and the script uses `auto`. |
 | `--tree on\|off` | Tree mode for one run. `on` is the default. `off` gives the page of one file, with no scan. The same as the `tree=` key. |
 | `--list-tree <file.md>` | Prints the encoded root on line 1, then one line `<state> <ENC>` per tree file in tree order. `state` is `page`, `big` or `cut`. A last line `cap N` shows when the cap stopped the scan. Writes no page and opens nothing. Exit 0. In one-file mode it prints line 1 and `off`. |
@@ -65,7 +66,7 @@ md-view --print-association
 |---|---|
 | 0 | The page is written, and it is opened or its path is printed. With `--no-open`, nothing is printed. |
 | 1 | The page cannot be written, or the opener fails. |
-| 2 | No file, an unreadable file, an unknown option, a missing `--width` or `--theme` value, or a value that is not accepted. Also a page folder that does not exist. No page is written. |
+| 2 | No file, an unreadable file, an unknown option, a missing `--width`, `--theme` or `--palette` value, or a value that is not accepted. Also a page folder that does not exist. No page is written. |
 | 3 | `marked.min.js` or a vendored style or `highlight.min.js` file is not found. No page is written. |
 
 A `--browser` value or a `browser=` key that is not accepted is not an error. It gives one line on stderr and the script uses `auto`.
@@ -75,7 +76,7 @@ A `--browser` value or a `browser=` key that is not accepted is not an error. It
 The file is `${XDG_CONFIG_HOME:-$HOME/.config}/md-view/config.ini`. md-view reads no file in the old far2l path `.../far2l/settings/md-view.ini`. A host never reads or writes this file.
 
 - Only the section `[View]` is read. A line that starts with `#` or `;` is a comment. Spaces around `=` and a CR at the line end are ignored. The last valid line of a key wins.
-- `width=` is `60`, `70` or `80`. `theme=` is `light`, `dark` or `auto`. `browser=` is `auto`, `firefox`, `chrome`, `safari`, or an absolute path to a program (on macOS also a `.app` folder).
+- `width=` is `60`, `70` or `80`. `theme=` is `light`, `dark` or `auto`. `palette=` is `github` or `tokyo`. `browser=` is `auto`, `firefox`, `chrome`, `safari`, or an absolute path to a program (on macOS also a `.app` folder).
 - `tree=` is `on` (default) or `off`. `root=` is `dir` (default) or `repo`.
 - `root=dir` is the folder of the opened file. `root=repo` is the nearest folder upward with `.git`, else the folder of the file. The walk stops at `$HOME` or `/`.
 - `tree_depth=` is a number from 1 to 12, default 6. `tree_max_files=` is a number from 1 to 2000, default 500. A number over the ceiling gives the ceiling. A value that is not accepted is ignored.
@@ -102,7 +103,7 @@ The script starts each command with `exec` in a subshell. The page path is one a
 4. The script adds `marked.min.js` inline, then `highlight.min.js`, then the page script.
 5. In the browser, the page script reverses the escapes and calls `marked.parse`. The result goes into `<main id="content">`, so the text shows before any network use. Then `highlight.js` marks each `pre > code` block that has a known language. A fence with no language, an unknown language or `mermaid` stays plain, and a highlight error leaves the plain block.
 
-The start values are the attributes `data-start-width` and `data-start-theme` of `html`. They can hold only an accepted word. A flag that sets the width or the theme adds `data-forced="1"`.
+The start values are the attributes `data-start-width`, `data-start-theme` and `data-start-palette` of `html`. They can hold only an accepted word. A flag that sets the width or the theme adds `data-forced="1"`.
 
 ### The tree page
 
@@ -133,12 +134,13 @@ Tree mode is on by default. It shows the opened file and the other Markdown file
 | Look | The body has the class `markdown-body`. The page holds one light and one dark GitHub style, and one light and one dark highlight theme. The page script enables one of each pair with the `media` attribute. |
 | Width | `html` has `data-width` with 60, 70 or 80. The column is centered and has that width in percent. With the tree panel open, the percent applies to the space on its right. |
 | Narrow window | Below 700 px the column has the full width, and the gear and the tree panel are hidden. The keys still work, so `?` still opens the popover. |
+| Palette | `html` has `data-palette` only for `tokyo`. A color layer of rules, each starting with `html[data-palette]`, sets colors for the page text, the code, the tree panel, the gear and the popover. The layer sets colors only (no `display`, no `!important`). The page script holds one color table for Tokyo Night and Tokyo Day. It writes the `--p-*` variables on `html` and gives mermaid its `themeVariables`. A bad saved word is ignored. |
 | Theme | `html` has `data-theme` with `light`, `dark` or `auto`. `auto` follows `prefers-color-scheme` and changes with it. |
 | Gear | One low-contrast button, fixed in the top-right corner. It takes no layout space. It opens a popover. |
-| Popover | Width buttons 60, 70, 80. Theme buttons light, dark, auto. The keys. A line to paste into `config.ini`. A Reset button. A click outside or Esc closes it. |
-| Keys | `t` changes the theme in the order light, dark, auto. `w` changes the width in the order 60, 70, 80. `b` opens or closes the tree panel. `?` opens the popover. The page ignores a key with Ctrl, Alt or Meta held, and when a form field has the focus. |
-| Saved choice | The page saves the choice in `localStorage`, keys `md-view-width`, `md-view-theme` and `md-view-tree`. Order of use: the saved choice (unless `data-forced`), then the start value. Reset removes the saved choice and applies the start values with no reload. |
-| Storage blocked | If a read or write throws, the page still works. The popover then shows a notice and the lines to paste: `[View]`, `width=N`, `theme=T`, with the current values. |
+| Popover | Width buttons 60, 70, 80. Theme buttons light, dark, auto. A `Style` row with the buttons github and tokyo. The keys. A line to paste into `config.ini`. A Reset button. A click outside or Esc closes it. |
+| Keys | `t` changes the theme in the order light, dark, auto. `s` changes the palette (github, tokyo). `w` changes the width in the order 60, 70, 80. `b` opens or closes the tree panel. `?` opens the popover. The page ignores a key with Ctrl, Alt or Meta held, and when a form field has the focus. |
+| Saved choice | The page saves the choice in `localStorage`, keys `md-view-width`, `md-view-theme`, `md-view-palette` and `md-view-tree`. Order of use: the saved choice (unless `data-forced`), then the start value. Reset removes the saved choice and applies the start values with no reload. |
+| Storage blocked | If a read or write throws, the page still works. The popover then shows a notice and the lines to paste: `[View]`, `width=N`, `theme=T`, `palette=P`, with the current values. |
 | Print | The gear, the popover, the tree panel and its toggle are hidden. |
 | Offline | Text, style and highlight show with no network. A mermaid block shows its source. |
 
@@ -147,7 +149,7 @@ Tree mode is on by default. It shows the opened file and the other Markdown file
 A fence is a diagram when the first word of its language is `mermaid`. This match is case-sensitive. Other fences stay plain code.
 
 1. The page adds one script element for mermaid 12.3.0 from `cdn.jsdelivr.net`, with a `sha384` integrity hash and `crossorigin="anonymous"`. It does this only if the page has a diagram.
-2. On load, `mermaid.initialize` runs with `startOnLoad: false` and `securityLevel:'strict'`. The theme is `dark` or `default`, as the used page theme says. When the used theme changes, the page draws each diagram again from its saved source text. A key, a button, or the system in `auto` can change it. One batch runs at a time, with a time limit of 10 s. A batch that waits is not added twice, and a redraw is skipped if the drawn theme is the same.
+2. On load, `mermaid.initialize` runs with `startOnLoad: false` and `securityLevel:'strict'`. With the palette `github`, the theme is `dark` or `default`, as the used page theme says. With `tokyo`, the theme is `base` with `themeVariables` from the palette table, and `securityLevel:'strict'` stays. When the used theme changes, the page draws each diagram again from its saved source text. A key, a button, or the system in `auto` can change it. One batch runs at a time, with a time limit of 10 s. A batch that waits is not added twice. A redraw is skipped if the drawn pair is the same. The pair is the palette and the used theme.
 3. `mermaid.parse` checks each diagram alone. A diagram that fails shows its source and its error. The others still draw.
 4. `mermaid.run` draws the good diagrams.
 
@@ -189,7 +191,7 @@ The policy is `default-src 'none'; script-src 'unsafe-inline' https://cdn.jsdeli
 | Write | The script writes a temporary file next to the page, then moves it over the page. A reader never sees a half page. The temporary file goes on an error or a signal. `--out` keeps the direct write. |
 | Reuse | The script opens the old page and writes nothing if three things hold. The page exists. No input is newer than the page. The head of the page has the key of this run and the state of `config.ini`. |
 | Inputs | The Markdown file (by modification time only), `md-view`, `marked.min.js`, the five other vendored files, and `config.ini`. In tree mode also the scan: the page holds a line with the tree of this scan, and a newer tree file rebuilds the page. |
-| Key | `<meta name="md-view-key" content="w=<width>;t=<theme>;f=<0 or 1>;tr=<on or off>;r=<root mode>;d=<depth>;n=<max files>">`, and a `md-view-tree` comment with the state of this scan in tree mode. A comment `md-view-ini` holds the size and the time of `config.ini`, or `none`. The script reads both from the head of the page only, so the Markdown text cannot fake them. |
+| Key | `<meta name="md-view-key" content="w=<width>;t=<theme>;p=<palette>;f=<0 or 1>;tr=<on or off>;r=<root mode>;d=<depth>;n=<max files>">`, and a `md-view-tree` comment with the state of this scan in tree mode. A comment `md-view-ini` holds the size and the time of `config.ini`, or `none`. The script reads both from the head of the page only, so the Markdown text cannot fake them. |
 | No reuse | `--no-cache` and `--out` always build. The fallback page is never reused. |
 | Cleanup | The script never deletes a page. The operating system cleans the temporary folder. The cache folder grows with the files that the user opens. |
 

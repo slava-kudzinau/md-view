@@ -1,6 +1,6 @@
 ---
 description: Add a palette setting to the md-view page, so a reader can pick a named color set. Tokyo is the first new palette, with a day and a night version, for the page text, the code blocks and the mermaid diagrams.
-status: planned
+status: in-review
 size: M
 risk: contract
 refs:
