@@ -62,4 +62,5 @@ Before you open files, get a list of all docs: `grep -r '^description:' docs REA
 **Git and delivery**
 - Do story work with the `fde-delivery:deliver-story` skill. Story folders go in `docs/stories/{story}/`.
 - Name each branch `{type}/{slug}`. The type is `feat`, `fix`, `refactor`, `test`, `doc` or `chore`.
+- Work on each story in its own git worktree, `.worktrees/{story}`, on the story branch. Make it with `git worktree add .worktrees/{story} -b {type}/{slug}`. Do not edit files in the main checkout during a story. Git ignores `.worktrees/` and `.build/` (the build workspace).
 - Do not push, merge or tag if the owner did not ask.
