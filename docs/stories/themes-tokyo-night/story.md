@@ -91,3 +91,4 @@ M. One script, one new setting at six places, one mermaid setting, the spec, the
 - Branch: feat/themes-tokyo-night, in the worktree .worktrees/themes-tokyo-night. The owner asked for a worktree. Base: ee5a918c481ca27b49e9a924f44abb174ec47810.
 - Project rule wins over the skill: AGENTS.md says no push, no merge, no tag unless the owner asks. Close-out prepares the branch and the PR text. The owner pushes.
 - The owner asked for a worktree rule in AGENTS.md ("add the policy rule to the agents md we do use worktrees"). Commit 4c719e1 adds it, with a `.gitignore` for `.worktrees/` and `.build/`. AGENTS.md is an owner-checked path, and this change is the owner's own request.
+- G2-design verifier, 2026-11-13: pass 1 FIX (0 Critical, 10 Important, 6 Minor), docs corrected. Pass 2 FIX (0 Critical, 3 Important, 4 Minor), docs corrected again. The skill allows one correction and one more verify, so the build waits for the owner.

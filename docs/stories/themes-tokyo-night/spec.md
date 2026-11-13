@@ -39,7 +39,7 @@ A **palette** is a named set of colors with a light version and a dark version. 
 | Reset | Removes `md-view-palette` and applies the start word with no reload. |
 | Change | A change of the palette or the mode applies at once, with no reload, and draws the diagrams again. |
 | Narrow window | Under 700 px the tree panel, the tree button and the gear stay hidden, as today. The layer sets colors only and never sets `display`. |
-| One table | The layer, the code colors and the diagrams take their colors from the one table `PALETTES`. A new palette is one new row of the table and one new word in `palette_ok`. |
+| One table | The layer, the code colors and the diagrams take their colors from the one table `PALETTES`. A new palette is one new row of the table and one new word in `palette_ok`. The word also goes in the usage text, the sample config and the README. |
 
 ## Palette values
 
@@ -159,11 +159,11 @@ The token classes of highlight.js, with the key of the text color. The block tex
 - One focused case for the setting. The flag and `palette=` reach the page. A bad word gives exit 2. A hostile config value is ignored.
 - One case for the cache key.
 - The layer test: each row of "Themed parts" and "Code tokens" has a layer rule.
-- Three page rows: the start word, the key `s` with the saved word, and a bad saved word.
+- Four page rows: the start word, the key `s`, the saved word and a bad saved word.
 - The `securityLevel` row on a `tokyo` page, the two diagram rows and the redraw row. They skip with no network.
 - The updated exact-tag, keys-line, usage and sample-config checks.
 
-The real run checks the rows of the other tables. The owner reads the screenshots of the sample page and of six diagram types. Reset and the narrow window keep the code of today, so they have no new test. `securityLevel`, the SRI hash, the CSP meta and the hostile-input rows are unchanged and pass.
+The real run checks the rows of the other tables. The owner reads the screenshots of the sample page and of six diagram types. Reset has a small change in `resetChoice()` and no new test, and the review checks it. The narrow window keeps the code of today, so it has no new test. `securityLevel`, the SRI hash, the CSP meta and the hostile-input rows are unchanged and pass.
 
 ## Out of scope
 

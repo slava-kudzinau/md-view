@@ -51,7 +51,7 @@ Update the cases that check the exact `html` tag (`expect_tag` takes the palette
 ## T2: The palette in the page script
 
 **Depends on:** T1
-**Done check:** `sh tests/browser-links-dom.sh > .build/t2.out && ! grep -q '^skip all' .build/t2.out && grep -q '^ok palette: start' .build/t2.out && grep -q '^ok palette: key s' .build/t2.out && grep -q '^ok palette: bad saved word' .build/t2.out && ! grep -q '^FAIL' .build/t2.out` exits 0
+**Done check:** `sh tests/browser-links-dom.sh > .build/t2.out && ! grep -q '^skip all' .build/t2.out && grep -q '^ok dom_palette_start$' .build/t2.out && grep -q '^ok dom_palette_key_s$' .build/t2.out && grep -q '^ok dom_palette_saved$' .build/t2.out && grep -q '^ok dom_palette_bad_saved$' .build/t2.out && ! grep -q '^FAIL' .build/t2.out` exits 0
 **Role:** implementer — review task-reviewer-critical
 
 Change the page script inside `lib/md-view`. No color rule yet; the colors only reach the page as CSS variables.
@@ -64,11 +64,12 @@ Change the page script inside `lib/md-view`. No color rule yet; the colors only 
 - Popover: a row `Style` with one button for each word, between the Width and Theme rows, with `aria-pressed`. The button text is the word in lower case, as for the theme buttons. The paste lines always show `palette=<word>`, also for `github`. The keys line becomes `Keys: t theme, s style, w width, b tree, ? help`, and `Keys: t theme, s style, w width, ? help` on a one-file page. The key `s` calls `setPalette(nextWord(PALETTE_WORDS, paletteSetting()))` under the same rules as `t` (no Ctrl, Alt or Meta, no form field).
 - `refresh()` marks the pressed palette button.
 
-Tests in `tests/browser-links-dom.sh`: update the two keys-line rows. Add these rows. Use forced pages for the mode.
+Tests in `tests/browser-links-dom.sh`: update the two keys-line rows. Each row is a shell function `case_<name>`, and its name is in the `for c in ...` list. Add these rows. Use forced pages for the mode, and no flag for the saved word.
 
-- `palette: start`: the start word `tokyo` gives `data-palette="tokyo"` and 19 `--p-` variables. The value of `--p-bg` is the Night value with `--theme dark`. It is the Day value with `--theme light`. The start word `github` gives no `data-palette` and no `--p-` variable.
-- `palette: key s`: the key `s` goes from `github` to `tokyo` and back. A saved word is used on a page that no flag forced.
-- `palette: bad saved word`: a saved word that is not accepted is ignored, and the page has no `data-palette`.
+- `dom_palette_start`: the start word `tokyo` gives `data-palette="tokyo"` and 19 `--p-` variables. The value of `--p-bg` is the Night value with `--theme dark`. It is the Day value with `--theme light`. The start word `github` gives no `data-palette` and no `--p-` variable.
+- `dom_palette_key_s`: the injected script sends the key `s`. The page goes from `github` to `tokyo`, and a second `s` goes back to `github`.
+- `dom_palette_saved`: the saved word is used. The page `measured` makes runs the injected script after `load()`, so the script cannot seed the saved word for the first load. Use a reload. The script does this once, guarded by `sessionStorage`: set `localStorage` key `md-view-palette` to `tokyo`, then call `location.reload()`. After the reload, the dumped `html` has `data-palette="tokyo"`. The page has no flag.
+- `dom_palette_bad_saved`: build the page with `palette=tokyo` in `config.ini` and no flag. Seed the saved word `evil` with the same reload. The dumped `html` still has `data-palette="tokyo"`, so a bad saved word does not replace the start word. This row fails with no palette code in the page.
 
 ## T3: The color layer
 
@@ -88,7 +89,7 @@ Test: in `tests/browser-page.sh`, add `case_palette_layer` to the list. For each
 ## T4: Mermaid with the palette
 
 **Depends on:** T2
-**Done check:** `sh tests/hostile-dom.sh > .build/t4h.out && sh tests/browser-links-dom.sh > .build/t4d.out && grep -q '^ok palette: tokyo dark draws svg' .build/t4h.out && grep -q '^ok palette: tokyo light draws svg' .build/t4h.out && grep -q '^ok palette: mermaid redraw' .build/t4d.out && ! grep -q '^FAIL' .build/t4h.out .build/t4d.out` exits 0
+**Done check:** `sh tests/hostile-dom.sh > .build/t4h.out && sh tests/browser-links-dom.sh > .build/t4d.out && grep -q '^ok palette: tokyo dark draws svg' .build/t4h.out && grep -q '^ok palette: tokyo light draws svg' .build/t4h.out && grep -q '^ok palette: mermaid redraw' .build/t4h.out && ! grep -q '^FAIL' .build/t4h.out .build/t4d.out` exits 0
 **Role:** implementer — review task-reviewer-critical
 
 - `mermaidVars(colors)` returns the `themeVariables` object from the color map of the used mode, by the mapping table in `spec.md`. The maps have all 19 keys, so it checks nothing.
@@ -103,10 +104,11 @@ Test: in `tests/browser-page.sh`, add `case_palette_layer` to the list. For each
   - Gantt: 2 sections, 3 tasks.
   - Pie: 4 slices.
 
-Tests. The rows that need the network use the same `net_check` helper and `skip` rule as the existing mermaid rows.
+Tests. The rows that need the network are `net_check` rows in `tests/hostile-dom.sh`. They print `skip` with no network. With no network, T4 stops and reports BLOCKED. Do not remove the `skip` rule.
 
-- In `tests/hostile-dom.sh`, keep every existing row. Add `palette: tokyo strict` (the initialize call has `securityLevel` `strict` on a `tokyo` page, and the page has one CDN script only). Add `palette: tokyo dark draws svg` and `palette: tokyo light draws svg` (each page has an SVG in its diagram block).
-- In `tests/browser-links-dom.sh`, add `palette: mermaid redraw`. A `github` dark page has a diagram. An injected script sends the key `s`. After that the SVG text holds the Night value of `bg-hl` (`#292e42`), and it did not hold it before.
+- Keep every existing row. Add `palette: tokyo strict`: the initialize call has `securityLevel` `strict` on a `tokyo` page, and the page has one CDN script only.
+- Add `palette: tokyo dark draws svg` and `palette: tokyo light draws svg`. Each page has an SVG in its diagram block.
+- Add `palette: mermaid redraw`. Build a `github` dark page with a diagram. Copy it with a script added before `</body>`, as `measured` does in `tests/browser-links-dom.sh`. The script sends the key `s`. After that, the SVG text holds the Night value of `bg-hl` (`#292e42`). On the page without the key, it does not.
 
 ## T5: The README and the real run
 
