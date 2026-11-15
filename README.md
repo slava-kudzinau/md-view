@@ -53,6 +53,8 @@ The page goes to `${XDG_CACHE_HOME:-$HOME/.cache}/md-view/` and md-view reuses i
 
 A diagram needs internet, because mermaid loads from a CDN. Without it, the page shows the source of the diagram.
 
+Each drawn diagram has an Expand button in its top right corner. Click it, or click the diagram, to see the diagram full screen. In that view, press `+` or `-` to zoom, `0` to fit the window and `1` to show the actual size. The mouse wheel zooms at the pointer, and a drag with the mouse pans. Press `Esc` or `×` to close the view.
+
 ## Palettes
 
 A palette is a set of colors for the page, the code blocks and the diagrams. The default is `github`, the GitHub look. The palette `tokyo` has two versions: Tokyo Night, a dark version, and Tokyo Day, a light version. The theme picks the version. The theme `dark` gives Tokyo Night. The theme `light` gives Tokyo Day. The theme `auto` follows the system and changes with it.

@@ -19,7 +19,8 @@ pre.mermaid:hover .md-dbar, .md-dbar:focus-within { opacity: 1 }
 .md-viewer[open] { display: flex; flex-direction: column }
 .md-viewer::backdrop { background: rgba(0,0,0,0.5) }
 .md-vtools { display: flex; justify-content: flex-end; gap: 4px; padding: 6px }
-.md-vbox { flex: 1; overflow: auto; display: flex }
+.md-vbox { flex: 1; overflow: auto; display: flex; cursor: grab }
+.md-drag { cursor: grabbing }
 .md-vbox > svg { flex: none; margin: auto }
 .markdown-body pre code.hljs { padding: 0; background: transparent; }
 #md-gear { position: fixed; top: 8px; right: 8px; z-index: 20; box-sizing: border-box; width: 28px; height: 28px; margin: 0; padding: 0; border: 1px solid GrayText; border-radius: 6px; background: Canvas; color: CanvasText; font: 16px/1 sans-serif; cursor: pointer; opacity: .45 }
