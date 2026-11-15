@@ -140,7 +140,7 @@ case_flags_ok() {
     [ ! -s "$d/out" ] || bad "--no-open printed: $(cat "$d/out")"
     [ ! -s "$d/err" ] || bad "stderr: $(cat "$d/err")"
     expect_tag 70 auto github 0
-    for w in 60 70 80; do
+    for w in 60 70 80 90; do
         for t in light dark auto; do
             rm -f "$page"
             md --width "$w" --theme "$t" --no-open --out "$page" "$sample"
@@ -694,7 +694,7 @@ case_page_width_rules() {
     fresh
     md --no-open --out "$page" "$sample"
     [ "$rc" = 0 ] || bad "exit $rc"
-    for w in 60 70 80; do
+    for w in 60 70 80 90; do
         grep -qF "html[data-width=\"$w\"] #content { width: $w% }" "$page" \
             || bad "no width rule for $w"
     done
@@ -749,11 +749,11 @@ case_page_narrow_rule() {
     fresh
     md --tree off --no-open --out "$page" "$sample"
     [ "$rc" = 0 ] || bad "exit $rc"
-    line_of 'html[data-width="80"] #content { width: 80% }'; w80=$ln
+    line_of 'html[data-width="90"] #content { width: 90% }'; w90=$ln
     # The CSS block, not the matchMedia call in the page script.
     media=$(grep -n -x -F '@media (max-width: 699px) {' "$page" | cut -d: -f1)
     line_of 'html[data-width] #content { width: 100% }'; narrow=$ln
-    [ "$media" -gt "$w80" ] && [ "$narrow" -gt "$media" ] \
+    [ "$media" -gt "$w90" ] && [ "$narrow" -gt "$media" ] \
         || bad "the narrow rule is not after the width rules"
     # The gear is hidden by a rule inside the narrow block, between its @media line
     # and its closing brace. The popover is not hidden below 700 px.
@@ -2328,10 +2328,10 @@ case_tree_off_same_page() {
             -e 's/^pre\.mermaid\[data-processed\] { position: relative; /pre.mermaid[data-processed] { /' \
             -e 's/^@media print { #md-gear, #md-pop, \.md-dbar { display: none !important } }$/@media print { #md-gear, #md-pop { display: none !important } }/' "$1"
     }
-    # Only the html line, the key line, the lines of the palette layer, the page
+    # Only the html line, the key line, the lines of the palette layer, the 90 width rule, the page
     # script and the viewer lines (see viewer_map) may differ.
     strip() {
-        viewer_map "$1" | sed -e '/^<html /d' -e '/^<meta name="md-view-key" /d' -e '/^html\[data-palette\] /d' -e '/^(function () {$/,/^})();$/d'
+        viewer_map "$1" | sed -e '/^<html /d' -e '/^<meta name="md-view-key" /d' -e '/^html\[data-palette\] /d' -e '/^html\[data-width="90"\] /d' -e '/^(function () {$/,/^})();$/d'
     }
     strip "$d/base.html" > "$d/a"
     strip "$page" > "$d/b"
@@ -2343,7 +2343,7 @@ case_tree_off_same_page() {
     # The page script is there in both.
     [ "$(grep -c '^(function () {$' "$page")" = 1 ] || bad "no page script"
     head_of "$page" > "$d/head-page" || bad "head"
-    [ "$(viewer_map "$d/head-page" | grep -v '^html\[data-palette\] ' | wc -l)" = "$(head_of "$d/base.html" | wc -l)" ] || bad "the head has new lines"
+    [ "$(viewer_map "$d/head-page" | grep -v -e '^html\[data-palette\] ' -e '^html\[data-width="90"\] ' | wc -l)" = "$(head_of "$d/base.html" | wc -l)" ] || bad "the head has new lines"
     exit 0
 }
 

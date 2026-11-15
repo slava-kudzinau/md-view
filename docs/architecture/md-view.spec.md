@@ -35,7 +35,7 @@ The script can also run alone from any folder.
 ### Script interface
 
 ```
-md-view [--out <page.html>] [--no-open] [--width 60|70|80]
+md-view [--out <page.html>] [--no-open] [--width 60|70|80|90]
         [--theme light|dark|auto] [--palette github|tokyo] [--browser B] [--no-cache]
         [--tree on|off] [--list-tree] <file.md>
 md-view --init-config
@@ -46,7 +46,7 @@ md-view --print-association
 |---|---|
 | `--out <page.html>` | The page path. The folder must exist. An existing file is replaced. The script writes it directly. The cache page is not used. `--out` alone does not stop the open step. |
 | `--no-open` | Writes the page and does not start a browser. |
-| `--width 60\|70\|80` | The start width of the text column, in percent. A flag also makes the page ignore the saved page choice. |
+| `--width 60\|70\|80\|90` | The start width of the text column, in percent. A flag also makes the page ignore the saved page choice. |
 | `--theme light\|dark\|auto` | The start theme. Same rule for the saved page choice. |
 | `--palette github\|tokyo` | The start palette. `github` is the look of the vendored styles. `tokyo` is Tokyo Night in dark mode and Tokyo Day in light mode. Same rule for the saved page choice. |
 | `--browser B` | Replaces the `browser=` key for this run. `B` is `auto`, `firefox`, `chrome`, `safari`, or an absolute path to a program. A value that is not accepted gives one line on stderr, and the script uses `auto`. |
@@ -76,7 +76,7 @@ A `--browser` value or a `browser=` key that is not accepted is not an error. It
 The file is `${XDG_CONFIG_HOME:-$HOME/.config}/md-view/config.ini`. md-view reads no file in the old far2l path `.../far2l/settings/md-view.ini`. A host never reads or writes this file.
 
 - Only the section `[View]` is read. A line that starts with `#` or `;` is a comment. Spaces around `=` and a CR at the line end are ignored. The last valid line of a key wins.
-- `width=` is `60`, `70` or `80`. `theme=` is `light`, `dark` or `auto`. `palette=` is `github` or `tokyo`. `browser=` is `auto`, `firefox`, `chrome`, `safari`, or an absolute path to a program (on macOS also a `.app` folder).
+- `width=` is `60`, `70`, `80` or `90`. `theme=` is `light`, `dark` or `auto`. `palette=` is `github` or `tokyo`. `browser=` is `auto`, `firefox`, `chrome`, `safari`, or an absolute path to a program (on macOS also a `.app` folder).
 - `tree=` is `on` (default) or `off`. `root=` is `dir` (default) or `repo`.
 - `root=dir` is the folder of the opened file. `root=repo` is the nearest folder upward with `.git`, else the folder of the file. The walk stops at `$HOME` or `/`.
 - `tree_depth=` is a number from 1 to 12, default 6. `tree_max_files=` is a number from 1 to 2000, default 500. A number over the ceiling gives the ceiling. A value that is not accepted is ignored.
@@ -132,13 +132,13 @@ Tree mode is on by default. It shows the opened file and the other Markdown file
 | Part | Rule |
 |---|---|
 | Look | The body has the class `markdown-body`. The page holds one light and one dark GitHub style, and one light and one dark highlight theme. The page script enables one of each pair with the `media` attribute. |
-| Width | `html` has `data-width` with 60, 70 or 80. The column is centered and has that width in percent. With the tree panel open, the percent applies to the space on its right. |
+| Width | `html` has `data-width` with 60, 70, 80 or 90. The column is centered and has that width in percent. With the tree panel open, the percent applies to the space on its right. |
 | Narrow window | Below 700 px the column has the full width, and the gear and the tree panel are hidden. The keys still work, so `?` still opens the popover. |
 | Palette | `html` has `data-palette` only for `tokyo`. A color layer of rules, each starting with `html[data-palette]`, sets colors for the page text, the code, the tree panel, the gear and the popover. The layer sets colors only (no `display`, no `!important`). The page script holds one color table for Tokyo Night and Tokyo Day. It writes the `--p-*` variables on `html` and gives mermaid its `themeVariables`. A bad saved word is ignored. |
 | Theme | `html` has `data-theme` with `light`, `dark` or `auto`. `auto` follows `prefers-color-scheme` and changes with it. |
 | Gear | One low-contrast button, fixed in the top-right corner. It takes no layout space. It opens a popover. |
-| Popover | Width buttons 60, 70, 80. Theme buttons light, dark, auto. A `Style` row with the buttons github and tokyo. The keys. A line to paste into `config.ini`. A Reset button. A click outside or Esc closes it. |
-| Keys | `t` changes the theme in the order light, dark, auto. `s` changes the palette (github, tokyo). `w` changes the width in the order 60, 70, 80. `b` opens or closes the tree panel. `?` opens the popover. The page ignores a key with Ctrl, Alt or Meta held, and when a form field has the focus. While the diagram viewer is open, these keys do nothing. Then `+` or `=` zooms in, `-` zooms out, `0` sets Fit, `1` sets 1:1 and Esc closes the viewer. |
+| Popover | Width buttons 60, 70, 80, 90. Theme buttons light, dark, auto. A `Style` row with the buttons github and tokyo. The keys. A line to paste into `config.ini`. A Reset button. A click outside or Esc closes it. |
+| Keys | `t` changes the theme in the order light, dark, auto. `s` changes the palette (github, tokyo). `w` changes the width in the order 60, 70, 80, 90. `b` opens or closes the tree panel. `?` opens the popover. The page ignores a key with Ctrl, Alt or Meta held, and when a form field has the focus. While the diagram viewer is open, these keys do nothing. Then `+` or `=` zooms in, `-` zooms out, `0` sets Fit, `1` sets 1:1 and Esc closes the viewer. |
 | Saved choice | The page saves the choice in `localStorage`, keys `md-view-width`, `md-view-theme`, `md-view-palette` and `md-view-tree`. Order of use: the saved choice (unless `data-forced`), then the start value. Reset removes the saved choice and applies the start values with no reload. |
 | Storage blocked | If a read or write throws, the page still works. The popover then shows a notice and the lines to paste: `[View]`, `width=N`, `theme=T`, `palette=P`, with the current values. |
 | Diagram bar | `.md-dbar`, the last child of each drawn `pre.mermaid`. It shows on hover and on keyboard focus, and always under `@media (hover: none)`. |

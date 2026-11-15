@@ -3,6 +3,7 @@ body { margin: 0; padding: 2em 16px; }
 html[data-width="60"] #content { width: 60% }
 html[data-width="70"] #content { width: 70% }
 html[data-width="80"] #content { width: 80% }
+html[data-width="90"] #content { width: 90% }
 @media (max-width: 699px) {
   html[data-width] #content { width: 100% }
   #md-gear { display: none }
