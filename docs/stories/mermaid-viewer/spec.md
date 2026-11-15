@@ -31,7 +31,7 @@ All code is in `lib/page.js` and `lib/page.css`. The print rules are in the two 
 | Item | Rule |
 |---|---|
 | Markup | One `<dialog class="md-viewer" aria-label="Diagram viewer">` on `body`, made at the first open and kept. It holds `<div class="md-vtools">` (the buttons) and then `<div class="md-vbox">` (the scroll box). |
-| Size | The dialog fills the window: `width: 100vw; height: 100vh; max-width: none; max-height: none; margin: 0; padding: 0; border: 0`. With `[open]`, it is a flex column. The scroll box takes the rest (`flex: 1; overflow: auto; display: flex`). The `<svg>` has `margin: auto` and `flex: none`. |
+| Size | The dialog fills the window: `width: 100%; height: 100%; max-width: none; max-height: none; margin: 0; padding: 0; border: 0`. With `[open]`, it is a flex column. The scroll box takes the rest (`flex: 1; overflow: auto; display: flex`). The `<svg>` has `margin: auto` and `flex: none`. |
 | Label font | At open, the scroll box gets the computed `font-family`, `font-size` and `line-height` of the `pre`, as inline style. |
 | Colors | `background: Canvas; color: CanvasText`. `::backdrop` is `rgba(0,0,0,0.5)` in all palettes, because the dialog fills the window and the backdrop does not show. Rules that start with `html[data-palette]` set `var(--p-bg)` and `var(--p-fg)` on the dialog, and `var(--p-bg-hl)`, `var(--p-fg)` and `var(--p-border)` on its buttons. |
 | Buttons | In this order, made with `makeButton`: `−` (`Zoom out`), `+` (`Zoom in`), `Fit` (`Fit`), `1:1` (`Actual size`), `×` (`Close`). The text in brackets is `aria-label` and `title`. |
