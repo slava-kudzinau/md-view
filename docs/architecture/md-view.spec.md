@@ -138,10 +138,12 @@ Tree mode is on by default. It shows the opened file and the other Markdown file
 | Theme | `html` has `data-theme` with `light`, `dark` or `auto`. `auto` follows `prefers-color-scheme` and changes with it. |
 | Gear | One low-contrast button, fixed in the top-right corner. It takes no layout space. It opens a popover. |
 | Popover | Width buttons 60, 70, 80. Theme buttons light, dark, auto. A `Style` row with the buttons github and tokyo. The keys. A line to paste into `config.ini`. A Reset button. A click outside or Esc closes it. |
-| Keys | `t` changes the theme in the order light, dark, auto. `s` changes the palette (github, tokyo). `w` changes the width in the order 60, 70, 80. `b` opens or closes the tree panel. `?` opens the popover. The page ignores a key with Ctrl, Alt or Meta held, and when a form field has the focus. |
+| Keys | `t` changes the theme in the order light, dark, auto. `s` changes the palette (github, tokyo). `w` changes the width in the order 60, 70, 80. `b` opens or closes the tree panel. `?` opens the popover. The page ignores a key with Ctrl, Alt or Meta held, and when a form field has the focus. While the diagram viewer is open, these keys do nothing. Then `+` or `=` zooms in, `-` zooms out, `0` sets Fit, `1` sets 1:1 and Esc closes the viewer. |
 | Saved choice | The page saves the choice in `localStorage`, keys `md-view-width`, `md-view-theme`, `md-view-palette` and `md-view-tree`. Order of use: the saved choice (unless `data-forced`), then the start value. Reset removes the saved choice and applies the start values with no reload. |
 | Storage blocked | If a read or write throws, the page still works. The popover then shows a notice and the lines to paste: `[View]`, `width=N`, `theme=T`, `palette=P`, with the current values. |
-| Print | The gear, the popover, the tree panel and its toggle are hidden. |
+| Diagram bar | `.md-dbar`, the last child of each drawn `pre.mermaid`. It shows on hover and on keyboard focus, and always under `@media (hover: none)`. |
+| Diagram viewer | `dialog.md-viewer` on `body`, made at the first open. Buttons `−`, `+`, `Fit`, `1:1`, `×`. The backdrop is `rgba(0,0,0,0.5)`. The color layer colors the dialog and its buttons. It works below 700 px too. |
+| Print | The gear, the popover, the tree panel and its toggle, and the diagram bars are hidden. |
 | Offline | Text, style and highlight show with no network. A mermaid block shows its source. |
 
 ### How diagrams render
@@ -152,6 +154,9 @@ A fence is a diagram when the first word of its language is `mermaid`. This matc
 2. On load, `mermaid.initialize` runs with `startOnLoad: false` and `securityLevel:'strict'`. With the palette `github`, the theme is `dark` or `default`, as the used page theme says. With `tokyo`, the theme is `base` with `themeVariables` from the palette table, and `securityLevel:'strict'` stays. When the used theme changes, the page draws each diagram again from its saved source text. A key, a button, or the system in `auto` can change it. One batch runs at a time, with a time limit of 10 s. A batch that waits is not added twice. A redraw is skipped if the drawn pair is the same. The pair is the palette and the used theme.
 3. `mermaid.parse` checks each diagram alone. A diagram that fails shows its source and its error. The others still draw.
 4. `mermaid.run` draws the good diagrams.
+5. After the draw, each drawn diagram gets a small bar in its top-right corner with an Expand button (`.md-dbar`). A diagram that shows its source gets no bar. A click on Expand, or on the drawn diagram, opens the diagram viewer. A click that ends a text selection does not open it.
+6. The viewer is one `<dialog class="md-viewer">`, opened with `showModal()`. It fills the window (`width: 100%; height: 100%`). The `<svg>` moves into its scroll box with no clone, because its style and markers use ids. The full size comes from `svg.viewBox`. The viewer opens in Fit, with no cap at 1. The zoom range is 0.05 to 20, and one step is 1.25. The wheel zooms around the pointer. A mouse or pen drag pans, and a touch drag scrolls.
+7. On close, the `<svg>` goes back into its `pre` with its old `style` attribute. If the `pre` was drawn again or is gone, the old `<svg>` is dropped. A theme or palette change, and a move to another file, close the viewer first.
 
 ### Content cases
 
@@ -248,6 +253,7 @@ The rows of `tests/hostile-dom.sh` are:
 | Paths with spaces, empty file, BOM and CRLF | `paths with spaces`, `empty file`, `BOM and CRLF` |
 | Diagrams, stalled and refused CDN | `diagram:`, `stalled CDN:`, `refused CDN:` |
 | Untrusted content | `hostile:`, `escapes:`, `remote image:`, `broken diagram:` |
+| Diagram viewer | ten `viewer:` rows: the bar, the open, Fit, zoom, the keys, the drag, the close and the close on redraw. A test cannot send a real Esc or a native `close` event to a headless page, so the close row sends the `close` event itself. A person checks Esc, pinch and the wheel. |
 | Script interface | `usage:`, `leading dash`, `open:` |
 | Association text | `association:` rows |
 

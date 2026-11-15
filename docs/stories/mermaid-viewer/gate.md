@@ -77,16 +77,30 @@ The reader listed 29 terms and 11 open choices. The gate now defines the page wo
 
 ### What was built
 
-{{against "What it builds"}}
+As planned. Each drawn diagram gets a small bar with an Expand button. A click on Expand or on the diagram opens a viewer that fills the window. The viewer opens in Fit. It has the buttons `−`, `+`, `Fit`, `1:1` and `×`, and the keys `+ = - 0 1` and Esc. The wheel zooms at the pointer, and a drag pans. On close, the diagram goes back into the page. A theme or palette change, and a move to another file, close the viewer first. The code is in `lib/page.js` and `lib/page.css`, and both print rules hide the bar. `tests/hostile-dom.sh` has ten new `viewer:` rows.
 
 ### Decisions changed during the build
 
-{{rows changed or added, or "none"}}
+| Decision | Before | Why |
+|---|---|---|
+| The dialog size is `width: 100%; height: 100%` | `100vw` and `100vh` | With a page scroll bar, `100vw` made the dialog wider than the window (final review). |
+| The viewer keys are in the one page `keydown` handler | a `keydown` listener on the dialog | `tests/browser-page.sh` pins one `keydown` listener. The behavior is the same. |
+| Ten test rows | nine | A review added a row that proves the drag pans and a drag on the scroll bar does not. |
+| The close row sends the `close` event itself after `dialog.close()` | the native event | Headless Chrome does not give the native event to the page. A copy with no close listener fails the row. A person checks the real Esc. |
+| The `×` button has the focus at open | no rule | The keyboard user can close at once. |
 
 ### What the reviews caught
 
-{{findings that changed code, or "nothing that changed code"}}
+- Final review, Important: the dialog was wider than the window on a page with a scroll bar. Fixed, and a new low-window test fails on the old CSS.
+- Final review, Minor: the Fit test did not cover a low window, where the height limits the zoom. Fixed with the same low-window test.
+- Task reviews: the Fit test was too weak, the focus at open, and a drag that started on the scroll bar. All fixed in T2.
+- Parked: no test proves that a move to another file closes the viewer, and print while the viewer is open prints the dialog. Both are in `closeout.md`.
 
 ### Run it
 
-{{the command and what you should see}}
+```sh
+make check
+bin/md-view tests/fixtures/broken-diagram.md
+```
+
+`make check` prints `all checks pass`, with ten `ok viewer:` rows and no `skip` line. In the page, point at the drawn diagram and click Expand. Then use the wheel, a drag, `+`, `-`, `0`, `1` and Esc. Check this in Chrome, Firefox and Safari.
