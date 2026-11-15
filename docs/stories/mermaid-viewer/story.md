@@ -1,6 +1,6 @@
 ---
 description: Add a full-screen viewer for mermaid diagrams, with zoom, fit, 1 to 1 and drag to pan, so that a big diagram is easy to read without browser zoom.
-status: planned
+status: in-progress
 size: M
 risk: contract
 depends-on:
@@ -89,3 +89,8 @@ M. The page script gets about 110 to 140 lines and the page style about 35 lines
 - Flow (from `flow-for.mjs --size M --risk contract`): tier full, docs spec and plan, orchestrator, final reviewer, gate stop, scan.
 - Budget: $15. Hard stop: $20. Size M.
 - Check: `make check`. A `skip all` pass proves only the tests that need no browser.
+- started: 2026-11-15T09:51:18Z
+- Flow: `flow tier=full docs=spec,plan design=no orchestrator=yes final=final-reviewer gate=stop scan=yes verifier=plan-verifier-critical`
+- G2-design waived by owner, 2026-11-15: "go in autonomus mode for the refactoring one, open PR, merge, pull main branch and the go in autonoums mode for the viewer one, I'm stepping out". The owner asked for the PR to be opened and merged in the same words.
+- Hooks: none.
+- Base: `origin/main` at 699f45c (page-assets merged).
