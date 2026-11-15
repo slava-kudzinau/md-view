@@ -8,8 +8,19 @@ html[data-width="80"] #content { width: 80% }
   #md-gear { display: none }
 }
 pre.mermaid { background: none; }
-pre.mermaid[data-processed] { text-align: center; overflow-x: auto; }
+pre.mermaid[data-processed] { position: relative; text-align: center; overflow-x: auto; }
+pre.mermaid[data-processed] > svg { cursor: zoom-in }
 .mermaid-error { color: #cf222e; color: light-dark(#cf222e, #ff7b72); font-size: 0.85em; text-align: left; }
+.md-dbar { position: absolute; top: 4px; right: 4px; opacity: 0 }
+pre.mermaid:hover .md-dbar, .md-dbar:focus-within { opacity: 1 }
+@media (hover: none) { .md-dbar { opacity: 1 } }
+.md-dbar button, .md-vtools button { font: 16px/1 sans-serif; min-width: 28px; height: 28px; padding: 0 6px; border: 1px solid GrayText; border-radius: 6px; background: ButtonFace; color: ButtonText; cursor: pointer }
+.md-viewer { width: 100vw; height: 100vh; max-width: none; max-height: none; margin: 0; padding: 0; border: 0; background: Canvas; color: CanvasText }
+.md-viewer[open] { display: flex; flex-direction: column }
+.md-viewer::backdrop { background: rgba(0,0,0,0.5) }
+.md-vtools { display: flex; justify-content: flex-end; gap: 4px; padding: 6px }
+.md-vbox { flex: 1; overflow: auto; display: flex }
+.md-vbox > svg { flex: none; margin: auto }
 .markdown-body pre code.hljs { padding: 0; background: transparent; }
 #md-gear { position: fixed; top: 8px; right: 8px; z-index: 20; box-sizing: border-box; width: 28px; height: 28px; margin: 0; padding: 0; border: 1px solid GrayText; border-radius: 6px; background: Canvas; color: CanvasText; font: 16px/1 sans-serif; cursor: pointer; opacity: .45 }
 #md-gear:hover, #md-gear:focus { opacity: 1 }
@@ -43,6 +54,8 @@ html[data-palette] #md-pop button { background-color: var(--p-bg-hl); color: var
 html[data-palette] #md-pop button[aria-pressed="true"] { border-color: var(--p-blue) }
 html[data-palette] #md-pop .md-notice { color: var(--p-red) }
 html[data-palette] .mermaid-error { color: var(--p-red) }
+html[data-palette] .md-viewer { background-color: var(--p-bg); color: var(--p-fg) }
+html[data-palette] .md-dbar button, html[data-palette] .md-vtools button { background-color: var(--p-bg-hl); color: var(--p-fg); border-color: var(--p-border) }
 html[data-palette] #md-pop pre.md-paste { color: var(--p-fg-dark); border-color: var(--p-border) }
 html[data-palette] .hljs { color: var(--p-fg); background: none }
 html[data-palette] .hljs-comment, html[data-palette] .hljs-quote { color: var(--p-comment); font-style: italic }

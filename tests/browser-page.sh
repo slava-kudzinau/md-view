@@ -854,7 +854,7 @@ case_page_print_hidden() {
     md --tree off --no-open --out "$page" "$sample"
     [ "$rc" = 0 ] || bad "exit $rc"
     sed -n '/^<style id="page">$/,/^<\/style>$/p' "$page" > "$d/page-style" || bad "sed"
-    grep -qxF '@media print { #md-gear, #md-pop { display: none !important } }' "$d/page-style" \
+    grep -qxF '@media print { #md-gear, #md-pop, .md-dbar { display: none !important } }' "$d/page-style" \
         || bad "no print rule that hides the gear and the popover in the page style"
     exit 0
 }
@@ -2320,10 +2320,18 @@ case_tree_off_same_page() {
     sh "$d/base/md-view" --no-open --out "$d/old.html" s.md 2> "$d/err" || bad "the BASE script failed: $(cat "$d/err")"
     sed 's/far2l-md-/md-view-/g' "$d/old.html" > "$d/base.html" || bad "sed"
     tpage --tree off s.md
-    # Only the html line, the key line, the lines of the palette layer and the
-    # page script may differ.
+    # The viewer adds lines to the page style. viewer_map removes the new rules and
+    # maps each changed line back to its base line, so any other change still differs.
+    viewer_map() {
+        sed -e '/^\.md-dbar { position: absolute/,/^\.md-vbox > svg { flex: none; margin: auto }$/d' \
+            -e '/^pre\.mermaid\[data-processed\] > svg { cursor: zoom-in }$/d' \
+            -e 's/^pre\.mermaid\[data-processed\] { position: relative; /pre.mermaid[data-processed] { /' \
+            -e 's/^@media print { #md-gear, #md-pop, \.md-dbar { display: none !important } }$/@media print { #md-gear, #md-pop { display: none !important } }/' "$1"
+    }
+    # Only the html line, the key line, the lines of the palette layer, the page
+    # script and the viewer lines (see viewer_map) may differ.
     strip() {
-        sed -e '/^<html /d' -e '/^<meta name="md-view-key" /d' -e '/^html\[data-palette\] /d' -e '/^(function () {$/,/^})();$/d' "$1"
+        viewer_map "$1" | sed -e '/^<html /d' -e '/^<meta name="md-view-key" /d' -e '/^html\[data-palette\] /d' -e '/^(function () {$/,/^})();$/d'
     }
     strip "$d/base.html" > "$d/a"
     strip "$page" > "$d/b"
@@ -2334,7 +2342,8 @@ case_tree_off_same_page() {
         || bad "key line is $(grep '^<meta name="md-view-key" ' "$page")"
     # The page script is there in both.
     [ "$(grep -c '^(function () {$' "$page")" = 1 ] || bad "no page script"
-    [ "$(head_of "$page" | grep -v '^html\[data-palette\] ' | wc -l)" = "$(head_of "$d/base.html" | wc -l)" ] || bad "the head has new lines"
+    head_of "$page" > "$d/head-page" || bad "head"
+    [ "$(viewer_map "$d/head-page" | grep -v '^html\[data-palette\] ' | wc -l)" = "$(head_of "$d/base.html" | wc -l)" ] || bad "the head has new lines"
     exit 0
 }
 
@@ -2602,7 +2611,7 @@ case_page_tree_print_hidden() {
     printf '# A\n' > proj/o.md || bad "write"
     tpage proj/o.md
     sed -n '/^<style id="page">$/,/^<\/style>$/p' "$page" > "$d/page-style" || bad "sed"
-    grep -qxF '@media print { #md-gear, #md-pop, #md-tree-panel, #md-tree-toggle { display: none !important } }' "$d/page-style" \
+    grep -qxF '@media print { #md-gear, #md-pop, #md-tree-panel, #md-tree-toggle, .md-dbar { display: none !important } }' "$d/page-style" \
         || bad "no print rule that hides the panel and the toggle"
     exit 0
 }
