@@ -39,7 +39,7 @@ md-view [options] <file.md>
 |---|---|
 | `--out <page.html>` | Write the page to this path. |
 | `--no-open` | Write the page and do not start a browser. |
-| `--width 60\|70\|80` | Start width of the text column, in percent. |
+| `--width 60\|70\|80\|90` | Start width of the text column, in percent. |
 | `--theme light\|dark\|auto` | Start theme. `auto` follows the system. |
 | `--palette github\|tokyo` | Start palette. See [Palettes](#palettes). |
 | `--browser auto\|firefox\|chrome\|safari\|<path>` | The browser. A path is an absolute path to a program. |
@@ -69,7 +69,7 @@ The file is `${XDG_CONFIG_HOME:-$HOME/.config}/md-view/config.ini`. Run `md-view
 
 | Key | Values | Default |
 |---|---|---|
-| `width` | `60`, `70`, `80` | `70` |
+| `width` | `60`, `70`, `80`, `90` | `70` |
 | `theme` | `light`, `dark`, `auto` | `auto` |
 | `palette` | `github`, `tokyo` | `github` |
 | `browser` | `auto`, `firefox`, `chrome`, `safari`, or an absolute path to a program | `auto` |
