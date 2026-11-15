@@ -976,11 +976,11 @@ html[data-palette] #md-tree-toggle { background-color: var(--p-bg-dark); color: 
   html[data-panel] body { padding-left: 16px }
   #md-tree-panel, #md-tree-toggle { display: none }
 }
-@media print { #md-gear, #md-pop, #md-tree-panel, #md-tree-toggle { display: none !important } }
+@media print { #md-gear, #md-pop, #md-tree-panel, #md-tree-toggle, .md-dbar { display: none !important } }
 CSS
     else
         cat <<'CSS'
-@media print { #md-gear, #md-pop { display: none !important } }
+@media print { #md-gear, #md-pop, .md-dbar { display: none !important } }
 CSS
     fi
     cat <<'HTML'

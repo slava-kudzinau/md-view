@@ -144,15 +144,16 @@ with_script() {
     awk -v s="$3" '{ i = index($0, "</body>"); if (i) print substr($0, 1, i - 1) s substr($0, i); else print }' "$1" > "$2"
 }
 
-# render <page> <name>: headless Chrome dumps the page to $tmp/<name>.dom, and
-# its log (console and CSP messages) goes to $tmp/<name>.err.
+# render <page> <name> [<window>]: headless Chrome dumps the page to $tmp/<name>.dom,
+# and its log (console and CSP messages) goes to $tmp/<name>.err. <window> is a
+# size such as 600,800, for the window size of Chrome.
 render() {
     prof=$(mktemp -d "$tmp/profile.XXXXXX") || return 1
     url=file://$(printf '%s' "$1" | sed 's/ /%20/g')
     "$CHROME" --headless=new --disable-gpu --no-first-run --no-default-browser-check \
         --use-mock-keychain --password-store=basic \
         --user-data-dir="$prof" --enable-logging=stderr --virtual-time-budget=5000 \
-        --dump-dom "$url" > "$tmp/$2.raw" 2> "$tmp/$2.err"
+        ${3:+--window-size=$3} --dump-dom "$url" > "$tmp/$2.raw" 2> "$tmp/$2.err"
     st=$?
     strip_scripts "$tmp/$2.raw" > "$tmp/$2.dom"
     return $st
@@ -372,6 +373,65 @@ redraw_check() {
         ! mermaid_has "$tmp/redraw-still.dom" '#292e42'
 }
 net_check "palette: mermaid redraw" redraw_check
+
+# Rows: the diagram viewer, on broken-diagram.md (one failed block, one drawn
+# diagram). A script is WHEN_BAR, some code and WHEN_BAR_END. It runs the code
+# when the first bar is in the page: the bar comes after the viewBox is read, so
+# WHEN_BAR is used here and not WHEN_DRAWN.
+WHEN_BAR="(function w(){if(document.querySelector('.md-dbar')){"
+WHEN_BAR_END="}else setTimeout(w,50);})();"
+# viewer_html <name> <script|-> <args...>: broken-diagram.md as a page with <args>,
+# and <script> added before </body> unless it is "-". The page is $tmp/<name>.html.
+viewer_html() {
+    n=$1
+    js=$2
+    shift 2
+    sh "$md_open" "$fix/broken-diagram.md" "$@" --out "$tmp/$n.html" --no-open > /dev/null 2>&1 || return 1
+    if [ "$js" != - ]; then
+        with_script "$tmp/$n.html" "$tmp/$n.html.js" "<script>$js</script>" &&
+            mv "$tmp/$n.html.js" "$tmp/$n.html" || return 1
+    fi
+}
+# viewer_page <name> <script|-> <args...>: viewer_html, then Chrome dumps the page
+# to $tmp/<name>.dom.
+viewer_page() {
+    viewer_html "$@" && render "$tmp/$1.html" "$1"
+}
+bars_page() {
+    viewer_page bars "${WHEN_BAR}document.title='bars='+document.querySelectorAll('.md-dbar').length+' failed='+document.querySelector('.mermaid-error').parentNode.querySelectorAll('.md-dbar').length;$WHEN_BAR_END" &&
+        grep -F -q '<title>bars=1 failed=0</title>' "$tmp/bars.dom"
+}
+net_check "viewer: one bar on the drawn diagram" bars_page
+fit_page() {
+    viewer_page fit "${WHEN_BAR}document.querySelector('.md-dbar button').click();var d=document.querySelector('dialog');var s=d.querySelector('svg');var box=d.querySelector('.md-vbox');var r=s.getBoundingClientRect();var w0=s.viewBox.baseVal.width;var h0=s.viewBox.baseVal.height;var k=Math.min(box.clientWidth/w0,box.clientHeight/h0);document.title='open='+(d.open?1:0)+' modal='+(d.matches(':modal')?1:0)+' moved='+(document.querySelector('pre svg')?0:1)+' one='+(document.querySelectorAll('svg').length===1&&document.getElementById(s.id)===s?1:0)+' fit='+(r.width<=box.clientWidth&&r.height<=box.clientHeight?1:0)+' largest='+(Math.abs(r.width-w0*k)<1&&Math.abs(r.height-h0*k)<1?1:0);$WHEN_BAR_END" &&
+        grep -F -q '<title>open=1 modal=1 moved=1 one=1 fit=1 largest=1</title>' "$tmp/fit.dom"
+}
+net_check "viewer: Expand opens the dialog in Fit" fit_page
+close_page() {
+    viewer_page close "${WHEN_BAR}var p=document.querySelector('pre.mermaid');var s=p.querySelector('svg');var before=s.getAttribute('style');document.querySelector('.md-dbar button').click();var d=document.querySelector('dialog');d.querySelector('button[aria-label=Close]').click();document.title='closed='+(d.open?0:1)+' back='+(p.contains(s)?1:0)+' style='+(s.getAttribute('style')===before?1:0);$WHEN_BAR_END" &&
+        grep -F -q '<title>closed=1 back=1 style=1</title>' "$tmp/close.dom"
+}
+net_check "viewer: close puts the svg back" close_page
+click_page() {
+    viewer_page click "${WHEN_BAR}var g=document.querySelector('pre.mermaid svg').querySelector('g');var d=function(){var x=document.querySelector('dialog');return x&&x.open?1:0};getSelection().selectAllChildren(document.querySelector('h1'));g.dispatchEvent(new MouseEvent('click',{bubbles:true}));var sel=d();getSelection().removeAllRanges();g.dispatchEvent(new MouseEvent('click',{bubbles:true}));document.title='selected='+sel+' plain='+d();$WHEN_BAR_END" &&
+        grep -F -q '<title>selected=0 plain=1</title>' "$tmp/click.dom"
+}
+net_check "viewer: a click on the diagram opens it" click_page
+narrow_page() {
+    viewer_html narrow "${WHEN_BAR}document.querySelector('.md-dbar button').click();document.title='open='+(document.querySelector('dialog').open?1:0)+' narrow='+(innerWidth<700?1:0)+' shown='+(getComputedStyle(document.querySelector('.md-dbar')).display!=='none'?1:0);$WHEN_BAR_END" &&
+        render "$tmp/narrow.html" narrow 600,800 &&
+        grep -F -q '<title>open=1 narrow=1 shown=1</title>' "$tmp/narrow.dom"
+}
+net_check "viewer: opens in a 600 px window" narrow_page
+# The print rule is text, so this row reads the two @media print lines. It needs
+# no browser.
+print_bar() {
+    sh "$md_open" "$fix/broken-diagram.md" --tree off --out "$tmp/print-off.html" --no-open > /dev/null 2>&1 &&
+        sh "$md_open" "$fix/broken-diagram.md" --tree on --out "$tmp/print-on.html" --no-open > /dev/null 2>&1 &&
+        grep '^@media print' "$tmp/print-off.html" | grep -F -q '.md-dbar' &&
+        grep '^@media print' "$tmp/print-on.html" | grep -F -q '.md-dbar'
+}
+check "viewer: print hides the bar" print_bar
 
 # Row: a BOM and CRLF are accepted.
 bom_page() {
