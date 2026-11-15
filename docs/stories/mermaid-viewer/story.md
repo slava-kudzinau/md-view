@@ -95,3 +95,4 @@ M. The page script gets about 110 to 140 lines and the page style about 35 lines
 - Hooks: none.
 - Base: `origin/main` at 699f45c (page-assets merged).
 - G2-design verifier, 2026-11-15: FIX twice (run 1: 5 Important, 4 Minor; run 2: 4 Important, 2 Minor). All findings are fixed in the docs. The rule stops the build after a second non-PASS, so the build waits for the owner.
+- G2-design: after the second FIX, the owner said "build" on 2026-11-15. The build starts.
