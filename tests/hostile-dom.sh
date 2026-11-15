@@ -403,14 +403,21 @@ bars_page() {
 }
 net_check "viewer: one bar on the drawn diagram" bars_page
 fit_page() {
-    viewer_page fit "${WHEN_BAR}document.querySelector('.md-dbar button').click();var d=document.querySelector('dialog');var s=d.querySelector('svg');var box=d.querySelector('.md-vbox');var r=s.getBoundingClientRect();var w0=s.viewBox.baseVal.width;var h0=s.viewBox.baseVal.height;var k=Math.min(box.clientWidth/w0,box.clientHeight/h0);document.title='open='+(d.open?1:0)+' modal='+(d.matches(':modal')?1:0)+' moved='+(document.querySelector('pre svg')?0:1)+' one='+(document.querySelectorAll('svg').length===1&&document.getElementById(s.id)===s?1:0)+' fit='+(r.width<=box.clientWidth&&r.height<=box.clientHeight?1:0)+' largest='+(Math.abs(r.width-w0*k)<1&&Math.abs(r.height-h0*k)<1?1:0);$WHEN_BAR_END" &&
-        grep -F -q '<title>open=1 modal=1 moved=1 one=1 fit=1 largest=1</title>' "$tmp/fit.dom"
+    viewer_page fit "${WHEN_BAR}document.querySelector('.md-dbar button').click();var d=document.querySelector('dialog');var s=d.querySelector('svg');var box=d.querySelector('.md-vbox');var r=s.getBoundingClientRect();var w0=s.viewBox.baseVal.width;var h0=s.viewBox.baseVal.height;var k=Math.min(box.clientWidth/w0,box.clientHeight/h0);document.title='open='+(d.open?1:0)+' modal='+(d.matches(':modal')?1:0)+' moved='+(document.querySelector('pre svg')?0:1)+' one='+(document.querySelectorAll('svg').length===1&&document.getElementById(s.id)===s?1:0)+' fit='+(r.width<=box.clientWidth&&r.height<=box.clientHeight?1:0)+' largest='+(Math.abs(r.width-w0*k)<1&&Math.abs(r.height-h0*k)<1?1:0)+' bar='+(innerWidth>document.documentElement.clientWidth?1:0)+' edge='+(d.getBoundingClientRect().right<=document.documentElement.clientWidth?1:0);$WHEN_BAR_END" &&
+        grep -F -q '<title>open=1 modal=1 moved=1 one=1 fit=1 largest=1 ' "$tmp/fit.dom" &&
+        render "$tmp/fit.html" fit-low 1600,240 &&
+        grep -F -q '<title>open=1 modal=1 moved=1 one=1 fit=1 largest=1 bar=1 edge=1</title>' "$tmp/fit-low.dom"
 }
+# The Fit row runs also in a low window, where the height limits the zoom and the
+# page has a scroll bar. The dialog must stay clear of that scroll bar (edge).
 net_check "viewer: Expand opens the dialog in Fit" fit_page
 close_page() {
-    viewer_page close "${WHEN_BAR}var p=document.querySelector('pre.mermaid');var s=p.querySelector('svg');var before=s.getAttribute('style');document.querySelector('.md-dbar button').click();var d=document.querySelector('dialog');d.querySelector('button[aria-label=Close]').click();document.title='closed='+(d.open?0:1)+' back='+(p.contains(s)?1:0)+' style='+(s.getAttribute('style')===before?1:0);$WHEN_BAR_END" &&
-        grep -F -q '<title>closed=1 back=1 style=1</title>' "$tmp/close.dom"
+    viewer_page close "${WHEN_BAR}var p=document.querySelector('pre.mermaid');var s=p.querySelector('svg');var before=s.getAttribute('style');document.querySelector('.md-dbar button').click();var d=document.querySelector('dialog');d.querySelector('button[aria-label=Close]').click();document.title='closed='+(d.open?0:1)+' back='+(p.contains(s)?1:0)+' style='+(s.getAttribute('style')===before?1:0);setTimeout(function(){document.querySelector('.md-dbar button').click();d.close();d.dispatchEvent(new Event('close'));setTimeout(function(){document.title+=' dclose='+(d.open?0:1)+' back='+(p.contains(s)?1:0)+' style='+(s.getAttribute('style')===before?1:0);},100);},100);$WHEN_BAR_END" &&
+        grep -F -q '<title>closed=1 back=1 style=1 dclose=1 back=1 style=1</title>' "$tmp/close.dom"
 }
+# The second step calls dialog.close() and then sends the close event, so the page
+# listener runs. In the headless dump, Chrome's own close event does not reach the
+# page, so the step sends it. The result is read after a timer.
 net_check "viewer: close puts the svg back" close_page
 click_page() {
     viewer_page click "${WHEN_BAR}var g=document.querySelector('pre.mermaid svg').querySelector('g');var d=function(){var x=document.querySelector('dialog');return x&&x.open?1:0};getSelection().selectAllChildren(document.querySelector('h1'));g.dispatchEvent(new MouseEvent('click',{bubbles:true}));var sel=d();getSelection().removeAllRanges();g.dispatchEvent(new MouseEvent('click',{bubbles:true}));document.title='selected='+sel+' plain='+d();$WHEN_BAR_END" &&
