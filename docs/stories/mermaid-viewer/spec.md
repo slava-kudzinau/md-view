@@ -65,8 +65,7 @@ All code is in `lib/page.js` and `lib/page.css`. The print rules are in the two 
 
 | Call | Result |
 |---|---|
-| Page `keydown` handler, viewer open | Returns at once. `t s w b ?` and its Esc do nothing. |
-| `keydown` on the dialog | `+`, `=`, `-`, `0`, `1` as in Zoom. Ctrl, Alt and Meta keys are not used. |
+| Page `keydown` handler, viewer open | `+`, `=`, `-`, `0`, `1` as in Zoom. Then it returns, so `t s w b ?` and its Esc do nothing. Ctrl, Alt and Meta keys are not used. The keys are in the one page handler, because `tests/browser-page.sh` pins one `keydown` listener. |
 
 ## Tests (`tests/hostile-dom.sh`)
 
