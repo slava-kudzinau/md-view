@@ -1,6 +1,6 @@
 ---
 description: Move the page script and the main page style out of the shell script into lib/page.js and lib/page.css, so that the page code is plain JS and CSS files and the written page does not change.
-status: in-progress
+status: in-review
 size: S
 risk: contract
 refs:

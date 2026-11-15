@@ -67,7 +67,7 @@ md-view --print-association
 | 0 | The page is written, and it is opened or its path is printed. With `--no-open`, nothing is printed. |
 | 1 | The page cannot be written, or the opener fails. |
 | 2 | No file, an unreadable file, an unknown option, a missing `--width`, `--theme` or `--palette` value, or a value that is not accepted. Also a page folder that does not exist. No page is written. |
-| 3 | `marked.min.js` or a vendored style or `highlight.min.js` file is not found. No page is written. |
+| 3 | `marked.min.js`, a vendored style file, `highlight.min.js`, `page.js` or `page.css` is not found or not readable. Stderr is `md-view: cannot find <name>`. No page is written. |
 
 A `--browser` value or a `browser=` key that is not accepted is not an error. It gives one line on stderr and the script uses `auto`.
 
@@ -97,10 +97,10 @@ The script starts each command with `exec` in a subshell. The page path is one a
 
 ### How the page is made
 
-1. The script writes the head. It holds a `Content-Security-Policy` meta, the page key, the state of `config.ini` (see "Page file and reuse") and the styles. `<title>` is the base name of the file. `<base href>` is the `file://` URL of its folder. The styles are four inlined vendored files (GitHub light and dark, highlight light and dark). A short stylesheet of the page follows them.
+1. The script writes the head. It holds a `Content-Security-Policy` meta, the page key, the state of `config.ini` (see "Page file and reuse") and the styles. `<title>` is the base name of the file. `<base href>` is the `file://` URL of its folder. The styles are four inlined vendored files (GitHub light and dark, highlight light and dark). The page stylesheet `page.css` follows them.
 2. `sed` removes a UTF-8 BOM and each CR at a line end. It doubles each `\`, then writes `</` as `<\/` and `<!--` as `<\!--`.
 3. The text goes into `<script type="text/markdown" id="md">`.
-4. The script adds `marked.min.js` inline, then `highlight.min.js`, then the page script.
+4. The script adds `marked.min.js` inline, then `highlight.min.js`, then the page script `page.js`.
 5. In the browser, the page script reverses the escapes and calls `marked.parse`. The result goes into `<main id="content">`, so the text shows before any network use. Then `highlight.js` marks each `pre > code` block that has a known language. A fence with no language, an unknown language or `mermaid` stays plain, and a highlight error leaves the plain block.
 
 The start values are the attributes `data-start-width`, `data-start-theme` and `data-start-palette` of `html`. They can hold only an accepted word. A flag that sets the width or the theme adds `data-forced="1"`.
@@ -190,7 +190,7 @@ The policy is `default-src 'none'; script-src 'unsafe-inline' https://cdn.jsdeli
 | Fallback | If the folder cannot be made or used, the script prints one line on stderr and writes `${TMPDIR:-/tmp}/md-view-<pid>.html`. |
 | Write | The script writes a temporary file next to the page, then moves it over the page. A reader never sees a half page. The temporary file goes on an error or a signal. `--out` keeps the direct write. |
 | Reuse | The script opens the old page and writes nothing if three things hold. The page exists. No input is newer than the page. The head of the page has the key of this run and the state of `config.ini`. |
-| Inputs | The Markdown file (by modification time only), `md-view`, `marked.min.js`, the five other vendored files, and `config.ini`. In tree mode also the scan: the page holds a line with the tree of this scan, and a newer tree file rebuilds the page. |
+| Inputs | The Markdown file (by modification time only), `md-view`, `marked.min.js`, the five other vendored files, `page.js`, `page.css` and `config.ini`. In tree mode also the scan: the page holds a line with the tree of this scan, and a newer tree file rebuilds the page. |
 | Key | `<meta name="md-view-key" content="w=<width>;t=<theme>;p=<palette>;f=<0 or 1>;tr=<on or off>;r=<root mode>;d=<depth>;n=<max files>">`, and a `md-view-tree` comment with the state of this scan in tree mode. A comment `md-view-ini` holds the size and the time of `config.ini`, or `none`. The script reads both from the head of the page only, so the Markdown text cannot fake them. |
 | No reuse | `--no-cache` and `--out` always build. The fallback page is never reused. |
 | Cleanup | The script never deletes a page. The operating system cleans the temporary folder. The cache folder grows with the files that the user opens. |
@@ -203,9 +203,9 @@ The policy is `default-src 'none'; script-src 'unsafe-inline' https://cdn.jsdeli
 | Opener | `open`, else `xdg-open`. If both are missing, the script prints the page path and exits 0. |
 | Browser | Any browser that the opener starts. Chrome is tested. Firefox is a manual check. |
 | Network | `cdn.jsdelivr.net` for a page with a diagram. No other network use. |
-| Install | `make install PREFIX=$p` puts `md-view` (mode 755) and the nine vendored files (mode 644) in `$p/share/md-view/`, and the launcher in `$p/bin/md-view`. The default `PREFIX` is `/usr/local`. `PREFIX` must be absolute and must not hold a single quote. `make uninstall` removes exactly these files. |
+| Install | `make install PREFIX=$p` puts `md-view` (mode 755), the page code `page.js` and `page.css`, and the nine vendored files (mode 644) in `$p/share/md-view/`, and the launcher in `$p/bin/md-view`. The default `PREFIX` is `/usr/local`. `PREFIX` must be absolute and must not hold a single quote. `make uninstall` removes exactly these files. |
 
-`md-view` reads `marked.min.js` and the other vendored files from its own folder (`self_dir`), so the files must stay together. The checkout launcher `bin/md-view` finds `lib/` from its own folder and does not follow symlinks.
+`md-view` reads `page.js`, `page.css`, `marked.min.js` and the other vendored files from its own folder (`self_dir`), so the files must stay together. The checkout launcher `bin/md-view` finds `lib/` from its own folder and does not follow symlinks.
 
 ### Boundaries
 
