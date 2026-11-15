@@ -17,7 +17,7 @@ Spec: `spec.md` (governs exact values: class names, labels, zoom step and range,
   - the wheel `deltaMode` and ctrl+wheel (Zoom);
   - Esc by the native dialog `cancel`, and the `close` event (Close);
   - the focus, and what `closeViewer()` restores (Close).
-- `view.style` holds the `style` attribute of the `<svg>` before the open, or `null`. `closeViewer()` sets it back, so the zoom width, height and `max-width` go away. `addBar` runs only after `mermaid.run` resolves, so each `<svg>` that gets a bar has its `viewBox`. If `viewBox.baseVal.width` or `.height` is 0 at open, `openViewer` uses `svg.getBoundingClientRect()` for `w0` and `h0`.
+- `view.style` holds the `style` attribute of the `<svg>` before the open, or `null`. `closeViewer()` sets it back, so the zoom width, height and `max-width` go away. It puts the `<svg>` back only when the `pre` still holds its `.md-dbar`, else it drops the `<svg>` (spec, Close). `addBar` runs only after `mermaid.run` resolves, so each `<svg>` that gets a bar has its `viewBox`.
 - Write POSIX `sh` only in tests. Add no new tool, package or library. The page script stays ES5 in form, as now: `var`, `function`, no arrow functions, no classes. (AGENTS.md, global policies; owner ruling "no third-party library")
 - Do not change the CSP meta, `securityLevel:'strict'`, `MERMAID_URL` or `MERMAID_SRI`. Do not change or remove a row of `tests/hostile-dom.sh` that is there now. (AGENTS.md; invariant `[browser]`)
 - Make all page elements with `createElement`, `makeButton` and `textContent`. Never set `innerHTML` with a string that holds text from the Markdown file. (AGENTS.md, untrusted input)
@@ -51,10 +51,11 @@ Spec: `spec.md` (governs exact values: class names, labels, zoom step and range,
 ## T2: Zoom, pan and keys
 
 **Depends on:** T1
-**Done check:** `make check` exits 0, and `sh tests/hostile-dom.sh | grep -c '^ok viewer:'` prints `8`.
-**Role:** implementer — review task-reviewer
+**Done check:** `make check` exits 0, `sh tests/hostile-dom.sh | grep -c '^ok viewer:'` prints `8`, and `grep -q "'pointermove'" lib/page.js && grep -q 'setPointerCapture' lib/page.js` exits 0.
+**Role:** implementer — review task-reviewer-critical (public contract: the page keys and the viewer keys)
 
 1. Write the rows `viewer: zoom keys, buttons and wheel` and `viewer: page keys do nothing while open` first. Run them and see them fail.
+   - Click the five buttons too, as the spec row says.
    - Send keys as `new KeyboardEvent('keydown',{key:'+',bubbles:true})` to the dialog.
    - Send the wheel as `new WheelEvent('wheel',{deltaY:100,clientX:..,clientY:..,bubbles:true,cancelable:true})` to the scroll box, with the point at the box center.
    - Compare widths with `Math.abs(a-b) < 0.5`.
@@ -65,9 +66,9 @@ Spec: `spec.md` (governs exact values: class names, labels, zoom step and range,
 ## T3: Close on redraw, and the README
 
 **Depends on:** T2
-**Done check:** `make check` exits 0, `sh tests/hostile-dom.sh | grep -c '^ok viewer:'` prints `9`, and `grep -c 'Expand' README.md` prints a number above 0.
+**Done check:** `make check` exits 0, `sh tests/hostile-dom.sh | grep -c '^ok viewer:'` prints `9`, and `grep -c 'Expand' README.md` prints a number above 0, and `awk '/function (show|redraw)\(/{getline; if ($0 !~ /closeViewer\(\)/) bad=1} END{exit bad}' lib/page.js` exits 0.
 **Role:** implementer — review task-reviewer
 
 1. Write the row `viewer: a palette change closes the viewer` first. Run it and see it fail. Use `--theme dark` and click the `tokyo` button in `#md-pop` with `.click()` (the popover can be hidden). Then wait for a new `.md-dbar` and for `#292e42` in the `pre`, as the row `palette: mermaid redraw` does.
-2. Call `closeViewer()` as the first line of `redraw()` and of `show()`. Update their comments.
+2. Call `closeViewer()` as the first line of the body of `redraw()` and of `show()`, before any comment or other line. Update their comments.
 3. In `README.md`, after the paragraph about the page keys in Usage, add one paragraph. It says: a drawn diagram has an Expand button in its top-right corner. A click on the diagram does the same. The viewer fills the window and opens in Fit. The wheel zooms at the pointer. A drag moves the diagram. The keys are `+` and `-` (zoom), `0` (Fit), `1` (actual size) and Esc (close). Write it in ASD-STE100.

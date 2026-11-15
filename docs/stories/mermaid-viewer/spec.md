@@ -22,7 +22,7 @@ All code is in `lib/page.js` and `lib/page.css`. The print rules are in the two 
 | Call | Result |
 |---|---|
 | Click on the Expand button | `openViewer(pre)`. |
-| Click on the `<svg>` of a `pre` that has a bar | `openViewer(pre)`, unless `String(window.getSelection())` is not empty. One `click` listener on `#content` does this. It is added once. |
+| Click on the `<svg>` of a `pre` that has a bar, or on an element inside that `<svg>` | Walk `parentNode` from `e.target`, as the link listener of `wireControls` does. Then `openViewer(pre)`, unless `String(window.getSelection())` is not empty. One `click` listener on `#content` does this. It is added once. |
 | `openViewer(pre)` | Does nothing if the viewer is open or `pre` holds no `<svg>`. Else it saves `pre`, the `<svg>` and the `style` attribute of the `<svg>` (or `null`). It moves the `<svg>` into the scroll box, with no clone. It calls `showModal()`, and then sets Fit. |
 | Window narrower than 700 px | The bar and the viewer work. No rule hides them. |
 
@@ -40,7 +40,7 @@ All code is in `lib/page.js` and `lib/page.css`. The print rules are in the two 
 
 | Call | Result |
 |---|---|
-| Full size | `w0 = svg.viewBox.baseVal.width`, `h0 = svg.viewBox.baseVal.height`, read at open. If one of them is 0, `openViewer` uses the width and height of `svg.getBoundingClientRect()`. |
+| Full size | `w0 = svg.viewBox.baseVal.width`, `h0 = svg.viewBox.baseVal.height`, read at open. |
 | `setZoom(k, x, y)` | Clamps `k` to the range 0.05 to 20. Sets `svg.style.width = w0*k + 'px'`, `svg.style.height = h0*k + 'px'` and `svg.style.maxWidth = 'none'`. Keeps the point at box position (`x`, `y`) under the same box position. With no `x` and `y`, it keeps the box center. |
 | Fit | `k = min(box.clientWidth / w0, box.clientHeight / h0)`. No cap at 1. The viewer always opens in Fit. |
 | `+` button, key `+` or `=` | `k × 1.25` |
@@ -57,7 +57,7 @@ All code is in `lib/page.js` and `lib/page.css`. The print rules are in the two 
 | Call | Result |
 |---|---|
 | `×` button, Esc, `dialog.close()` | The dialog `close` event calls `closeViewer()`. |
-| `closeViewer()` | Does nothing if no `<svg>` is saved. Case 1: the `pre` is in the document and holds no `<svg>`. It puts the `<svg>` back before the bar. It sets the saved `style` attribute again, or removes it when the saved value is `null`. Case 2, all other cases: it drops the `<svg>`. It clears the saved values, and closes the dialog if it is open. |
+| `closeViewer()` | Does nothing if no `<svg>` is saved. Case 1: the `pre` is in the document and still holds its `.md-dbar`. (`redraw` and `showCode` empty the `pre`, so the bar is gone after them. The bar marks a `pre` that is the same as at the open.) It puts the `<svg>` back before the bar. It sets the saved `style` attribute again, or removes it when the saved value is `null`. Case 2, all other cases: it drops the `<svg>`. It clears the saved values, and closes the dialog if it is open. |
 | `show()` and `redraw()` | Call `closeViewer()` first. A palette or theme change while the viewer is open closes it, and then the diagrams draw again. |
 | Focus | The browser puts the focus back on the element that had it before `showModal()`. |
 
@@ -70,23 +70,25 @@ All code is in `lib/page.js` and `lib/page.css`. The print rules are in the two 
 
 ## Tests (`tests/hostile-dom.sh`)
 
-Each row uses `tests/fixtures/broken-diagram.md` (one failed, one drawn diagram), adds a script to the page, and reads the result from `document.title`. Each row is a `net_check` row, so it skips with no network.
+Each row uses `tests/fixtures/broken-diagram.md` (one failed, one drawn diagram), adds a script to the page, and reads the result from `document.title`. Each row except `viewer: print hides the bar` is a `net_check` row, so it skips with no network. The print row needs no browser and uses `check`.
 
 | Row label | Proves |
 |---|---|
 | `viewer: one bar on the drawn diagram` | One `.md-dbar` in the page, and none in the failed block. |
 | `viewer: Expand opens the dialog in Fit` | The dialog is open and modal. The `<svg>` is in the dialog and not in the `pre`. The page has one `<svg>` with its id. Its box is no wider and no higher than the scroll box. |
 | `viewer: close puts the svg back` | After `×`, the dialog is closed, the `<svg>` is in its `pre`, and its `style` attribute is the same as before the open. |
-| `viewer: a click on the diagram opens it` | A click on the `<svg>` opens the dialog. With a text selection, the same click does not. |
+| `viewer: a click on the diagram opens it` | A click on an element inside the `<svg>` (`svg.querySelector('g')`) opens the dialog. With a text selection, the same click does not. |
 | `viewer: opens in a 600 px window` | Chrome with `--window-size=600,800`: Expand opens the dialog. |
 | `viewer: print hides the bar` | The print rule of the one-file page and of the tree page holds `.md-dbar`. |
-| `viewer: zoom keys, buttons and wheel` | `1` gives width `w0`. `+` gives `w0 × 1.25`. `-` gives `w0`. The `+` button gives `w0 × 1.25`. A wheel event with `deltaY: 100` gives `w0`. `0` gives Fit. |
+| `viewer: zoom keys, buttons and wheel` | `1` gives width `w0`. `+` gives `w0 × 1.25`. `-` gives `w0`. The `+` button gives `w0 × 1.25`. A wheel event with `deltaY: 100` gives `w0`. The `−` button gives `w0 / 1.25`. The `1:1` button gives `w0`. The `Fit` button and then `0` give a size inside the box. |
 | `viewer: page keys do nothing while open` | `t` and `w` sent to the dialog do not change `data-theme` or `data-width`. |
 | `viewer: a palette change closes the viewer` | A page with `--theme dark`. With the viewer open, a click on the `tokyo` button of the popover closes the dialog. The diagram draws again with `#292e42`. The dialog holds no `<svg>`, and the page has one diagram `<svg>`. |
 
 ## Done
 
-`make check` exits 0 with no `FAIL` line, and each row above prints `ok` (not `skip`). All rows of `tests/hostile-dom.sh` that were there before still pass. The PR lists the `skip` lines of `make check`. The PR lists the manual check as open for the owner. It covers Chrome, Firefox and Safari: wheel zoom at the pointer, pinch, drag, the bar on hover, Esc and the focus after close.
+`make check` exits 0 with no `FAIL` line, and each row above prints `ok` (not `skip`). All rows of `tests/hostile-dom.sh` that were there before still pass. The PR lists the `skip` lines of `make check`. The PR lists the manual check as open for the owner. It covers Chrome, Firefox and Safari: wheel zoom at the pointer, pinch, drag, the bar on hover, Esc and the focus after close. It also checks that the labels at 1:1 look the same as in the page.
+
+At close-out, the main session updates `docs/architecture/md-view.spec.md`. It changes the section "How diagrams render" and the page part table (`.md-dbar`, `dialog.md-viewer`, the viewer keys). It adds the nine new rows to the test table.
 
 ## Out of scope
 
