@@ -432,14 +432,26 @@ print_bar() {
         grep '^@media print' "$tmp/print-on.html" | grep -F -q '.md-dbar'
 }
 check "viewer: print hides the bar" print_bar
-# The zoom row reads the rendered width after each step: 1, +, -, the + button,
-# a wheel of deltaY 100 at the box center, the - button, 1:1, then Fit and 0.
-# Each step gives 1 when it holds. The title is the nine flags in that order.
+# The zoom row reads the rendered width after each step. The first flag is the
+# focus at open: it is on Close, so Enter does not zoom out. Then: 1, +, -, the +
+# button, a wheel of deltaY 100 at the box center, the - button and 1:1. Fit and 0
+# each start from an svg larger than the box. The expected width is w0 times the
+# Fit zoom of the box as it is when the key or button is pressed. The title is the
+# ten flags in that order.
 zoom_page() {
-    viewer_page zoom "${WHEN_BAR}document.querySelector('.md-dbar button').click();var d=document.querySelector('dialog');var s=d.querySelector('svg');var box=d.querySelector('.md-vbox');var w0=s.viewBox.baseVal.width;var r=[];var key=function(k){d.dispatchEvent(new KeyboardEvent('keydown',{key:k,bubbles:true}))};var btn=function(l){return [].filter.call(d.querySelectorAll('button'),function(x){return x.getAttribute('aria-label')===l})[0]};var at=function(a){return Math.abs(s.getBoundingClientRect().width-a)<0.5?1:0};var inside=function(){var q=s.getBoundingClientRect();return q.width<=box.clientWidth+0.5&&q.height<=box.clientHeight+0.5?1:0};key('1');r.push(at(w0));key('+');r.push(at(w0*1.25));key('-');r.push(at(w0));btn('Zoom in').click();r.push(at(w0*1.25));var c=box.getBoundingClientRect();box.dispatchEvent(new WheelEvent('wheel',{deltaY:100,clientX:c.left+c.width/2,clientY:c.top+c.height/2,bubbles:true,cancelable:true}));r.push(at(w0));btn('Zoom out').click();r.push(at(w0/1.25));btn('Actual size').click();r.push(at(w0));btn('Fit').click();r.push(inside());key('0');r.push(inside());document.title='zoom='+r.join('');$WHEN_BAR_END" &&
-        grep -F -q '<title>zoom=111111111</title>' "$tmp/zoom.dom"
+    viewer_page zoom "${WHEN_BAR}document.querySelector('.md-dbar button').click();var d=document.querySelector('dialog');var s=d.querySelector('svg');var box=d.querySelector('.md-vbox');var w0=s.viewBox.baseVal.width;var h0=s.viewBox.baseVal.height;var r=[];var key=function(k){d.dispatchEvent(new KeyboardEvent('keydown',{key:k,bubbles:true}))};var btn=function(l){return [].filter.call(d.querySelectorAll('button'),function(x){return x.getAttribute('aria-label')===l})[0]};var at=function(a){return Math.abs(s.getBoundingClientRect().width-a)<0.5?1:0};var fit=function(){return w0*Math.min(box.clientWidth/w0,box.clientHeight/h0)};var big=function(){for(var i=0;i<20&&s.getBoundingClientRect().width<=box.clientWidth;i++)key('+')};r.push(document.activeElement&&document.activeElement.getAttribute('aria-label')==='Close'?1:0);key('1');r.push(at(w0));key('+');r.push(at(w0*1.25));key('-');r.push(at(w0));btn('Zoom in').click();r.push(at(w0*1.25));var c=box.getBoundingClientRect();box.dispatchEvent(new WheelEvent('wheel',{deltaY:100,clientX:c.left+c.width/2,clientY:c.top+c.height/2,bubbles:true,cancelable:true}));r.push(at(w0));btn('Zoom out').click();r.push(at(w0/1.25));btn('Actual size').click();r.push(at(w0));big();var f=fit();btn('Fit').click();r.push(at(f));big();var g=fit();key('0');r.push(at(g));document.title='zoom='+r.join('');$WHEN_BAR_END" &&
+        grep -F -q '<title>zoom=1111111111</title>' "$tmp/zoom.dom"
 }
 net_check "viewer: zoom keys, buttons and wheel" zoom_page
+# The drag row: a drag pans the box by the pointer move, and a drag that starts on
+# the scroll bar does not pan. The box has user-select none. The title is the four
+# flags in that order: the pan, the scroll bars are there, no pan on the scroll bar,
+# user-select none.
+drag_page() {
+    viewer_page drag "${WHEN_BAR}document.querySelector('.md-dbar button').click();var d=document.querySelector('dialog');var box=d.querySelector('.md-vbox');var b=box.getBoundingClientRect();var pe=function(t,x,y){box.dispatchEvent(new PointerEvent(t,{pointerId:1,button:0,buttons:1,pointerType:'mouse',clientX:x,clientY:y,bubbles:true}))};var key=function(k){d.dispatchEvent(new KeyboardEvent('keydown',{key:k,bubbles:true}))};for(var i=0;i<20&&(box.scrollWidth<=box.clientWidth+100||box.scrollHeight<=box.clientHeight+100);i++)key('+');box.scrollLeft=100;box.scrollTop=100;var sl=box.scrollLeft;var st=box.scrollTop;var r=[];pe('pointerdown',b.left+200,b.top+150);pe('pointermove',b.left+180,b.top+130);pe('pointerup',b.left+180,b.top+130);r.push(Math.abs(box.scrollLeft-sl-20)<0.5&&Math.abs(box.scrollTop-st-20)<0.5?1:0);r.push(box.offsetWidth>box.clientWidth&&box.offsetHeight>box.clientHeight?1:0);sl=box.scrollLeft;st=box.scrollTop;pe('pointerdown',b.left+box.clientWidth+5,b.top+150);pe('pointermove',b.left+box.clientWidth-15,b.top+130);pe('pointerup',b.left+box.clientWidth-15,b.top+130);r.push(box.scrollLeft===sl&&box.scrollTop===st?1:0);var cs=getComputedStyle(box);r.push(cs.userSelect==='none'||cs.webkitUserSelect==='none'?1:0);document.title='drag='+r.join('');$WHEN_BAR_END" &&
+        grep -F -q '<title>drag=1111</title>' "$tmp/drag.dom"
+}
+net_check "viewer: a drag pans, and the scroll bar does not" drag_page
 # The page keys t and w are sent to the open dialog. The theme and the width do not change.
 keys_page() {
     viewer_page keys "${WHEN_BAR}document.querySelector('.md-dbar button').click();var d=document.querySelector('dialog');var h=document.documentElement;var before=h.getAttribute('data-theme')+h.getAttribute('data-width');d.dispatchEvent(new KeyboardEvent('keydown',{key:'t',bubbles:true}));d.dispatchEvent(new KeyboardEvent('keydown',{key:'w',bubbles:true}));document.title='open='+(d.open?1:0)+' keys='+(before===h.getAttribute('data-theme')+h.getAttribute('data-width')?'still':'changed');$WHEN_BAR_END" &&
