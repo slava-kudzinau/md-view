@@ -94,3 +94,4 @@ M. The page script gets about 110 to 140 lines and the page style about 35 lines
 - G2-design waived by owner, 2026-11-15: "go in autonomus mode for the refactoring one, open PR, merge, pull main branch and the go in autonoums mode for the viewer one, I'm stepping out". The owner asked for the PR to be opened and merged in the same words.
 - Hooks: none.
 - Base: `origin/main` at 699f45c (page-assets merged).
+- G2-design verifier, 2026-11-15: FIX twice (run 1: 5 Important, 4 Minor; run 2: 4 Important, 2 Minor). All findings are fixed in the docs. The rule stops the build after a second non-PASS, so the build waits for the owner.

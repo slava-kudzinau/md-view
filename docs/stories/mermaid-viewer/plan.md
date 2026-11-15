@@ -17,7 +17,7 @@ Spec: `spec.md` (governs exact values: class names, labels, zoom step and range,
   - the wheel `deltaMode` and ctrl+wheel (Zoom);
   - Esc by the native dialog `cancel`, and the `close` event (Close);
   - the focus, and what `closeViewer()` restores (Close).
-- `view.style` holds the `style` attribute of the `<svg>` before the open, or `null`. `closeViewer()` sets it back, so the zoom width, height and `max-width` go away. It puts the `<svg>` back only when the `pre` still holds its `.md-dbar`, else it drops the `<svg>` (spec, Close). `addBar` runs only after `mermaid.run` resolves, so each `<svg>` that gets a bar has its `viewBox`.
+- `view.style` holds the `style` attribute of the `<svg>` before the open, or `null`. `closeViewer()` sets it back, so the zoom width, height and `max-width` go away. `view.bar` is the bar node at the open. `closeViewer()` puts the `<svg>` back only when `view.bar` is still a child of the `pre`. Else it drops the `<svg>` (spec, Close). `addBar` runs only after `mermaid.run` settles (also after its `.catch`), so each `<svg>` that gets a bar has its `viewBox`.
 - Write POSIX `sh` only in tests. Add no new tool, package or library. The page script stays ES5 in form, as now: `var`, `function`, no arrow functions, no classes. (AGENTS.md, global policies; owner ruling "no third-party library")
 - Do not change the CSP meta, `securityLevel:'strict'`, `MERMAID_URL` or `MERMAID_SRI`. Do not change or remove a row of `tests/hostile-dom.sh` that is there now. (AGENTS.md; invariant `[browser]`)
 - Make all page elements with `createElement`, `makeButton` and `textContent`. Never set `innerHTML` with a string that holds text from the Markdown file. (AGENTS.md, untrusted input)
@@ -32,7 +32,7 @@ Spec: `spec.md` (governs exact values: class names, labels, zoom step and range,
 ## T1: Button bar, open and close
 
 **Depends on:** none
-**Done check:** `make check` exits 0, and `sh tests/hostile-dom.sh | grep -c '^ok viewer:'` prints `6`.
+**Done check:** `make check` exits 0, `sh tests/hostile-dom.sh | grep -c '^ok viewer:'` prints `6`, and `grep -q '\.md-dbar' lib/page.css && grep -q 'zoom-in' lib/page.css && grep -q 'html\[data-palette\].*md-viewer' lib/page.css` exits 0.
 **Role:** implementer — review task-reviewer-critical (a public contract: new page parts; the untrusted-input rule)
 
 1. Write the six T1 rows of the spec Tests table in `tests/hostile-dom.sh` first, after the row `palette: mermaid redraw`. Run them and see them fail.
@@ -40,9 +40,9 @@ Spec: `spec.md` (governs exact values: class names, labels, zoom step and range,
    - Add `viewer_page <name> <script|-> <args...>`, the same as `palette_page` but with `$fix/broken-diagram.md`.
    - Give `render` an optional third argument: a window size such as `600,800`. When it is set, add `--window-size=$3`. The calls that are there now do not change.
    - Each row sets `document.title` to one word list, for example `bars=1 failed=0`, and greps the dump for the exact `<title>`.
-   - The click row: make a selection with `getSelection().selectAllChildren(document.querySelector('h1'))`, send `new MouseEvent('click',{bubbles:true})` to the `<svg>`, and read `dialog.open`. Then call `removeAllRanges()`, send the click again and read it again.
+   - The click row: make a selection with `getSelection().selectAllChildren(document.querySelector('h1'))`, send `new MouseEvent('click',{bubbles:true})` to `svg.querySelector('g')`, and read `dialog.open`. Then call `removeAllRanges()`, send the click again and read it again.
    - The print row: write the page with `--tree off` and with `--tree on`, and grep the `@media print` line of each for `.md-dbar`. It needs no Chrome, but it is in this file with the other viewer rows. Use `check`, not `net_check`, for it.
-2. In `lib/page.js`, add `addBar(pre)`, `openViewer(pre)`, `closeViewer()`, `buildViewer()` and `fitZoom()`. Keep the viewer state in one object `view = { dlg, box, pre, svg, style, w0, h0, k }`, made by `buildViewer()` at the first open.
+2. In `lib/page.js`, add `addBar(pre)`, `openViewer(pre)`, `closeViewer()`, `buildViewer()` and `fitZoom()`. Keep the viewer state in one object `view = { dlg, box, pre, bar, svg, style, w0, h0, k }`, made by `buildViewer()` at the first open. `buildViewer()` makes `.md-vtools` with the `×` button, and `.md-vbox`. The zoom buttons come in T2.
 3. In `drawDiagrams`, wait for `mermaid.run` to resolve. If `batch.cancelled` is false, call `addBar(it.pre)` for each `it` of `good` whose `pre` holds an `<svg>`.
 4. In `wireControls`, add one `click` listener on `#content`. It opens the viewer for a click on the `<svg>` of a `pre` that has a bar (spec, Open).
 5. In `lib/page.css`, add the rules of the spec (bar, cursor, dialog, box, backdrop, palette colors). Put the palette rules next to the other `html[data-palette]` rules.
@@ -59,7 +59,7 @@ Spec: `spec.md` (governs exact values: class names, labels, zoom step and range,
    - Send keys as `new KeyboardEvent('keydown',{key:'+',bubbles:true})` to the dialog.
    - Send the wheel as `new WheelEvent('wheel',{deltaY:100,clientX:..,clientY:..,bubbles:true,cancelable:true})` to the scroll box, with the point at the box center.
    - Compare widths with `Math.abs(a-b) < 0.5`.
-2. Add `setZoom(k, x, y)` (spec, Zoom) and the five buttons. Fit uses `setZoom`.
+2. Add `setZoom(k, x, y)` (spec, Zoom) and the four zoom buttons `−`, `+`, `Fit`, `1:1`, before `×`. Fit uses `setZoom`.
 3. Add the `keydown` listener on the dialog and the `wheel` listener on the box (`{ passive: false }`). Add the pointer drag (`pointerdown`, `pointermove`, `pointerup`, `pointercancel`).
 4. Add the guard at the top of the page `keydown` handler: return when the viewer is open.
 
