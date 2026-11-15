@@ -458,6 +458,15 @@ keys_page() {
         grep -F -q '<title>open=1 keys=still</title>' "$tmp/keys.dom"
 }
 net_check "viewer: page keys do nothing while open" keys_page
+# A palette change while the viewer is open closes it, and the diagram draws again
+# in the new palette. The popover is hidden, so the script clicks its tokyo button.
+# The title is four flags: the viewer was open, it is closed, the dialog holds no
+# svg, and the page holds one svg.
+palette_close_page() {
+    viewer_page palette-close "${WHEN_BAR}var old=document.querySelector('.md-dbar');document.querySelector('.md-dbar button').click();var d=document.querySelector('dialog');var opened=d.open?1:0;[].filter.call(document.querySelectorAll('#md-pop button'),function(x){return x.textContent==='tokyo'})[0].click();var wait=function(){var b=document.querySelector('.md-dbar');var p=document.querySelector('pre.mermaid');if(b&&b!==old&&p&&p.innerHTML.indexOf('#292e42')>=0){document.title='opened='+opened+' closed='+(d.open?0:1)+' dialogSvgs='+d.querySelectorAll('svg').length+' svgs='+document.querySelectorAll('svg').length;}else setTimeout(wait,50);};wait();$WHEN_BAR_END" --theme dark &&
+        grep -F -q '<title>opened=1 closed=1 dialogSvgs=0 svgs=1</title>' "$tmp/palette-close.dom"
+}
+net_check "viewer: a palette change closes the viewer" palette_close_page
 
 # Row: a BOM and CRLF are accepted.
 bom_page() {
