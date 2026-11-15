@@ -107,7 +107,7 @@ quote_refused() {
     test ! -e "$d/rel" || fail "a folder was made under a relative PREFIX"
 }
 
-# uninstall_only_own: make uninstall removes the 11 installed files, and keeps the
+# uninstall_only_own: make uninstall removes the 13 installed files, and keeps the
 # folder share/md-view while it holds another file.
 uninstall_only_own() {
     fresh uninstall_only_own

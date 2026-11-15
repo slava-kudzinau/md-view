@@ -14,6 +14,9 @@ VENDORED = marked.min.js highlight.min.js github-markdown-light.css \
 	github-markdown-dark.css hljs-github.min.css hljs-github-dark.min.css \
 	marked.LICENSE.md highlight.LICENSE.md github-markdown.LICENSE.md
 
+# The page files of lib/. install copies them to SHAREDIR with mode 644.
+PAGE = page.js page.css
+
 # Expands to a make error when PREFIX is not absolute or holds a single quote.
 # Put it first in a recipe.
 PREFIX_CHECK = $(if $(filter /%,$(PREFIX)),,$(error md-view: PREFIX must be an absolute path)) \
@@ -33,7 +36,7 @@ install:
 	@$(PREFIX_CHECK)
 	install -d '$(SHAREDIR)' '$(BINDIR)'
 	install -m 755 lib/md-view '$(SHAREDIR)/md-view'
-	install -m 644 $(VENDORED:%=lib/%) '$(SHAREDIR)/'
+	install -m 644 $(VENDORED:%=lib/%) $(PAGE:%=lib/%) '$(SHAREDIR)/'
 	t=$$(mktemp "$${TMPDIR:-/tmp}/md-view.XXXXXX") || exit 1; \
 	printf '#!/bin/sh\n' > "$$t" && \
 	printf "exec '%s' \"\$$@\"\n" '$(SHAREDIR)/md-view' >> "$$t" && \
@@ -44,5 +47,5 @@ install:
 # replaced by a file name.
 uninstall:
 	@$(PREFIX_CHECK)
-	rm -f '$(BINDIR)/md-view' '$(SHAREDIR)/md-view' $(addsuffix ',$(addprefix '$(SHAREDIR)/,$(VENDORED)))
+	rm -f '$(BINDIR)/md-view' '$(SHAREDIR)/md-view' $(addsuffix ',$(addprefix '$(SHAREDIR)/,$(VENDORED) $(PAGE)))
 	rmdir '$(SHAREDIR)' 2>/dev/null || true
