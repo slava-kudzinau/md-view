@@ -670,14 +670,14 @@ case_page_has_github_css() {
         || bad "style blocks are not in the order gh-light, gh-dark, hl-light, hl-dark, page"
     grep -qF '<body class="markdown-body">' "$page" || bad "body has no markdown-body class"
     grep -qF '<main id="content" class="markdown-body">' "$page" || bad "#content has no markdown-body class"
-    # A missing vendored file stops the run with exit 3 and no page.
+    # A missing vendored or page file stops the run with exit 3 and no page.
     for f in github-markdown-light.css github-markdown-dark.css hljs-github.min.css \
-             hljs-github-dark.min.css highlight.min.js; do
+             hljs-github-dark.min.css highlight.min.js page.js page.css; do
         rm -rf "$d/missing"
         mkdir "$d/missing" || bad "mkdir"
         cp "$md_open" "$d/missing/md-view" || bad "cp script"
         for g in marked.min.js github-markdown-light.css github-markdown-dark.css \
-                 hljs-github.min.css hljs-github-dark.min.css highlight.min.js; do
+                 hljs-github.min.css hljs-github-dark.min.css highlight.min.js page.js page.css; do
             [ "$g" = "$f" ] || cp "$vendor/$g" "$d/missing/" || bad "cp $g"
         done
         rm -f "$page"
@@ -929,6 +929,8 @@ case_page_paste_line() {
 # --- vendored files ---------------------------------------------------------
 
 vendored='github-markdown-light.css github-markdown-dark.css highlight.min.js hljs-github.min.css hljs-github-dark.min.css marked.min.js'
+# The page code. These files are not vendored, so they are not in $vendored.
+page_code='page.js page.css'
 
 # The page puts each vendored file inside a style or script element, so no file
 # may end that element. Only marked.min.js and highlight.min.js may hold one "<!--".
@@ -1017,11 +1019,12 @@ no_tmp() {
     [ -z "$left" ] || bad "a temporary file is left: $left"
 }
 
-# scratch: a copy of the script and every vendored file in $d/s; md then runs it.
+# scratch: a copy of the script, every vendored file and every page file in $d/s;
+# md then runs it.
 scratch() {
     mkdir -p "$d/s" || bad "mkdir scratch"
     cp "$md_open" "$d/s/md-view" || bad "cp script"
-    for g in $vendored; do
+    for g in $vendored $page_code; do
         cp "$vendor/$g" "$d/s/" || bad "cp $g"
     done
     md_open=$d/s/md-view
@@ -1129,13 +1132,13 @@ case_cache_rebuild_on_edit() {
     scratch
     cp "$sample" s.md || bad "cp"
     cache_page s.md
-    for f in s.md "$d/s/md-view" $vendored; do
+    for f in s.md "$d/s/md-view" $vendored $page_code; do
         case $f in
             /*|s.md) ;;
             *) f=$d/s/$f ;;
         esac
         old s.md "$d/s/md-view"
-        for g in $vendored; do old "$d/s/$g"; done
+        for g in $vendored $page_code; do old "$d/s/$g"; done
         md --no-open s.md
         [ "$rc" = 0 ] || bad "exit $rc before an edit of $f"
         mark
