@@ -49,8 +49,8 @@ flowchart LR
 | Button text `⤢` for Expand, and `−`, `+`, `Fit`, `1:1`, `×`, each with a label for screen readers. | Icons from a font or an image | No new file and no CSP change. |
 | The tests read the result from the page title, with the fixture that has one failed and one drawn diagram. | A new browser test tool | The tests already work this way. A probe proved that the dialog works in the headless dump. |
 | Key `=` zooms in too, as `+` does. | Only `+` | On many keyboards, `+` needs Shift. |
-| A wheel that sends lines (`deltaMode` 1, as Firefox can) counts each line as 33 px. The backdrop is black at 50 %. | Ignore line mode | Without it, one Firefox wheel step zooms almost nothing. |
-| The `<svg>` goes back only into a `pre` that still has its bar. Else it is dropped. | Put it back in any `pre` with no `<svg>` | A redraw empties the `pre` later than the close. The bar shows that the `pre` did not change. |
+| A wheel that sends lines (`deltaMode` 1, as Firefox can) counts each line as 33 px. The backdrop is black at 50 % in all palettes, because the dialog fills the window and the backdrop does not show. | Ignore line mode | Without it, one Firefox wheel step zooms almost nothing. |
+| The `<svg>` goes back only into a `pre` that still has the same bar node as at the open. Else it is dropped. | Put it back in any `pre` with no `<svg>` | A redraw empties the `pre` later than the close. A new drawing gets a new bar, so the old bar shows that the `pre` did not change. |
 | Three tasks: the bar and open and close, then zoom and keys, then the close on redraw. | One task | Each task has its own rows that fail first. The first task is the risky part and gets the critical review. |
 
 ### How you'll see it working

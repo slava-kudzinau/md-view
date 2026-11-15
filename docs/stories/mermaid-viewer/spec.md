@@ -10,7 +10,7 @@ All code is in `lib/page.js` and `lib/page.css`. The print rules are in the two 
 
 | Item | Rule |
 |---|---|
-| When | After `mermaid.run` resolves in `drawDiagrams`, and the batch is not cancelled. Each `pre` of the batch that holds an `<svg>` gets one bar. A `pre` that shows its source (parse error, draw error, time limit) gets no bar. |
+| When | After `mermaid.run` settles in `drawDiagrams` (also after its `.catch`), and the batch is not cancelled. Each `pre` of the batch that holds an `<svg>` gets one bar. A `pre` that shows its source (parse error, draw error, time limit) gets no bar. |
 | Markup | `<div class="md-dbar">` as the last child of the `pre`, with one button. The button is made with `makeButton('⤢', …)`. It has `aria-label` and `title` `Expand diagram`. |
 | Place | Top-right corner of the `pre`. `pre.mermaid[data-processed]` gets `position: relative`. |
 | Shows | `opacity: 0`. `opacity: 1` on `pre.mermaid:hover` and on `.md-dbar:focus-within`. Always `opacity: 1` under `@media (hover: none)`. |
@@ -33,7 +33,7 @@ All code is in `lib/page.js` and `lib/page.css`. The print rules are in the two 
 | Markup | One `<dialog class="md-viewer" aria-label="Diagram viewer">` on `body`, made at the first open and kept. It holds `<div class="md-vtools">` (the buttons) and then `<div class="md-vbox">` (the scroll box). |
 | Size | The dialog fills the window: `width: 100vw; height: 100vh; max-width: none; max-height: none; margin: 0; padding: 0; border: 0`. With `[open]`, it is a flex column. The scroll box takes the rest (`flex: 1; overflow: auto; display: flex`). The `<svg>` has `margin: auto` and `flex: none`. |
 | Label font | At open, the scroll box gets the computed `font-family`, `font-size` and `line-height` of the `pre`, as inline style. |
-| Colors | `background: Canvas; color: CanvasText`. `::backdrop` is `rgba(0,0,0,0.5)`. Rules that start with `html[data-palette]` set `var(--p-bg)` and `var(--p-fg)` on the dialog, and `var(--p-bg-hl)`, `var(--p-fg)` and `var(--p-border)` on its buttons. |
+| Colors | `background: Canvas; color: CanvasText`. `::backdrop` is `rgba(0,0,0,0.5)` in all palettes, because the dialog fills the window and the backdrop does not show. Rules that start with `html[data-palette]` set `var(--p-bg)` and `var(--p-fg)` on the dialog, and `var(--p-bg-hl)`, `var(--p-fg)` and `var(--p-border)` on its buttons. |
 | Buttons | In this order, made with `makeButton`: `−` (`Zoom out`), `+` (`Zoom in`), `Fit` (`Fit`), `1:1` (`Actual size`), `×` (`Close`). The text in brackets is `aria-label` and `title`. |
 
 ## Zoom
@@ -57,7 +57,7 @@ All code is in `lib/page.js` and `lib/page.css`. The print rules are in the two 
 | Call | Result |
 |---|---|
 | `×` button, Esc, `dialog.close()` | The dialog `close` event calls `closeViewer()`. |
-| `closeViewer()` | Does nothing if no `<svg>` is saved. Case 1: the `pre` is in the document and still holds its `.md-dbar`. (`redraw` and `showCode` empty the `pre`, so the bar is gone after them. The bar marks a `pre` that is the same as at the open.) It puts the `<svg>` back before the bar. It sets the saved `style` attribute again, or removes it when the saved value is `null`. Case 2, all other cases: it drops the `<svg>`. It clears the saved values, and closes the dialog if it is open. |
+| `closeViewer()` | Does nothing if no `<svg>` is saved. Case 1: the bar node saved at the open (`view.bar`) is still a child of the saved `pre`, and the `pre` is in the document. (`redraw` and `showCode` empty the `pre`, so the old bar is gone after them. A new drawing gets a new bar node. So the saved bar marks a `pre` that is the same as at the open.) It puts the `<svg>` back before the bar. It sets the saved `style` attribute again, or removes it when the saved value is `null`. Case 2, all other cases: it drops the `<svg>`. It clears the saved values, and closes the dialog if it is open. |
 | `show()` and `redraw()` | Call `closeViewer()` first. A palette or theme change while the viewer is open closes it, and then the diagrams draw again. |
 | Focus | The browser puts the focus back on the element that had it before `showModal()`. |
 
