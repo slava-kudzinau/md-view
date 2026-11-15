@@ -432,6 +432,20 @@ print_bar() {
         grep '^@media print' "$tmp/print-on.html" | grep -F -q '.md-dbar'
 }
 check "viewer: print hides the bar" print_bar
+# The zoom row reads the rendered width after each step: 1, +, -, the + button,
+# a wheel of deltaY 100 at the box center, the - button, 1:1, then Fit and 0.
+# Each step gives 1 when it holds. The title is the nine flags in that order.
+zoom_page() {
+    viewer_page zoom "${WHEN_BAR}document.querySelector('.md-dbar button').click();var d=document.querySelector('dialog');var s=d.querySelector('svg');var box=d.querySelector('.md-vbox');var w0=s.viewBox.baseVal.width;var r=[];var key=function(k){d.dispatchEvent(new KeyboardEvent('keydown',{key:k,bubbles:true}))};var btn=function(l){return [].filter.call(d.querySelectorAll('button'),function(x){return x.getAttribute('aria-label')===l})[0]};var at=function(a){return Math.abs(s.getBoundingClientRect().width-a)<0.5?1:0};var inside=function(){var q=s.getBoundingClientRect();return q.width<=box.clientWidth+0.5&&q.height<=box.clientHeight+0.5?1:0};key('1');r.push(at(w0));key('+');r.push(at(w0*1.25));key('-');r.push(at(w0));btn('Zoom in').click();r.push(at(w0*1.25));var c=box.getBoundingClientRect();box.dispatchEvent(new WheelEvent('wheel',{deltaY:100,clientX:c.left+c.width/2,clientY:c.top+c.height/2,bubbles:true,cancelable:true}));r.push(at(w0));btn('Zoom out').click();r.push(at(w0/1.25));btn('Actual size').click();r.push(at(w0));btn('Fit').click();r.push(inside());key('0');r.push(inside());document.title='zoom='+r.join('');$WHEN_BAR_END" &&
+        grep -F -q '<title>zoom=111111111</title>' "$tmp/zoom.dom"
+}
+net_check "viewer: zoom keys, buttons and wheel" zoom_page
+# The page keys t and w are sent to the open dialog. The theme and the width do not change.
+keys_page() {
+    viewer_page keys "${WHEN_BAR}document.querySelector('.md-dbar button').click();var d=document.querySelector('dialog');var h=document.documentElement;var before=h.getAttribute('data-theme')+h.getAttribute('data-width');d.dispatchEvent(new KeyboardEvent('keydown',{key:'t',bubbles:true}));d.dispatchEvent(new KeyboardEvent('keydown',{key:'w',bubbles:true}));document.title='open='+(d.open?1:0)+' keys='+(before===h.getAttribute('data-theme')+h.getAttribute('data-width')?'still':'changed');$WHEN_BAR_END" &&
+        grep -F -q '<title>open=1 keys=still</title>' "$tmp/keys.dom"
+}
+net_check "viewer: page keys do nothing while open" keys_page
 
 # Row: a BOM and CRLF are accepted.
 bom_page() {
