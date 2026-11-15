@@ -13,7 +13,7 @@ There is no build step. Run these commands from the repo root.
 | Command | Result |
 |---|---|
 | `make check` | Runs `tests/browser-page.sh`, `tests/browser-links-dom.sh`, `tests/hostile-dom.sh` and `tests/launcher.sh`. It stops at the first failure. |
-| `make install PREFIX=$p` | Writes `$p/share/md-view/` (the script and nine vendored files) and `$p/bin/md-view`. Default `PREFIX` is `/usr/local`. |
+| `make install PREFIX=$p` | Writes `$p/share/md-view/` (the script, `page.js`, `page.css` and nine vendored files) and `$p/bin/md-view`. Default `PREFIX` is `/usr/local`. |
 | `make uninstall PREFIX=$p` | Removes the files that install wrote. |
 
 A test that has no Chrome or no network prints `skip` lines and passes. Read the `skip` lines before you trust a pass. A pass with `skip all` proved only the tests that need no browser.
@@ -24,8 +24,9 @@ Use a temporary `PREFIX` to test the install. `PREFIX` must be absolute and must
 
 | Path | Holds |
 |---|---|
-| `lib/md-view` | The script. It reads the vendored files from its own folder (`self_dir`). |
-| `lib/*.js`, `lib/*.css`, `lib/*.LICENSE.md` | The nine vendored files and their licenses. |
+| `lib/md-view` | The script. It reads the page code and the vendored files from its own folder (`self_dir`). |
+| `lib/page.js`, `lib/page.css` | The page script and the main page style. They are md-view code, not vendored. |
+| other `lib/*.js` and `lib/*.css`, `lib/*.LICENSE.md` | The nine vendored files and their licenses. |
 | `bin/md-view` | The launcher of the checkout. |
 | `tests/` | The four tests, `fixtures/` and `browser-page/`. |
 | `README.md` | Install, usage, config keys, far2l and Midnight Commander, the move from far2l. |
@@ -44,7 +45,7 @@ Before you open files, get a list of all docs: `grep -r '^description:' docs REA
 - Do not weaken the `Content-Security-Policy` meta. Do not weaken the mermaid `securityLevel:'strict'`, the SRI hash of the pinned mermaid script, the escape of raw HTML or the block of remote images. Run a change to any of them through the spec and the hostile-input test.
 - Start a browser with `exec` from a checked name or an absolute path. Never use `eval` or `sh -c` with a value from a file or a flag.
 - Write POSIX `sh` only. Add no new tool or package.
-- The files in `lib/` that are not `md-view` are vendored and unmodified. Each has a license file that names its source. After an upgrade, check the file for `</script` and `</style`, and update the license file.
+- The files in `lib/` other than `md-view`, `page.js` and `page.css` are vendored and unmodified. Each has a license file that names its source. After an upgrade, check the file for `</script` and `</style`, and update the license file.
 - The license is GNU GPL version 2. Keep the license text of each vendored file.
 - Keep the spec, the README and the tests in step when a flag, a path or a key changes.
 

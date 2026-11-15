@@ -8,7 +8,7 @@ description: The list of md-view stories in build order, with the status of each
 |---|---|---|---|---|
 | - | [md-view-repo](md-view-repo/story.md) | M | in-review | - |
 | - | [themes-tokyo-night](themes-tokyo-night/story.md) | M | in-review | - |
-| 1 | [page-assets](page-assets/story.md) | S | planned | - |
+| 1 | [page-assets](page-assets/story.md) | S | in-review | - |
 | 2 | [mermaid-viewer](mermaid-viewer/story.md) | M | planned | page-assets |
 
 ## Build order

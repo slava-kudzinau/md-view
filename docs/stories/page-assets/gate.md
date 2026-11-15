@@ -59,16 +59,22 @@ The reader said that the page did not define the reuse rule or exit 3. The "Cont
 
 ### What was built
 
-{{against "What it builds"}}
+As planned. The page script moved to `lib/page.js` (35 KB) and the main page style to `lib/page.css` (6 KB). `lib/md-view` writes them with `cat`. `make install` installs them with mode 644. A missing file gives exit 3. A newer file makes md-view write the page again. The written page is byte-identical to `origin/main` for each fixture, in tree mode and in one-file mode.
 
 ### Decisions changed during the build
 
-{{rows changed or added, or "none"}}
+none
 
 ### What the reviews caught
 
-{{findings that changed code, or "nothing that changed code"}}
+Nothing that changed code. The final review found one doc gap: the spec Install row and the `AGENTS.md` vendored-files rule did not name the page files. The close-out fixed both. Three Minor findings are parked in `closeout.md`.
 
 ### Run it
 
-{{the command and what you should see}}
+```sh
+make check
+ls lib/page.js lib/page.css
+bin/md-view README.md
+```
+
+`make check` prints `all checks pass`. The page looks and acts as before.
