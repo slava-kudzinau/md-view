@@ -12,7 +12,7 @@ description: The list of md-view stories in build order, with the status of each
 | 2 | [mermaid-viewer](mermaid-viewer/story.md) | M | done | page-assets |
 | 3 | [mermaid-accent-coloring](mermaid-accent-coloring/story.md) | M | in-review | mermaid-viewer |
 | 4 | [mermaid-accent-toolbar](mermaid-accent-toolbar/story.md) | M | planned | mermaid-accent-coloring |
-| 5 | [md-view-version](md-view-version/story.md) | S | planned | mermaid-viewer |
+| 5 | [md-view-version](md-view-version/story.md) | M | planned | mermaid-viewer |
 
 ## Build order
 
