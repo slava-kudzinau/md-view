@@ -144,15 +144,18 @@ with_script() {
     awk -v s="$3" '{ i = index($0, "</body>"); if (i) print substr($0, 1, i - 1) s substr($0, i); else print }' "$1" > "$2"
 }
 
-# render <page> <name> [<window>]: headless Chrome dumps the page to $tmp/<name>.dom,
-# and its log (console and CSP messages) goes to $tmp/<name>.err. <window> is a
-# size such as 600,800, for the window size of Chrome.
+# render <page> <name> [<window>] [<ms>]: headless Chrome dumps the page to
+# $tmp/<name>.dom, and its log (console and CSP messages) goes to
+# $tmp/<name>.err. <window> is a size such as 600,800, for the window size of
+# Chrome. <ms> is the virtual time budget (5000 ms by default); the accent rows
+# give a longer one, because their script polls with setTimeout from the bar to
+# the draw and to the redraws.
 render() {
     prof=$(mktemp -d "$tmp/profile.XXXXXX") || return 1
     url=file://$(printf '%s' "$1" | sed 's/ /%20/g')
     "$CHROME" --headless=new --disable-gpu --no-first-run --no-default-browser-check \
         --use-mock-keychain --password-store=basic \
-        --user-data-dir="$prof" --enable-logging=stderr --virtual-time-budget=5000 \
+        --user-data-dir="$prof" --enable-logging=stderr --virtual-time-budget=${4:-5000} \
         ${3:+--window-size=$3} --dump-dom "$url" > "$tmp/$2.raw" 2> "$tmp/$2.err"
     st=$?
     strip_scripts "$tmp/$2.raw" > "$tmp/$2.dom"
@@ -283,6 +286,11 @@ refused_page() {
 check "refused CDN: each diagram shows as a code block" refused_page
 check "refused CDN: the code block holds the source" grep -F -q '<pre class="mermaid">flowchart LR' "$tmp/refused.dom"
 
+# The accents are inline styles on the shapes of a drawn svg. With the CDN
+# refused the block keeps its source and has no svg, so no accent shows. The
+# page style holds no stroke property, so any stroke in the dump is an accent.
+check "refused CDN: the code block shows no accent paint" absent grep -F -q 'stroke' "$tmp/refused.dom"
+
 # Row: </script> in the file does not end the script; the rest renders and
 # nothing from the file runs or becomes an element.
 hostile_page() {
@@ -380,6 +388,121 @@ net_check "palette: mermaid redraw" redraw_check
 # WHEN_BAR is used here and not WHEN_DRAWN.
 WHEN_BAR="(function w(){if(document.querySelector('.md-dbar')){"
 WHEN_BAR_END="}else setTimeout(w,50);})();"
+# WHEN_PAINT is an accent on the shape of the first node: the page writes it
+# as an inline style, and the theme border of a node is not, so an inline
+# stroke means the accent pass has run on this svg. It polls at 0 ms, so a
+# slow CDN fetch costs virtual time only when the page is idle.
+WHEN_PAINT="(function w(){var q=document.querySelector('pre.mermaid svg g.node rect');if(q&&q.style.stroke){"
+WHEN_PAINT_END="}else setTimeout(w,0);})();"
+# WHEN_PAINT_ACTOR is the sequence sibling of WHEN_PAINT: a sequence svg has no
+# g.node, so it gates on the first actor, the shape mermaid gives the actor
+# box. It polls at 0 ms and ends the same way, so a slow CDN fetch costs
+# virtual time only when the page is idle.
+WHEN_PAINT_ACTOR="(function w(){var q=document.querySelector('pre.mermaid svg .actor');if(q){"
+
+# Rows: the accent paint of a drawn diagram. The pages use the default github
+# palette, so an accent is one of the 16 hexes of GITHUB_ACCENTS (the 8 keys of
+# the cycle, once per mode). The rows read the inline style of a shape, not the
+# computed style, and they run on the bar (WHEN_BAR): the page adds the bar and
+# paints the accents in the same step.
+# accent_page <name> <fixture> <script|-> <args...>: <fixture> as a page with
+# <args>, and <script> added before </body> unless it is "-". Chrome dumps the
+# page to $tmp/<name>.dom.
+accent_page() {
+    n=$1
+    f=$2
+    js=$3
+    shift 3
+    sh "$md_open" "$fix/$f" "$@" --out "$tmp/$n.html" --no-open > /dev/null 2>&1 || return 1
+    if [ "$js" != - ]; then
+        with_script "$tmp/$n.html" "$tmp/$n.html.js" "<script>$js</script>" &&
+            mv "$tmp/$n.html.js" "$tmp/$n.html" || return 1
+    fi
+    render "$tmp/$n.html" "$n" "" 15000
+}
+# ACCENT_LIB is the page-side code of these rows. ACC holds the github accents:
+# the 8 light hexes, then the 8 dark ones. norm drops the spaces of a color, as
+# the DOM writes it. isAccent is true for a color of ACC, in the hex form or in
+# the rgb form. shape is the shape child the page paints, not the label. keyOf
+# is the node key: the id with the mermaid flowchart prefix and the trailing
+# -<n> dropped, as the redraw rows read it. strokeOf is the inline
+# stroke of a node shape. center and box give the node center from its own
+# translate and the box of a cluster from its rect attributes. clusterOf is the
+# cluster of a node: the innermost box that holds the center, the smallest
+# width * height, a tie keeping the later cluster. srcKey is the source key of a
+# connector: drop the leading L_ and the trailing _<n>, then keep the longest
+# node key that starts the rest and ends at a _ boundary. These follow the rules
+# of the page script.
+ACCENT_LIB="var ACC='#0969da #1b7c83 #1a7f37 #8250df #bc4c00 #cf222e #6639ba #9a6700 #4493f8 #33b5c9 #3fb950 #a56eff #db6d28 #ff7b72 #ab7df6 #d4a72c';var norm=function(c){c=(c||'').toLowerCase();var o='';for(var i=0;i<c.length;i++){var ch=c.charAt(i);if(ch!==' ')o+=ch;}return o};var hexrgb=function(h){return 'rgb('+parseInt(h.substr(1,2),16)+','+parseInt(h.substr(3,2),16)+','+parseInt(h.substr(5,2),16)+')'};var isAccent=function(c){var L=ACC.split(' ');var v=norm(c);for(var i=0;i<L.length;i++){if(v===L[i]||v===hexrgb(L[i]))return 1;}return 0};var shape=function(g){var t=['rect','polygon','circle','ellipse','path'];for(var i=0;i<t.length;i++){var q=g.querySelector(':scope > '+t[i]);if(q)return q;}return null};var keyOf=function(n){var id=n.id||'';return id.replace(/^.*flowchart-/,'').replace(/-[0-9]+$/,'')};var strokeOf=function(n){var q=shape(n);return q?norm(q.style.stroke):''};var nums=function(t){var o=[],cur='';for(var i=0;i<t.length;i++){var ch=t.charAt(i);if((ch>='0'&&ch<='9')||ch==='-'||ch==='.'){cur+=ch;}else if(cur){o.push(parseFloat(cur));cur='';}}if(cur)o.push(parseFloat(cur));return o};var center=function(n){var t=n.getAttribute('transform')||'';var k=t.indexOf('translate(');if(k<0)return null;var a=nums(t.slice(k));return a.length>1?{x:a[0],y:a[1]}:null};var box=function(c){var r=c.querySelector('rect');return {x:parseFloat(r.getAttribute('x')),y:parseFloat(r.getAttribute('y')),w:parseFloat(r.getAttribute('width')),h:parseFloat(r.getAttribute('height'))}};var clusterOf=function(cl,n){var c=center(n);if(!c)return -1;var best=-1,area=Infinity;for(var i=0;i<cl.length;i++){var b=box(cl[i]);if(isNaN(b.x)||isNaN(b.y)||isNaN(b.w)||isNaN(b.h))continue;if(c.x<b.x||c.x>b.x+b.w||c.y<b.y||c.y>b.y+b.h)continue;if(b.w*b.h<=area){best=i;area=b.w*b.h;}}return best};var srcKey=function(id,keys){if(!id||id.indexOf('L_')!==0)return '';var rest=id.slice(2,id.lastIndexOf('_'));var best='';for(var k in keys){if(k.length>best.length&&rest.length>k.length&&rest.indexOf(k)===0&&rest.charAt(k.length)==='_')best=k;}return best};"
+# linksOk <svg> <keys> <by>: every connector is in one of the two states of the
+# paint: it carries the stroke of the source node its data-id names, 2 px wide,
+# or it keeps the theme stroke and has no inline stroke of its own. A connector
+# with an inline stroke of another color fails the row. painted and theme count
+# the two states, and the row puts both in its title.
+ACCENT_LINKS="var linksOk=function(s,keys,by){var L=s.querySelectorAll('path.flowchart-link');var painted=0,theme=0;for(var i=0;i<L.length;i++){var v=norm(L[i].style.stroke);if(v===''){theme++;}else{var k=srcKey(L[i].getAttribute('data-id'),keys);if(k===''||v!==by[k]||L[i].style.strokeWidth!=='2px')return 0;painted++;}}return painted+theme===L.length&&L.length?1:0};"
+# A flat diagram (no subgraph) colors each node by its place in document order,
+# so the first two nodes differ, and both take an accent of the palette. The
+# first node carries the four properties of the paint: the accent as fill and as
+# stroke, blended at 0.15, 2 px wide. Every connector agrees with its source: a
+# source the node keys name gives it the stroke of that node, and one they do
+# not name keeps the theme stroke. The title is the flag, then the counts of
+# nodes, of connectors, of painted connectors, and of connectors on the theme.
+accent_flat_page() {
+    accent_page accent-flat diagram.md "${WHEN_PAINT}${ACCENT_LIB}${ACCENT_LINKS}var s=document.querySelector('pre.mermaid svg');var ns=s.querySelectorAll('g.node');var keys={},by={},i;for(i=0;i<ns.length;i++){var k=keyOf(ns[i]);keys[k]=1;by[k]=strokeOf(ns[i]);}var q=shape(ns[0]);var L=s.querySelectorAll('path.flowchart-link'),painted=0,theme=0;for(i=0;i<L.length;i++){if(norm(L[i].style.stroke)==='')theme++;else painted++;}document.title='flat='+(isAccent(strokeOf(ns[0]))&&isAccent(strokeOf(ns[1]))&&strokeOf(ns[0])!==strokeOf(ns[1])&&ns.length>1&&linksOk(s,keys,by)&&q.style.stroke===q.style.fill&&q.style.fillOpacity==='0.15'&&q.style.strokeWidth==='2px'?1:0)+' nodes='+ns.length+' links='+L.length+' painted='+painted+' theme='+theme;$WHEN_PAINT_END" &&
+        grep -F -q '<title>flat=1 nodes=6 links=6 painted=6 theme=0</title>' "$tmp/accent-flat.dom"
+}
+net_check "accent: a flat diagram colors each node and its connectors" accent_flat_page
+# A diagram with three subgraphs gives every node of one subgraph the stroke of
+# that subgraph, and two subgraphs differ. The nodes come in the order of the
+# fixture: the two of alpha, the two of beta, the three of gamma. The box of a
+# subgraph is an accent of the palette, not the theme border, blended at 0.06 and
+# 2 px wide, and it holds the stroke of the nodes inside it. Every connector
+# carries the stroke of the node it starts from, so none of them keeps the theme
+# stroke: the flag also encodes that every connector matches its source node.
+# The title is the flag, then the counts of nodes, of clusters, and of
+# connectors on the theme stroke.
+accent_cluster_page() {
+    accent_page accent-cluster accent-subgraphs.md "${WHEN_PAINT}${ACCENT_LIB}${ACCENT_LINKS}var s=document.querySelector('pre.mermaid svg');var ns=s.querySelectorAll('g.node'),i,keys={},by={},k;for(i=0;i<ns.length;i++){k=keyOf(ns[i]);keys[k]=1;by[k]=strokeOf(ns[i]);}var st=function(j){return strokeOf(ns[j])};var same=function(a,b){return st(a)&&st(a)===st(b)?1:0};var cl=s.querySelectorAll('g.cluster');var cr=function(g){return norm(g.querySelector('rect').style.stroke)};var boxOk=function(g){var r=g.querySelector('rect');return isAccent(cr(g))&&r.style.fillOpacity==='0.06'&&r.style.strokeWidth==='2px'?1:0};var pair=function(){for(var j=0;j<ns.length;j++){var ci=clusterOf(cl,ns[j]);if(ci<0||strokeOf(ns[j])!==cr(cl[ci]))return 0;}return 1};var L=s.querySelectorAll('path.flowchart-link'),theme=0;for(i=0;i<L.length;i++)if(norm(L[i].style.stroke)==='')theme++;document.title='cluster='+(same(0,1)&&same(2,3)&&same(4,5)&&same(5,6)&&st(0)!==st(2)&&st(2)!==st(4)&&cl.length===3&&boxOk(cl[0])&&boxOk(cl[1])&&boxOk(cl[2])&&cr(cl[0])!==cr(cl[1])&&cr(cl[1])!==cr(cl[2])&&pair()&&linksOk(s,keys,by)&&theme===0?1:0)+' nodes='+ns.length+' clusters='+cl.length+' theme='+theme;$WHEN_PAINT_END" &&
+        grep -F -q '<title>cluster=1 nodes=7 clusters=3 theme=0</title>' "$tmp/accent-cluster.dom"
+}
+net_check "accent: each subgraph shares a hue, and its box keeps that hue" accent_cluster_page
+# A sequence diagram has no g.node, so the page takes the actor branch: it
+# paints every rect.actor and polygon.actor shape, in document order. Mermaid
+# gives the actor class to the box of a participant, at the top and at the
+# bottom of the diagram, and to the text of its label; the selector skips the
+# labels. The row counts the six boxes of the three participants, three at
+# the top and three at the bottom, and asks that the first two carry two
+# accents of the palette: the accent as fill and as stroke, blended at 0.15,
+# 2 px wide. The title is the flag, then the count of painted shapes, and
+# every tick rewrites it, so the dump holds the achieved stage.
+accent_seq_page() {
+    accent_page accent-seq accent-sequence.md "${WHEN_PAINT_ACTOR}${ACCENT_LIB}var tries=0;var v=function(){var s=document.querySelector('pre.mermaid svg');var sh=s?s.querySelectorAll('rect.actor, polygon.actor'):[];var ok=document.querySelectorAll('pre.mermaid svg').length===1&&s.querySelectorAll('g.node').length===0&&sh.length===6&&isAccent(sh[0].style.stroke)&&isAccent(sh[1].style.stroke)&&sh[0].style.stroke!==sh[1].style.stroke&&sh[0].style.fillOpacity==='0.15'&&sh[0].style.strokeWidth==='2px'&&sh[0].style.stroke===sh[0].style.fill?1:0;document.title='seq='+ok+' actors='+sh.length;if(tries++<3000)setTimeout(v,0);};v();$WHEN_PAINT_END" &&
+        grep -F -q '<title>seq=1 actors=6</title>' "$tmp/accent-seq.dom"
+}
+net_check "accent: a sequence diagram colors its actor boxes" accent_seq_page
+# The broken block shows its source, so it holds no svg and no accent at all; the
+# block after it draws, and its two nodes take two accents of the palette. The
+# title is the flag, then the count of painted elements in the source block and
+# the count of nodes in the drawn one.
+accent_broken_page() {
+    accent_page accent-broken broken-diagram.md "${WHEN_PAINT}${ACCENT_LIB}var b=document.querySelector('code.language-mermaid').parentNode;var all=b.querySelectorAll('*'),painted=0,i;for(i=0;i<all.length;i++)if(all[i].style.stroke)painted++;var ns=document.querySelector('pre.mermaid').querySelectorAll('g.node');document.title='broken='+(b.querySelector('svg')===null&&b.querySelector('.mermaid-error')&&painted===0&&ns.length===2&&isAccent(strokeOf(ns[0]))&&isAccent(strokeOf(ns[1]))&&strokeOf(ns[0])!==strokeOf(ns[1])?1:0)+' painted='+painted+' nodes='+ns.length;$WHEN_PAINT_END" &&
+        grep -F -q '<title>broken=1 painted=0 nodes=2</title>' "$tmp/accent-broken.dom"
+}
+net_check "accent: a source-only block shows no accent, a drawn one does" accent_broken_page
+# The page starts on github dark. The key s changes the palette to tokyo, and the
+# two presses of the key t take the theme from dark to auto and to light: each
+# change draws the diagram again and paints the accents of the new colors. The
+# row waits for the new svg of each redraw, and asks that every node shape holds
+# an inline stroke 2 px wide, and that every connector agrees with its source. The
+# first flag says the first node changed its stroke when the palette changed,
+# because the accents of tokyo dark differ from those of github dark. The next two
+# say the paint is there after the palette change and after the theme change.
+accent_redraw_page() {
+    accent_page accent-redraw diagram.md "${WHEN_PAINT}${ACCENT_LIB}${ACCENT_LINKS}var p=document.querySelector('pre.mermaid');var s0=p.querySelector('svg');var one=function(){var s=p.querySelector('svg');var ns=s&&s.querySelectorAll('g.node');return ns&&ns.length?strokeOf(ns[0]):'';};var stat=function(){var s=p.querySelector('svg');if(!s)return 0;var ns=s.querySelectorAll('g.node');if(!ns.length)return 0;var keys={},by={},i;for(i=0;i<ns.length;i++){var k=keyOf(ns[i]);var q=shape(ns[i]);if(!q||!q.style.stroke||q.style.strokeWidth!=='2px')return 0;keys[k]=1;by[k]=norm(q.style.stroke);}return linksOk(s,keys,by);};var tries=0;var before=one();document.dispatchEvent(new KeyboardEvent('keydown',{key:'s'}));var w1=function(){var s1=p.querySelector('svg');if(!(s1&&s1!==s0&&stat())){if(tries++<3000)setTimeout(w1,0);return;}document.title='redraw=s='+(before!==''&&before!==one()?1:0)+' paint='+stat();document.dispatchEvent(new KeyboardEvent('keydown',{key:'t'}));document.dispatchEvent(new KeyboardEvent('keydown',{key:'t'}));var base=s1;tries=0;var w2=function(){var s2=p.querySelector('svg');if(s2&&s2!==base&&stat()){document.title+=' theme=1';}else if(tries++<3000)setTimeout(w2,0);};setTimeout(w2,0);};w1();$WHEN_PAINT_END" --palette github --theme dark &&
+        grep -F -q '<title>redraw=s=1 paint=1 theme=1</title>' "$tmp/accent-redraw.dom"
+}
+net_check "accent: a palette change and a theme change recolor the diagram" accent_redraw_page
+
 # viewer_html <name> <script|-> <args...>: broken-diagram.md as a page with <args>,
 # and <script> added before </body> unless it is "-". The page is $tmp/<name>.html.
 viewer_html() {

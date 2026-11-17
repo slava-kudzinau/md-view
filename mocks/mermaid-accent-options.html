@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en" data-palette="tokyo">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>md-view · mermaid accent coloring options (Tokyo Night)</title>
+<style>
+  :root{
+    --p-bg:#1a1b26; --p-bg-dark:#16161e; --p-bg-hl:#292e42; --p-bg-visual:#283457;
+    --p-fg:#c0caf5; --p-fg-dark:#a9b1d6; --p-border:#3b4261; --p-comment:#565f89;
+    --p-blue:#7aa2f7; --p-blue1:#2ac3de; --p-blue5:#89ddff; --p-cyan:#7dcfff;
+    --p-green:#9ece6a; --p-green1:#73daca; --p-magenta:#bb9af7; --p-orange:#ff9e64;
+    --p-purple:#9d7cd8; --p-red:#f7768e; --p-yellow:#e0af68;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--p-bg);color:var(--p-fg);
+    font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;padding:28px 22px 60px}
+  h1{color:var(--p-blue);font-size:22px;margin:0 0 4px}
+  h1 .sub{color:var(--p-fg-dark);font-weight:400;font-size:14px}
+  .intro{color:var(--p-fg-dark);max-width:92ch;margin:0 0 16px}
+  .intro code{background:var(--p-bg-hl);color:var(--p-orange);padding:1px 5px;border-radius:4px;font-size:12px}
+  .bar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:0 0 18px}
+  .bar label{color:var(--p-fg-dark);font-size:13px}
+  .bar select{background:var(--p-bg-hl);color:var(--p-fg);border:1px solid var(--p-border);
+    border-radius:7px;padding:6px 10px;font:inherit}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(470px,1fr));gap:18px}
+  .card{background:var(--p-bg-dark);border:1px solid var(--p-border);border-radius:10px;padding:16px 18px 10px}
+  .card h2{margin:0 0 2px;font-size:16px}
+  .tag{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;
+    padding:2px 8px;border-radius:999px;border:1px solid var(--p-border);margin-right:8px;vertical-align:2px}
+  .a .tag{color:var(--p-blue);border-color:var(--p-blue)}
+  .b .tag{color:var(--p-cyan);border-color:var(--p-cyan)}
+  .c .tag{color:var(--p-green);border-color:var(--p-green)}
+  .d .tag{color:var(--p-magenta);border-color:var(--p-magenta)}
+  .e .tag{color:var(--p-orange);border-color:var(--p-orange)}
+  .card h2 b{color:var(--p-fg)}
+  .desc{color:var(--p-fg-dark);font-size:13px;margin:6px 0 12px;min-height:38px}
+  .desc code{background:var(--p-bg-hl);color:var(--p-orange);padding:1px 5px;border-radius:4px;font-size:12px}
+  .mmd{background:var(--p-bg);border:1px solid var(--p-border);border-radius:8px;padding:10px;overflow:auto}
+  .mmd svg{display:block;margin:0 auto;max-width:100%;height:auto}
+  .mmd svg .nodeLabel,.mmd svg .nodeLabel p,.mmd svg .edgeLabel,.mmd svg .edgeLabel p{color:var(--p-fg)}
+  .mmd svg text,.mmd svg .actor tspan,.mmd svg .actor text{fill:var(--p-fg)}
+  .mmd svg .cluster rect{fill:var(--p-bg-hl);stroke:var(--p-border)}
+  .mmd svg .cluster-label,.mmd svg .cluster-label .nodeLabel,.mmd svg .cluster-label text{fill:var(--p-fg-dark);color:var(--p-fg-dark)}
+  .mmd svg .edgePath .path,.mmd svg .flowchart-link{fill:none;stroke:var(--p-border);stroke-width:1.6px}
+  .mmd svg .edgePath marker path,.mmd svg defs marker path{fill:var(--p-border)}
+  .mmd svg .edgeLabel{background:var(--p-bg)}
+  .mmd svg .actor-line,.mmd svg line.line,.mmd svg .messageLine0,.mmd svg .messageLine1{stroke:var(--p-border)}
+  .mmd svg .actor{transition:opacity .12s ease}
+  .mmd svg .node{transition:opacity .12s ease}
+  .mmd svg .edgePath{transition:opacity .12s ease}
+  .mmd svg .actor rect{stroke-width:2}
+  .legend{margin:4px 0 20px;background:var(--p-bg-dark);border:1px solid var(--p-border);border-radius:10px;padding:14px 18px}
+  .legend h3{margin:0 0 10px;font-size:13px;color:var(--p-fg-dark);font-weight:600}
+  .sw{display:flex;flex-wrap:wrap;gap:8px}
+  .sw div{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--p-fg-dark)}
+  .sw i{width:22px;height:22px;border-radius:5px;display:inline-block;border:1px solid}
+  .note{color:var(--p-comment);font-size:12px;margin:22px 0 0;max-width:96ch}
+</style>
+</head>
+<body>
+  <h1>Mermaid accent coloring — options <span class="sub">md-view · Tokyo Night (dark)</span></h1>
+  <p class="intro">Same mermaid 12.3.0 (the version md-view pins), Tokyo Night theme. A post-render pass walks the
+    SVG, reads the graph from <code>g.node[id]</code> + <code>g.edgePath[id]</code> (<code>L-&lt;src&gt;-&lt;tgt&gt;-n</code>)
+    and <code>g.cluster</code>, then colors it. Nodes: <code>stroke = accent</code>, <code>fill = 15% accent tint</code>,
+    text = <code>--p-fg</code>. Diagrams from <code>fde-kb/handbook/situations.md</code>. Hover / click panels B and D.</p>
+
+  <div class="bar">
+    <label for="src">Diagram</label>
+    <select id="src"></select>
+  </div>
+
+  <div class="legend">
+    <h3>Accent cycle — md-view's existing Tokyo keys, 8 slots (zed uses 8 too)</h3>
+    <div class="sw" id="legend"></div>
+  </div>
+
+  <div class="grid">
+    <section class="card a">
+      <h2><span class="tag">A</span><b>Zed parity · positional cycle</b></h2>
+      <p class="desc">Color = node DOM order <code>% 8</code>. Zero graph awareness — the zed baseline. Related boxes share nothing.</p>
+      <div class="mmd" data-mode="positional"></div>
+    </section>
+
+    <section class="card b">
+      <h2><span class="tag">B</span><b>Graph-aware · flow depth + edges by source</b></h2>
+      <p class="desc">Color = topological depth from entry nodes; each connector takes its <b>source</b> node's color, so a flow reads as one family. Detect: in-degree-0 sources, BFS layering over <code>L-…</code> ids.</p>
+      <div class="mmd" data-mode="depth"></div>
+    </section>
+
+    <section class="card c">
+      <h2><span class="tag">C</span><b>Author intent · subgraph + classDef</b></h2>
+      <p class="desc">Color = the author's grouping: one hue per <code>subgraph</code> (DOM nesting under <code>g.cluster</code>), authored <code>:::class</code> overrides. Needs the diagram to declare context.</p>
+      <div class="mmd" data-mode="author"></div>
+    </section>
+
+    <section class="card d">
+      <h2><span class="tag">D</span><b>Interactive focus · spot a flow</b></h2>
+      <p class="desc">Base = depth coloring. Hover a node: it + its incident connectors + direct neighbors stay bright, the rest dims. Click pins. Detect neighbors from <code>L-&lt;node&gt;-*</code> / <code>L-*-&lt;node&gt;</code>.</p>
+      <div class="mmd" data-mode="focus"></div>
+    </section>
+    <section class="card e">
+      <h2><span class="tag">E</span><b>1b hybrid · subgraph, else positional</b></h2>
+      <p class="desc">Subgraph present → <b>one hue per box</b> (C: all FDE green, all Agent magenta). No subgraph → <b>positional cycle</b> (A). Flat diagrams (decision + loop, viewer flow) match A; the pitch loop matches C.</p>
+      <div class="mmd" data-mode="hybrid"></div>
+    </section>
+  </div>
+
+  <p class="note">Throwaway mock — not part of md-view. Node/actor shapes get a Tokyo fill tint
+    (<code>--p-bg-hl</code>-ish blend) + accent border; connectors are neutral on A/C, source-colored on B/D.
+    On the sequence diagram, modes A–D all cycle the actor boxes (mermaid draws no node graph there); D dims
+    non-adjacent actors. Real story reuses md-view's <code>PALETTES.tokyo.dark</code> keys via <code>--p-*</code> in
+    <code>lib/page.css</code> and a post-<code>mermaid.run</code> pass in <code>lib/page.js</code>.</p>
+
+<script src="https://cdn.jsdelivr.net/npm/mermaid@12.3.0/dist/mermaid.min.js"></script>
+<script>
+(function () {
+  var ACCENTS = ['blue','cyan','green','magenta','orange','red','purple','yellow'];
+  var CSSV = { blue:'#7aa2f7',cyan:'#7dcfff',green:'#9ece6a',magenta:'#bb9af7',
+    orange:'#ff9e64',red:'#f7768e',purple:'#9d7cd8',yellow:'#e0af68' };
+  var BG = [0x1a,0x1b,0x26];
+
+  var SOURCES = [
+    { name:'Situations · pitch loop (4 subgraphs + feedback loop)', kind:'flow', text:
+      'flowchart LR\n'+
+      '  subgraph decider [Client Decision Maker]\n    pick[Pick one to three options]\n    accept[Accept one pitch]\n  end\n'+
+      '  subgraph fde [FDE]\n    ask[Ask for material]\n    ship[Accept each source the same day]\n    present[Present the pitch]\n  end\n'+
+      '  subgraph agent [Agent]\n    src[Write sources S##]\n    build[Rebuild out from all sources]\n    poc[Build the POC]\n  end\n'+
+      '  subgraph people [Client SMEs]\n    show[Show the last case]\n  end\n'+
+      '  show --> ask --> src --> ship --> build --> pick --> poc --> present --> accept\n'+
+      '  accept -.->|corrections| ask' },
+    { name:'Situations · source register (subgraphs + correction loop)', kind:'flow', text:
+      'flowchart LR\n'+
+      '  subgraph fde [FDE]\n    ask[Ask for material]\n    acc[Read it and set accepted]\n    fix[Say that is wrong]\n  end\n'+
+      '  subgraph agent [Agent]\n    row[Add the register row]\n    write[Write the source file]\n    ana[Rebuild the builds]\n  end\n'+
+      '  subgraph files [Workspace files]\n    reg[Register: requested, new, accepted]\n    srcs[sources: S## immutable]\n    outs[out: context, lens, open-questions, ideas]\n  end\n'+
+      '  ask --> row --> reg --> write --> srcs --> ana --> outs\n  acc --> ana\n  outs -.->|a correction| write' },
+    { name:'Situations · feedback (sequence)', kind:'seq', text:
+      'sequenceDiagram\n  participant C as Client SMEs\n  participant F as FDE\n  participant A as Agent\n  participant D as Client Decision Maker\n'+
+      '  C->>F: feedback on the pitch\n  F->>A: capture the feedback, then record the ruling\n  A->>A: D8 taken, D6 superseded\n'+
+      '  F->>A: analyze, ideate, or pitch (one)\n  F->>A: re-run the riskiest spike\n  F->>D: present the reshaped option\n  D->>F: accept, or new feedback (loop)' },
+    { name:'Situations · decision gate (decision node + loop)', kind:'flow', text:
+      'flowchart LR\n  P[Pitch and POC] -->|cold read, one lens review| G{Decision Maker accepts?}\n'+
+      '  G -->|yes| B[Build, story by story]\n  G -->|no| R[One more Discover round with its own appetite]\n  R --> P\n'+
+      '  B --> PR[Prove with evidence and readouts] --> H[Hand over]' },
+    { name:'md-view viewer flow (toy, no subgraphs)', kind:'flow', text:
+      'flowchart TD\n  A[parse source] --> B[mermaid.run]\n  B --> C[add bar]\n  B --> D[apply accents]\n'+
+      '  C --> E[open viewer]\n  D --> E\n  E --> F[zoom / drag]\n  F --> G[close: restore]' }
+  ];
+
+  // legend
+  (function(){ var leg=document.getElementById('legend');
+    ACCENTS.forEach(function(k){ var d=document.createElement('div');
+      d.innerHTML='<i style="background:'+blend(CSSV[k],0.28)+';border-color:'+CSSV[k]+'"></i>'+k; leg.appendChild(d); }); })();
+
+  // selector
+  (function(){ var sel=document.getElementById('src');
+    SOURCES.forEach(function(s,i){ var o=document.createElement('option'); o.value=i; o.textContent=s.name; sel.appendChild(o); });
+    sel.addEventListener('change', render); })();
+
+  mermaid.initialize({
+    startOnLoad:false, securityLevel:'strict', theme:'base',
+    themeVariables:{ darkMode:true, background:'#1a1b26', primaryColor:'#292e42', primaryTextColor:'#c0caf5',
+      primaryBorderColor:'#3b4261', lineColor:'#3b4261', clusterBkg:'#292e42', clusterBorder:'#3b4261',
+      actorBkg:'#292e42', actorBorder:'#3b4261', actorTextColor:'#c0caf5', signalColor:'#3b4261',
+      signalTextColor:'#c0caf5', labelBoxBkgColor:'#292e42', labelBoxBorderColor:'#3b4261',
+      labelTextColor:'#c0caf5', noteBkgColor:'#283457', noteTextColor:'#c0caf5',
+      activationBkgColor:'#283457', activationBorderColor:'#7aa2f7', sequenceNumberColor:'#1a1b26',
+      edgeLabelBackground:'#1a1b26', fontFamily:'inherit' }
+  });
+
+  function hex(c){ c=c.replace('#',''); return [parseInt(c.substr(0,2),16),parseInt(c.substr(2,2),16),parseInt(c.substr(4,2),16)]; }
+  function blend(c,t){ var a=hex(c); var r=a.map(function(v,i){return Math.round(v*t+BG[i]*(1-t));}); return 'rgb('+r.join(',')+')'; }
+  function paint(g,color,tint){ var list=[g].concat([].slice.call(g.querySelectorAll('rect,path,polygon,circle,ellipse')));
+    list.forEach(function(s){ if(s.tagName && /^(rect|path|polygon|circle|ellipse)$/i.test(s.tagName)){ s.style.stroke=color; s.style.fill=blend(color,tint); s.style.strokeWidth='2'; } }); }
+  function paintEdge(p,color){ p.style.stroke=color; p.style.strokeWidth='2'; }
+
+  function isSeq(svg){ return !!svg.querySelector('.actor') || !!svg.querySelector('.actor-line'); }
+
+  // v12: node id = <svgId>-<key>; edge = path.flowchart-link[data-id=L_<src>_<tgt>_<n>]
+  function graph(svg){
+    var sid = svg.id || '';
+    var nodes=[].slice.call(svg.querySelectorAll('g.node'));
+    var byKey={};
+    nodes.forEach(function(g){
+      var k = (g.id && sid && g.id.indexOf(sid+'-')===0) ? g.id.slice(sid.length+1) : g.id;
+      g.__key=k; byKey[k]=g; });
+    var edges=[].slice.call(svg.querySelectorAll('path.flowchart-link, path[data-edge="true"]')).map(function(p){
+      var parts=(p.getAttribute('data-id')||p.id||'').split('_'); return {p:p, src:parts[1], tgt:parts[2]};
+    }).filter(function(e){ return byKey[e.src] && byKey[e.tgt]; });
+    return {nodes:nodes, edges:edges, byKey:byKey, svg:svg};
+  }
+  function depthOf(gm){
+    var indeg={}, out={};
+    gm.nodes.forEach(function(g){ indeg[g.__key]=0; out[g.__key]=[]; });
+    gm.edges.forEach(function(e){ indeg[e.tgt]++; out[e.src].push(e.tgt); });
+    var d={}, q=[]; Object.keys(indeg).forEach(function(k){ if(indeg[k]===0){ d[k]=0; q.push(k);} });
+    while(q.length){ var k=q.shift(); out[k].forEach(function(t){ if(d[t]==null){ d[t]=d[k]+1; q.push(t);} }); }
+    Object.keys(indeg).forEach(function(k){ if(d[k]==null) d[k]=0; });
+    return d;
+  }
+  function flowColor(gm, mode){
+    if (mode==='positional'){ gm.nodes.forEach(function(g,i){ paint(g, CSSV[ACCENTS[i%8]], 0.15); }); return; }
+    var d=depthOf(gm), color={};
+    Object.keys(d).forEach(function(k){ color[k]=CSSV[ACCENTS[d[k]%8]]; });
+    gm.nodes.forEach(function(g){ paint(g, color[g.__key], 0.15); });
+    gm.edges.forEach(function(e){ paintEdge(e.p, color[e.src]); });
+    if (mode==='focus') wireFocus(gm, color);
+  }
+  function applyAuthor(svg){
+    var clusters=[].slice.call(svg.querySelectorAll('g.cluster')).map(function(c){ var r=c.querySelector('rect'); if(!r) return null;
+      return {c:c, r:r, x:+r.getAttribute('x')||0, y:+r.getAttribute('y')||0, w:+r.getAttribute('width')||0, h:+r.getAttribute('height')||0}; }).filter(Boolean);
+    [].slice.call(svg.querySelectorAll('g.node')).forEach(function(g){
+      var m=/translate\(\s*([-\d.]+)[, ]+([-\d.]+)/.exec(g.getAttribute('transform')||''); var cx=m?+m[1]:0, cy=m?+m[2]:0, idx=-1;
+      for(var i=0;i<clusters.length;i++){ var r=clusters[i]; if(cx>=r.x&&cx<=r.x+r.w&&cy>=r.y&&cy<=r.y+r.h){ idx=i; break; } }
+      var hot=/\b(hot|crit|done|active)\b/.test(g.getAttribute('class')||'');
+      paint(g, hot?CSSV.red:(idx>=0?CSSV[ACCENTS[idx%8]]:CSSV.blue), 0.15); });
+    clusters.forEach(function(cl,i){ var col=CSSV[ACCENTS[i%8]]; cl.r.style.stroke=col; cl.r.style.fill=blend(col,0.06); });
+  }
+  function wireFocus(gm, color){
+    var pinned=null;
+    function neighbors(key){ var s={}; s[key]=1; gm.edges.forEach(function(e){ if(e.src===key) s[e.tgt]=1; if(e.tgt===key) s[e.src]=1; }); return s; }
+    function focus(key){
+      var s=neighbors(key);
+      gm.nodes.forEach(function(g){ g.style.opacity = s[g.__key]?'1':'0.28'; });
+      gm.edges.forEach(function(e){ var on=(e.src===key||e.tgt===key); e.p.style.opacity=on?'1':'0.22'; if(on) paintEdge(e.p, color[e.src]); });
+    }
+    function clear(){ gm.nodes.forEach(function(g){ g.style.opacity='1'; }); gm.edges.forEach(function(e){ e.p.style.opacity='1'; }); }
+    gm.nodes.forEach(function(g){ var key=g.__key;
+      g.addEventListener('mouseenter', function(){ if(!pinned) focus(key); });
+      g.addEventListener('mouseleave', function(){ if(!pinned) clear(); });
+      g.addEventListener('click', function(){ pinned=(pinned===key)?null:key; if(pinned) focus(pinned); else clear(); }); });
+  }
+  function applySeq(svg, mode){
+    var actors=[].slice.call(svg.querySelectorAll('.actor'));
+    actors.forEach(function(g,i){ paint(g, CSSV[ACCENTS[i%8]], 0.15); });
+    if (mode==='focus'){ var pinned=null;
+      function focus(g){ actors.forEach(function(a){ a.style.opacity=(a===g)?'1':'0.4'; }); }
+      function clear(){ actors.forEach(function(a){ a.style.opacity='1'; }); }
+      actors.forEach(function(g){ g.addEventListener('mouseenter', function(){ if(!pinned) focus(g); });
+        g.addEventListener('mouseleave', function(){ if(!pinned) clear(); });
+        g.addEventListener('click', function(){ pinned=(pinned===g)?null:g; if(pinned) focus(pinned); else clear(); }); }); }
+  }
+  function applyHybrid(svg){
+    var clusters=[].slice.call(svg.querySelectorAll('g.cluster')).map(function(c){ var r=c.querySelector('rect'); if(!r) return null;
+      return {r:r, x:+r.getAttribute('x')||0, y:+r.getAttribute('y')||0, w:+r.getAttribute('width')||0, h:+r.getAttribute('height')||0}; }).filter(Boolean);
+    var nodes=[].slice.call(svg.querySelectorAll('g.node'));
+    var global=0;
+    nodes.forEach(function(g){
+      var m=/translate\(\s*([-\d.]+)[, ]+([-\d.]+)/.exec(g.getAttribute('transform')||''); var cx=m?+m[1]:0, cy=m?+m[2]:0, ci=-1;
+      for(var i=0;i<clusters.length;i++){ var r=clusters[i]; if(cx>=r.x&&cx<=r.x+r.w&&cy>=r.y&&cy<=r.y+r.h){ ci=i; break; } }
+      var hot=/\b(hot|crit|done|active)\b/.test(g.getAttribute('class')||'');
+      var hue = hot ? CSSV.red : (ci>=0 ? CSSV[ACCENTS[ci%8]] : (clusters.length ? CSSV.blue : CSSV[ACCENTS[(global++)%8]]));
+      paint(g, hue, 0.15); });
+    clusters.forEach(function(cl,i){ var col=CSSV[ACCENTS[i%8]]; cl.r.style.stroke=col; cl.r.style.fill=blend(col,0.06); });
+  }
+  function applyMode(box){
+    var svg=box.querySelector('svg'); if(!svg) return;
+    var mode=box.getAttribute('data-mode');
+    if (isSeq(svg)) applySeq(svg, mode);
+    else if (mode==='author') applyAuthor(svg);
+    else if (mode==='hybrid') applyHybrid(svg);
+    else flowColor(graph(svg), mode);
+  }
+
+  var renderToken = 0;
+  async function render(){
+    var token = ++renderToken;
+    var sel=document.getElementById('src');
+    var src=SOURCES[+sel.value];
+    for (var box of [].slice.call(document.querySelectorAll('.mmd'))){
+      if (token!==renderToken) return;
+      box.innerHTML='';
+      var host=document.createElement('div'); box.appendChild(host);
+      host.textContent=src.text;
+      try { await mermaid.run({ nodes:[host], suppressErrors:true }); applyMode(box); }
+      catch(e){ box.innerHTML='<pre style="color:var(--p-red);white-space:pre-wrap;font-size:12px">'+esc(src.text)+'</pre>'; }
+    }
+  }
+  function esc(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  render();
+})();
+</script>
+</body>
+</html>
