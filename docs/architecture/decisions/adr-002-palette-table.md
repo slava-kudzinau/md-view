@@ -22,7 +22,7 @@ The page script holds one color table per palette and mode. It writes the `--p-*
 
 ## Consequences
 
-- One source of truth for color; the three consumers cannot drift.
+- One source of truth for color; the three consumers cannot differ.
 - A new palette is data. The code-token colors are rules that read the table, and mermaid uses `theme:'base'` with `themeVariables` from the same colors.
 - The table keys must stay in step across modes (the `tokyo` count is 19). The spec pins the count.
 
@@ -46,4 +46,4 @@ The page script holds one color table per palette and mode. It writes the `--p-*
 
 ## Notes
 
-Color-mapping choices the next palette faces again (values live in the `PALETTES` table in `lib/md-view`): borders use the source key `fg_gutter`, not `border` (Night's `border` is near the page color); the current tree file uses `bg-visual`, not `bg-hl` (Day: `bg-hl` is near the panel color).
+Color-mapping choices the next palette faces again. The values live in the `PALETTES` table in `lib/md-view`. Borders use the source key `fg_gutter`, not `border`: Night's `border` is near the page color. The current tree file uses `bg-visual`, not `bg-hl`: Day's `bg-hl` is near the panel color.

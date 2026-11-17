@@ -13,7 +13,7 @@ date: 2026-11-17
 
 ## Decision
 
-One literal `version=0.1.0` lives in `lib/md-view`. It is the single source of truth: the script injects it as a `<meta name="md-view-version">` in the page head and prints it for `--version`. It also folds into the page key (`;v=`), so a version bump invalidates a cached page on its own, with no change to the cache code.
+One literal `version=0.1.0` lives in `lib/md-view`. It is the single source of truth: the script injects it as a `<meta name="md-view-version">` in the page head and prints it for `--version`. It also folds into the page key (`;v=`). A version bump then invalidates a cached page on its own, with no change to the cache code.
 
 ## Consequences
 
