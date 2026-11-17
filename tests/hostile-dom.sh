@@ -467,17 +467,19 @@ accent_cluster_page() {
 }
 net_check "accent: each subgraph shares a hue, and its box keeps that hue" accent_cluster_page
 # A sequence diagram has no g.node, so the page takes the actor branch: it
-# paints the shape child of every .actor, in document order. Mermaid gives
-# the actor class to the box and to the label of a participant, and neither
-# holds a shape child, so the pass paints nothing on a sequence diagram: each
-# of the twelve .actor elements keeps the stroke of the theme, and the page
-# adds no element. The row counts the boxes of the three participants at the
-# top of the diagram; the bottom row and the labels mirror them.
+# paints every rect.actor and polygon.actor shape, in document order. Mermaid
+# gives the actor class to the box of a participant, at the top and at the
+# bottom of the diagram, and to the text of its label; the selector skips the
+# labels. The row counts the six boxes of the three participants, three at
+# the top and three at the bottom, and asks that the first two carry two
+# accents of the palette: the accent as fill and as stroke, blended at 0.15,
+# 2 px wide. The title is the flag, then the count of painted shapes, and
+# every tick rewrites it, so the dump holds the achieved stage.
 accent_seq_page() {
-    accent_page accent-seq accent-sequence.md "${WHEN_PAINT_ACTOR}${ACCENT_LIB}var s=document.querySelector('pre.mermaid svg');var as=s.querySelectorAll('.actor');var top=s.querySelectorAll('rect.actor.actor-top'),bot=s.querySelectorAll('rect.actor.actor-bottom'),i;var plain=function(g){return norm(g.style.stroke)===''&&norm(g.style.fill)===''&&norm(g.style.fillOpacity)===''&&norm(g.style.strokeWidth)===''?1:0};var all=function(L){for(i=0;i<L.length;i++)if(!plain(L[i]))return 0;return 1};var theme=function(L){for(i=0;i<L.length;i++)if(norm(L[i].getAttribute('stroke'))==='')return 0;return 1};document.title='seq='+(document.querySelectorAll('pre.mermaid svg').length===1&&s.querySelectorAll('g.node').length===0&&top.length===3&&bot.length===3&&theme(top)&&theme(bot)&&all(as)&&as.length===12?1:0)+' actors='+top.length;$WHEN_PAINT_END" &&
-        grep -F -q '<title>seq=1 actors=3</title>' "$tmp/accent-seq.dom"
+    accent_page accent-seq accent-sequence.md "${WHEN_PAINT_ACTOR}${ACCENT_LIB}var tries=0;var v=function(){var s=document.querySelector('pre.mermaid svg');var sh=s?s.querySelectorAll('rect.actor, polygon.actor'):[];var ok=document.querySelectorAll('pre.mermaid svg').length===1&&s.querySelectorAll('g.node').length===0&&sh.length===6&&isAccent(sh[0].style.stroke)&&isAccent(sh[1].style.stroke)&&sh[0].style.stroke!==sh[1].style.stroke&&sh[0].style.fillOpacity==='0.15'&&sh[0].style.strokeWidth==='2px'&&sh[0].style.stroke===sh[0].style.fill?1:0;document.title='seq='+ok+' actors='+sh.length;if(tries++<3000)setTimeout(v,0);};v();$WHEN_PAINT_END" &&
+        grep -F -q '<title>seq=1 actors=6</title>' "$tmp/accent-seq.dom"
 }
-net_check "accent: a sequence diagram keeps its actor boxes on the theme" accent_seq_page
+net_check "accent: a sequence diagram colors its actor boxes" accent_seq_page
 # The broken block shows its source, so it holds no svg and no accent at all; the
 # block after it draws, and its two nodes take two accents of the palette. The
 # title is the flag, then the count of painted elements in the source block and
