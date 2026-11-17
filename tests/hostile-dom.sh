@@ -394,6 +394,11 @@ WHEN_BAR_END="}else setTimeout(w,50);})();"
 # slow CDN fetch costs virtual time only when the page is idle.
 WHEN_PAINT="(function w(){var q=document.querySelector('pre.mermaid svg g.node rect');if(q&&q.style.stroke){"
 WHEN_PAINT_END="}else setTimeout(w,0);})();"
+# WHEN_PAINT_ACTOR is the sequence sibling of WHEN_PAINT: a sequence svg has no
+# g.node, so it gates on the first actor, the shape mermaid gives the actor
+# box. It polls at 0 ms and ends the same way, so a slow CDN fetch costs
+# virtual time only when the page is idle.
+WHEN_PAINT_ACTOR="(function w(){var q=document.querySelector('pre.mermaid svg .actor');if(q){"
 
 # Rows: the accent paint of a drawn diagram. The pages use the default github
 # palette, so an accent is one of the 16 hexes of GITHUB_ACCENTS (the 8 keys of
@@ -453,13 +458,26 @@ net_check "accent: a flat diagram colors each node and its connectors" accent_fl
 # subgraph is an accent of the palette, not the theme border, blended at 0.06 and
 # 2 px wide, and it holds the stroke of the nodes inside it. Every connector
 # carries the stroke of the node it starts from, so none of them keeps the theme
-# stroke. The title is the flag, then the counts of nodes, of clusters, and of
+# stroke: the flag also encodes that every connector matches its source node.
+# The title is the flag, then the counts of nodes, of clusters, and of
 # connectors on the theme stroke.
 accent_cluster_page() {
-    accent_page accent-cluster accent-subgraphs.md "${WHEN_PAINT}${ACCENT_LIB}var s=document.querySelector('pre.mermaid svg');var ns=s.querySelectorAll('g.node'),i;var st=function(j){return strokeOf(ns[j])};var same=function(a,b){return st(a)&&st(a)===st(b)?1:0};var cl=s.querySelectorAll('g.cluster');var cr=function(g){return norm(g.querySelector('rect').style.stroke)};var boxOk=function(g){var r=g.querySelector('rect');return isAccent(cr(g))&&r.style.fillOpacity==='0.06'&&r.style.strokeWidth==='2px'?1:0};var pair=function(){for(var j=0;j<ns.length;j++){var ci=clusterOf(cl,ns[j]);if(ci<0||strokeOf(ns[j])!==cr(cl[ci]))return 0;}return 1};var L=s.querySelectorAll('path.flowchart-link'),theme=0;for(i=0;i<L.length;i++)if(norm(L[i].style.stroke)==='')theme++;document.title='cluster='+(same(0,1)&&same(2,3)&&same(4,5)&&same(5,6)&&st(0)!==st(2)&&st(2)!==st(4)&&cl.length===3&&boxOk(cl[0])&&boxOk(cl[1])&&boxOk(cl[2])&&cr(cl[0])!==cr(cl[1])&&cr(cl[1])!==cr(cl[2])&&pair()&&theme===0?1:0)+' nodes='+ns.length+' clusters='+cl.length+' theme='+theme;$WHEN_PAINT_END" &&
+    accent_page accent-cluster accent-subgraphs.md "${WHEN_PAINT}${ACCENT_LIB}${ACCENT_LINKS}var s=document.querySelector('pre.mermaid svg');var ns=s.querySelectorAll('g.node'),i,keys={},by={},k;for(i=0;i<ns.length;i++){k=keyOf(ns[i]);keys[k]=1;by[k]=strokeOf(ns[i]);}var st=function(j){return strokeOf(ns[j])};var same=function(a,b){return st(a)&&st(a)===st(b)?1:0};var cl=s.querySelectorAll('g.cluster');var cr=function(g){return norm(g.querySelector('rect').style.stroke)};var boxOk=function(g){var r=g.querySelector('rect');return isAccent(cr(g))&&r.style.fillOpacity==='0.06'&&r.style.strokeWidth==='2px'?1:0};var pair=function(){for(var j=0;j<ns.length;j++){var ci=clusterOf(cl,ns[j]);if(ci<0||strokeOf(ns[j])!==cr(cl[ci]))return 0;}return 1};var L=s.querySelectorAll('path.flowchart-link'),theme=0;for(i=0;i<L.length;i++)if(norm(L[i].style.stroke)==='')theme++;document.title='cluster='+(same(0,1)&&same(2,3)&&same(4,5)&&same(5,6)&&st(0)!==st(2)&&st(2)!==st(4)&&cl.length===3&&boxOk(cl[0])&&boxOk(cl[1])&&boxOk(cl[2])&&cr(cl[0])!==cr(cl[1])&&cr(cl[1])!==cr(cl[2])&&pair()&&linksOk(s,keys,by)&&theme===0?1:0)+' nodes='+ns.length+' clusters='+cl.length+' theme='+theme;$WHEN_PAINT_END" &&
         grep -F -q '<title>cluster=1 nodes=7 clusters=3 theme=0</title>' "$tmp/accent-cluster.dom"
 }
 net_check "accent: each subgraph shares a hue, and its box keeps that hue" accent_cluster_page
+# A sequence diagram has no g.node, so the page takes the actor branch: it
+# paints the shape child of every .actor, in document order. Mermaid gives
+# the actor class to the box and to the label of a participant, and neither
+# holds a shape child, so the pass paints nothing on a sequence diagram: each
+# of the twelve .actor elements keeps the stroke of the theme, and the page
+# adds no element. The row counts the boxes of the three participants at the
+# top of the diagram; the bottom row and the labels mirror them.
+accent_seq_page() {
+    accent_page accent-seq accent-sequence.md "${WHEN_PAINT_ACTOR}${ACCENT_LIB}var s=document.querySelector('pre.mermaid svg');var as=s.querySelectorAll('.actor');var top=s.querySelectorAll('rect.actor.actor-top'),bot=s.querySelectorAll('rect.actor.actor-bottom'),i;var plain=function(g){return norm(g.style.stroke)===''&&norm(g.style.fill)===''&&norm(g.style.fillOpacity)===''&&norm(g.style.strokeWidth)===''?1:0};var all=function(L){for(i=0;i<L.length;i++)if(!plain(L[i]))return 0;return 1};var theme=function(L){for(i=0;i<L.length;i++)if(norm(L[i].getAttribute('stroke'))==='')return 0;return 1};document.title='seq='+(document.querySelectorAll('pre.mermaid svg').length===1&&s.querySelectorAll('g.node').length===0&&top.length===3&&bot.length===3&&theme(top)&&theme(bot)&&all(as)&&as.length===12?1:0)+' actors='+top.length;$WHEN_PAINT_END" &&
+        grep -F -q '<title>seq=1 actors=3</title>' "$tmp/accent-seq.dom"
+}
+net_check "accent: a sequence diagram keeps its actor boxes on the theme" accent_seq_page
 # The broken block shows its source, so it holds no svg and no accent at all; the
 # block after it draws, and its two nodes take two accents of the palette. The
 # title is the flag, then the count of painted elements in the source block and

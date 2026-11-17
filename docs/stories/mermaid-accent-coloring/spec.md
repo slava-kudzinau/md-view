@@ -1,7 +1,7 @@
 # Spec: mermaid accent coloring
 
 Unit under test: `lib/page.js` — `applyAccents(pre)` (new), `ACCENT_KEYS` (new),
-`GITHUB_ACCENTS` (new), and the call in `drawDiagrams` at `lib/page.js:711`.
+`GITHUB_ACCENTS` (new), and the call in `drawDiagrams` at `lib/page.js:853`.
 It runs only on a drawn SVG (`pre` contains an `svg`). A source-only block
 gets no accents.
 
@@ -33,7 +33,9 @@ exist in both tokyo modes; the `tokyo/19` palette-key count is unchanged.
 
 The mode is `paletteMode().split(':')[1]` (`paletteMode()` returns `<palette>:<mode>`, for example
 `tokyo:dark`); the palette name (tokyo versus github) is `paletteSetting()`. The table's `light` /
-`dark` columns are the mode. These are the same values the mermaid `themeVariables` use (`lib/page.js:684-688`).
+`dark` columns are the mode. The `tokyo` columns are the colors the page hands mermaid as
+`themeVariables` (`lib/page.js:826-832`). The `github` columns are GitHub's own accent set, its
+default light and dark accents.
 
 ## Flowchart scheme (1b hybrid)
 
@@ -51,7 +53,8 @@ smallest `width * height`. A tie keeps the later cluster in DOM order. Clusters 
 | Flat diagram | document-order node index `% 8` | source node's index |
 
 A node's center is its `g.node` `transform` `translate(cx,cy)`. `applyAccents` first builds
-the set of node keys: the part of each `g.node` id after `<svgId>-` (node id = `<svgId>-<key>`).
+the set of node keys: each `g.node` id with the `<svgId>-flowchart-` prefix dropped and one
+trailing `-<n>` dropped.
 A connector is `path.flowchart-link`; its `data-id` is `L_<src>_<tgt>_<n>`, and a key may itself
 contain underscores (for example `write_src`). A naive `_` split mis-parses those, so:
 
@@ -93,7 +96,7 @@ document-order index `% 8`. Leave messages, activations, and lifelines on theme 
 ## Call site and redraw
 
 `drawDiagrams` calls `applyAccents(it.pre)` for a drawn diagram, beside `addBar(it.pre)`
-at `lib/page.js:711`, guarded by `it.pre.querySelector('svg')` and `!batch.cancelled`.
+at `lib/page.js:853`, guarded by `it.pre.querySelector('svg')` and `!batch.cancelled`.
 `redraw` re-runs `drawDiagrams`, so a theme, palette, or mode change re-colors the
 accents. `applyAccents` adds no element: `svg.length` stays 1, and the root `svg`
 `style` attribute is unchanged (accents set `style` on child shapes).

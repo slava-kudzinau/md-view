@@ -10,7 +10,7 @@ description: The list of md-view stories in build order, with the status of each
 | - | [themes-tokyo-night](themes-tokyo-night/story.md) | M | in-review | - |
 | 1 | [page-assets](page-assets/story.md) | S | done | - |
 | 2 | [mermaid-viewer](mermaid-viewer/story.md) | M | done | page-assets |
-| 3 | [mermaid-accent-coloring](mermaid-accent-coloring/story.md) | M | planned | mermaid-viewer |
+| 3 | [mermaid-accent-coloring](mermaid-accent-coloring/story.md) | M | in-review | mermaid-viewer |
 | 4 | [mermaid-accent-toolbar](mermaid-accent-toolbar/story.md) | M | planned | mermaid-accent-coloring |
 
 ## Build order
