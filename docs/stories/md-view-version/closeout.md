@@ -32,3 +32,11 @@ None. The story is a one-token append plus one meta line plus one popover footer
 | re-reviewer | mlx/local/Swift-1.5-Flash-Next-Heretic-MLX-Serve-iQ-MLX-Dense46 | 1 | 0 | 0 | 0 |
 
 The plan's role tiers held: no per-task fix rounds, and the one Important finding (a missing test row, not a code defect) came from the whole-branch review. `final-reviewer-light` was the right tier for this standard story.
+
+## Cost
+
+`spend.mjs` reports the build as unmetered (no Claude transcript matched the local-model
+subagent runs), so the dollar figure is not script-priced. Against budget $15 / stop $20
+the run stayed inside the stop: three tasks, T2 critical review, one final-review fix
+round, and a scoped re-review, each with `make check` after. Track the exact total from
+the harness usage.

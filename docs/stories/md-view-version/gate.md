@@ -55,13 +55,21 @@ the key token is the hook that turns a bump into a rebuild.
 ## At merge
 
 ### What was built
-{{against "What it builds": same, more, or less, and why}}
+As planned: one `version=0.1.0` literal in `lib/md-view`; a `--version` flag
+(prints `md-view 0.1.0`, exits 0, reads no config); a `;v=0.1.0` token on the page key
+meta; a `<meta name="md-view-version" content="0.1.0">` in the page head; and a muted
+`md-view 0.1.0` footer in the settings popover (fallback `md-view` when the meta is
+absent). Spec, README, and tests moved in step.
 
 ### Decisions changed during the build
-{{rows changed or added in the table above, with the reason; or "none"}}
+None. Every decision in the table held through the build.
 
 ### What the reviews caught
-{{the findings that changed code, one line each; or "nothing that changed code"}}
+The final review found one Important item: no DOM test for the footer's no-meta
+fallback. Added as `e3d3dc8` (a meta-stripped page asserts the footer reads `md-view`).
+The reviews raised five Minors, all parked as acceptable (documented in `closeout.md`).
 
 ### Run it
-{{the command or demo, and what you should see}}
+`md-view --version` prints `md-view 0.1.0`. Open a page, click the gear, and the last
+line of the popover reads `md-view 0.1.0`. Bump the literal in `lib/md-view` and the
+next run rebuilds the page (the key line changes), then reuses it.

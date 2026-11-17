@@ -1,6 +1,6 @@
 ---
 description: Gives md-view a version string, shown in the settings menu and printed by a --version flag, from one source of truth.
-status: in-progress
+status: in-review
 size: M
 refs: docs/architecture/md-view.spec.md
 ---
