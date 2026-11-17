@@ -147,6 +147,16 @@ install_over_symlink() {
     mode_is "$pre/bin/md-view" -rwxr-xr-x || fail "bin/md-view is not a regular file of mode 755"
 }
 
+# version_flag: md-view --version prints the version, exits 0, and reads no
+# config.ini: a browser= value that would print a warning stays silent.
+version_flag() {
+    fresh version_flag
+    mkdir -p "$d/config/md-view" || fail "mkdir the config folder"
+    printf '[View]\nbrowser=/no/such/browser\n' > "$d/config/md-view/config.ini" || fail "write config.ini"
+    out=$("$root/bin/md-view" --version 2>&1) || fail "md-view --version exit $?"
+    [ "$out" = "md-view 0.1.0" ] || fail "md-view --version printed: $out"
+}
+
 # run CASE: runs one case in a subshell and prints its result.
 run() {
     if ( "$1" ) > "$tmp/$1.log" 2>&1; then
@@ -158,7 +168,7 @@ run() {
     fi
 }
 
-for c in checkout_space installed_space quote_refused uninstall_only_own uninstall_empty_folder install_over_symlink; do
+for c in checkout_space installed_space quote_refused uninstall_only_own uninstall_empty_folder install_over_symlink version_flag; do
     run "$c"
 done
 

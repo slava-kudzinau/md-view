@@ -13,6 +13,7 @@
 #     --list-tree         print the root and the tree files, write no page
 #   md-view --init-config
 #   md-view --print-association
+#   md-view --version
 #
 # Writes one page (the Markdown text and marked inline; mermaid from a pinned
 # CDN script with an SRI hash) and opens it with the system opener. The page
@@ -30,6 +31,9 @@
 
 LC_ALL=C
 export LC_ALL
+# The one version string. The --version flag, the page key, and the page
+# meta read it.
+version=0.1.0
 
 self_dir=$(cd "$(dirname -- "$0")" && pwd) || exit 2
 ini=${XDG_CONFIG_HOME:-$HOME/.config}/md-view/config.ini
@@ -46,6 +50,7 @@ usage() {
     echo '               [--tree on|off] [--list-tree] <file.md>' >&2
     echo '       md-view --init-config' >&2
     echo '       md-view --print-association' >&2
+    echo '       md-view --version' >&2
     exit 2
 }
 
@@ -587,6 +592,9 @@ flag_palette=
 list_tree=0
 while [ $# -gt 0 ]; do
     case $1 in
+        --version)
+            printf 'md-view %s\n' "$version"
+            exit 0 ;;
         --print-association)
             print_association
             exit 0 ;;

@@ -48,6 +48,7 @@ md-view [options] <file.md>
 | `--no-cache` | Build the page again. |
 | `--init-config` | Write a commented sample `config.ini`, and print its path. |
 | `--print-association` | Print the far2l File associations entry. |
+| `--version` | Print the version, and exit. |
 
 The page goes to `${XDG_CACHE_HOME:-$HOME/.cache}/md-view/` and md-view reuses it while no input changed. In the page, press `t` to change the theme, `s` to change the palette and `w` to change the width. Press `b` to open or close the file tree. Press `?` for help.
 
