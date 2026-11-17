@@ -14,6 +14,7 @@ Rules that always hold for md-view. Format: `- **[area]**: rule (Learned from: s
 - **[browser]**: `lib/md-view` treats the Markdown file as untrusted. The text goes into the page as escaped data (`\` first, then `</` and `<!--`) and raw HTML shows as text. Mermaid runs with `securityLevel:'strict'`. The page has a `Content-Security-Policy` that allows inline scripts, scripts from all of `https://cdn.jsdelivr.net`, and local images only. Only the page script pins the mermaid URL (`MERMAID_URL`) and its `integrity` hash (`MERMAID_SRI`). The text shows before the CDN script loads. (Learned from: far2l story markdown-browser-view, first final review, 2026-11-06)
 - **[browser]**: The printed far2l command leaves `!.!` unquoted, because far2l escapes the file name. (Learned from: far2l story markdown-browser-view, first final review, 2026-11-06)
 - **[browser]**: No script edits the config file of a host. far2l rewrites its `config.ini` on exit. The user adds the File associations entry by hand. (Learned from: far2l story markdown-browser-view, gate, 2026-11-06)
+- **[browser]**: Each drawn diagram carries an accent pass. It sets inline `style` on child shapes only, and the pass adds no element. The `style` of the root `<svg>` stays unchanged. (Learned from: story mermaid-accent-coloring, spec, 2026-11-17)
 
 ## Install and paths
 
