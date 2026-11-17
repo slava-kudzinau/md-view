@@ -928,6 +928,62 @@ case_page_paste_line() {
     exit 0
 }
 
+# --- version footer ---------------------------------------------------------
+
+# chrome_prog: the Chrome program for the DOM cases, empty when there is none.
+# CHROME names the program. Defaults: the macOS path, then google-chrome,
+# then chromium in PATH. A name with no slash is looked up in PATH.
+chrome_prog() {
+    c=${CHROME:-}
+    if [ -z "$c" ]; then
+        for p in '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome' google-chrome chromium; do
+            case $p in
+                /*)
+                    [ -x "$p" ] && { printf '%s\n' "$p"; return; } ;;
+                *)
+                    c=$(command -v "$p" 2>/dev/null) && [ -n "$c" ] && { printf '%s\n' "$c"; return; } ;;
+            esac
+        done
+        return
+    fi
+    case $c in
+        */*) ;;
+        *) c=$(command -v "$c" 2>/dev/null) || c= ;;
+    esac
+    [ -n "$c" ] && printf '%s\n' "$c"
+}
+
+# file_url PATH: the file:// URL of PATH, with the escapes of md-view.
+file_url() {
+    printf 'file://%s' "$(printf '%s' "$1" | sed -e 's/%/%25/g' -e 's/ /%20/g' -e 's/#/%23/g' \
+        -e 's/?/%3F/g' -e 's/"/%22/g' -e "s/'/%27/g" -e 's/</%3C/g' -e 's/>/%3E/g' -e 's/&/%26/g')"
+}
+
+# The footer of the popover, in headless Chrome: the gear opens the popover,
+# and .md-version reads the text of the version meta. No Chrome: skip.
+case_page_version_footer() {
+    CHROME=$(chrome_prog)
+    [ -n "$CHROME" ] || skip "no Chrome"
+    fresh
+    md --tree off --no-open --out "$page" "$sample"
+    [ "$rc" = 0 ] || bad "exit $rc"
+    # The injected script runs after the page script wired its handlers.
+    # It opens the popover with the gear and copies the footer text to the title.
+    awk -v s='<script>document.getElementById("md-gear").click();document.title=document.querySelector("#md-pop .md-version").textContent;</script>' \
+        '{ i = index($0, "</body>"); if (i) print substr($0, 1, i - 1) s substr($0, i); else print }' \
+        "$page" > "$d/injected.html" || bad "awk"
+    prof=$d/chrome
+    mkdir -p "$prof" || bad "mkdir Chrome profile"
+    dom=$("$CHROME" --headless=new --disable-gpu --no-first-run \
+        --use-mock-keychain --password-store=basic \
+        --user-data-dir="$prof" --virtual-time-budget=3000 --dump-dom \
+        "$(file_url "$d/injected.html")" 2>/dev/null)
+    rm -rf "$prof"
+    got=$(printf '%s\n' "$dom" | sed -n 's/.*<title>\(.*\)<\/title>.*/\1/p')
+    [ "$got" = 'md-view 0.1.0' ] || bad "the footer reads [$got], want [md-view 0.1.0]"
+    exit 0
+}
+
 # --- vendored files ---------------------------------------------------------
 
 vendored='github-markdown-light.css github-markdown-dark.css highlight.min.js hljs-github.min.css hljs-github-dark.min.css marked.min.js'
@@ -2322,11 +2378,13 @@ case_tree_off_same_page() {
     sh "$d/base/md-view" --no-open --out "$d/old.html" s.md 2> "$d/err" || bad "the BASE script failed: $(cat "$d/err")"
     sed 's/far2l-md-/md-view-/g' "$d/old.html" > "$d/base.html" || bad "sed"
     tpage --tree off s.md
-    # The viewer adds lines to the page style. viewer_map removes the new rules and
-    # maps each changed line back to its base line, so any other change still differs.
+    # The viewer and the version footer add lines to the page style. viewer_map
+    # removes the new rules and maps each changed line back to its base line,
+    # so any other change still differs.
     viewer_map() {
         sed -e '/^\.md-dbar { position: absolute/,/^\.md-vbox > svg { flex: none; margin: auto }$/d' \
             -e '/^pre\.mermaid\[data-processed\] > svg { cursor: zoom-in }$/d' \
+            -e '/^#md-pop \.md-version {/d' \
             -e 's/^pre\.mermaid\[data-processed\] { position: relative; /pre.mermaid[data-processed] { /' \
             -e 's/^@media print { #md-gear, #md-pop, \.md-dbar { display: none !important } }$/@media print { #md-gear, #md-pop { display: none !important } }/' "$1"
     }
@@ -2760,6 +2818,7 @@ for c in flags_ok flag_width_bad flag_theme_bad flag_width_missing palette_setti
          page_has_github_css page_width_rules page_start_values page_policy_unchanged \
          page_narrow_rule page_hljs_after_marked page_mermaid_theme_hook \
          page_gear_markup page_print_hidden page_storage_try_catch page_keys_guard page_paste_line \
+         page_version_footer \
          vendor_no_close_tag vendor_sha384 \
          cache_path_stable cache_two_files cache_reuse cache_rebuild_on_edit cache_rebuild_on_flag \
          cache_rebuild_on_ini palette_cache cache_no_cache_flag cache_dir_mode cache_dir_fallback cache_name_safe \

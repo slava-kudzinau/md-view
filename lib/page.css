@@ -33,6 +33,7 @@ pre.mermaid:hover .md-dbar, .md-dbar:focus-within { opacity: 1 }
 #md-pop button { font: inherit; min-width: 44px; padding: 2px 6px; border: 1px solid GrayText; border-radius: 4px; background: ButtonFace; color: ButtonText; cursor: pointer }
 #md-pop button[aria-pressed="true"] { border-width: 2px; font-weight: 600 }
 #md-pop .md-notice { color: #cf222e; color: light-dark(#cf222e, #ff7b72) }
+#md-pop .md-version { margin-top: 8px; padding-top: 6px; border-top: 1px solid GrayText; color: GrayText; font-size: 12px }
 #md-pop pre.md-paste { margin: 4px 0 8px; padding: 6px; border: 1px solid GrayText; border-radius: 4px; background: none; font: 12px/1.4 ui-monospace, Menlo, monospace; white-space: pre; overflow-x: auto }
 html[data-palette] body, html[data-palette] .markdown-body { background-color: var(--p-bg); color: var(--p-fg) }
 html[data-palette] .markdown-body a { color: var(--p-cyan) }
