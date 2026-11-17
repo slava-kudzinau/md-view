@@ -1,6 +1,6 @@
 ---
 description: Colors mermaid nodes and connectors with a Tokyo accent palette so blocks and flows read at a glance, the way Zed colors its diagrams.
-status: planned
+status: in-progress
 size: M
 depends-on: mermaid-viewer
 risk: contract
@@ -69,3 +69,10 @@ M. One new function plus a call site in `lib/page.js`; a fixed accent list; one 
 - Fill blend (15% accent over `#1a1b26`) is a design value. Keep it one named constant in `page.js`, so a later palette story can tune it.
 - Branch `feat/mermaid-accent-coloring`, base `main`, after `mermaid-viewer` merges (both edit `lib/page.js` and the spec diagram section, so they do not run in parallel).
 - Budget M (hard stop L). Check: `make check`; the new rows need Chrome + the CDN (skip with `skip` lines otherwise).
+- started: 2026-11-17T12:08:00Z (main-session cost window start).
+- Budget / hard stop: M = $15 / $20. Check: `make check`.
+- flow tier=full docs=spec,plan design=no orchestrator=yes final=final-reviewer gate=stop scan=yes verifier=none
+- Gate page: gate=stop → owner reads `gate.md` before the build (G2-design).
+- Owner-checked paths: `docs/architecture/md-view.spec.md` (builder edits per scope), `docs/stories/mermaid-accent-coloring/story.md` (brief).
+- Worktree `.worktrees/mermaid-accent-coloring`, branch `feat/mermaid-accent-coloring`, base `main` (mermaid-viewer merged).
+- Accent palette = 8 existing keys (blue, cyan, green, magenta, orange, red, purple, yellow); `tokyo/19` test count unchanged.
