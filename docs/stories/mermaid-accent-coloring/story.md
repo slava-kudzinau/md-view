@@ -1,6 +1,6 @@
 ---
 description: Colors mermaid nodes and connectors with a Tokyo accent palette so blocks and flows read at a glance, the way Zed colors its diagrams.
-status: in-progress
+status: in-review
 size: M
 depends-on: mermaid-viewer
 risk: contract
@@ -54,7 +54,7 @@ M. One new function plus a call site in `lib/page.js`; a fixed accent list; one 
 ## Acceptance criteria
 
 - `tests/fixtures/diagram.md` (flat, no subgraph): each node shows a distinct accent `stroke` in document order; each connector's `stroke` equals its source node's `stroke`. New `net_check` row asserts two first-node strokes differ and a connector stroke equals its source.
-- A 4-subgraph fixture (the mock pitch loop, as `tests/fixtures/accent-subgraphs.md`): nodes inside one subgraph share one `stroke`; nodes in different subgraphs differ.
+- A 3-subgraph fixture (the mock pitch loop, as `tests/fixtures/accent-subgraphs.md`): nodes inside one subgraph share one `stroke`; nodes in different subgraphs differ.
 - `tests/fixtures/broken-diagram.md`: the source-only block gets no accents; the drawn block gets them.
 - Theme and palette change (tokyo to github, dark to light) redraws the diagram with accents in the used palette. Assert an accent `stroke` is present after `setTheme`/`setPalette`.
 - `fit_page`: `document.querySelectorAll('svg').length === 1` after the viewer opens (the pass adds no `<svg>`).
