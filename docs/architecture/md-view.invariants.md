@@ -34,3 +34,7 @@ Rules that always hold for md-view. Format: `- **[area]**: rule (Learned from: s
 ## Repo
 
 - **[repo]**: Only `README.md`, `AGENTS.md`, `docs/`, the `--print-association` text and its tests, the old-config-path test, and git history name far2l. `git grep -i far2l` finds no other name. (Learned from: story md-view-repo, owner ruling, 2026-11-12)
+
+## Cache
+
+- **[cache]**: `page_fresh` reuses a cached page only when the head `key_line` matches the page the run would write, byte for byte. The `key_line` carries every setting and the version (`;v=`). A bump then rebuilds the page on its own, with no cache code and no file-time check. (Learned from: story md-view-version, spec, 2026-11-17)
