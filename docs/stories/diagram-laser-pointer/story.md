@@ -1,6 +1,6 @@
 ---
 description: Adds a laser pointer to the diagram viewer, a toolbar button and the key l that show a red dot following the pointer.
-status: planned
+status: in-progress
 size: S
 risk: none
 ---
@@ -59,3 +59,8 @@ None.
 - Branch `feat/diagram-laser-pointer`, base `main`. It runs in series with `mermaid-accent-toolbar` (both touch `.md-vtools` and the spec Keys row); this story goes first.
 - Budget S (hard stop M). Check: `make check` (read the `skip` lines; a Chrome row proves the laser test).
 - The dot is red at a fixed color (a laser is red); it is not palette-driven. A print while the viewer is open prints the dialog with the dot, covered by the existing manual print check.
+- Budget $8, hard stop $10 (size S). Check: `make check`. Owner-checked paths: the nine vendored `lib/` files and their licenses; `.templates/`. Hooks: preflight none; verify `make check`; status none; cleanup none.
+- started: 2026-11-17T09:55:00Z
+- flow tier=lite docs=plan design=no orchestrator=no final=final-reviewer-light gate=read-later scan=no verifier=none
+- G2-design: read later in the PR. Autonomous mode granted by owner, 2026-11-17: "go in autonomous mode, keep laptop on".
+- BASE: 146dd90 (local main; the two story-brief commits are not pushed, so the worktree stacks on local main).
