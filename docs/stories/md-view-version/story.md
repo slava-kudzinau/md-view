@@ -1,7 +1,7 @@
 ---
 description: Gives md-view a version string, shown in the settings menu and printed by a --version flag, from one source of truth.
-status: planned
-size: S
+status: in-progress
+size: M
 refs: docs/architecture/md-view.spec.md
 ---
 
@@ -32,11 +32,11 @@ One value feeds both, so they never disagree.
   from that meta (fallback `md-view` when the meta is absent).
 - The spec's settings/menu section, the page-meta note, and the README flag
   list updated in step.
-- Folding `;v=$version` into `key_line` changes the token list, so every verbatim
-  key-line assertion must change in the same commit: 24 full-content `grep -qxF`
-  strings in `tests/browser-page.sh`, the token list in
-  `docs/architecture/md-view.spec.md:200`, and the `viewer_map` sed that strips the
-  key line (`tests/browser-page.sh:2334` and `:2341`). Add one new assertion for the
+- Folding `;v=$version` into `key_line` changes the token list. Every verbatim
+  key-line assertion must change in the same commit. It covers: 24 full-content
+  `grep -qxF` strings in `tests/browser-page.sh`, the token list in
+  `docs/architecture/md-view.spec.md:200`, and the `viewer_map` sed at
+  `tests/browser-page.sh:2334` and `:2341`. Add one assertion for the
   `md-view-version` meta.
 
 **Out:**
@@ -46,11 +46,11 @@ One value feeds both, so they never disagree.
 
 ## Size
 
-M. Small code (one literal, one meta, one flag branch, one popover footer, the
-`key_line` append), but the test surface is wide: the key-line token appears
-verbatim in ~24 `tests/browser-page.sh` greps and the `spec.md:200` row, all of
-which move with the append. No new tool, no new vendored file. Run the full suite
-(several rows need Chrome and the network).
+M. The code is small: one literal, one meta, one flag branch, one popover footer,
+and the `key_line` append. The test surface is wide. The key-line token appears
+verbatim in about 24 `tests/browser-page.sh` greps and the `spec.md:200` row. All of
+them move with the append. No new tool and no new vendored file. Run the full suite;
+several rows need Chrome and the network.
 
 ## Unknowns
 
@@ -71,3 +71,11 @@ Reset); it is cosmetic.
 
 The version string is untrusted-input-safe: it is a fixed literal, set with
 `textContent` in the page, and is a plain `printf` on the CLI.
+
+- started: 2026-11-17T19:50Z
+- budget/stop: $15 / $20 (M)
+- flow: tier=standard docs=spec,plan design=no orchestrator=yes final=final-reviewer-light gate=read-later scan=no verifier=none
+- Gate page: read later in the PR
+- check: `make check`
+- owner-checked paths: none
+- hooks: preflight `lib/md-view --help`; verify `make install` smoke into a temp PREFIX.
