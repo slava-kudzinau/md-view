@@ -6,13 +6,13 @@ description: The list of md-view stories in build order, with the status of each
 
 | Order | Story | Size | Status | Depends on |
 |---|---|---|---|---|
-| - | [md-view-repo](md-view-repo/story.md) | M | in-review | - |
-| - | [themes-tokyo-night](themes-tokyo-night/story.md) | M | in-review | - |
-| 1 | [page-assets](page-assets/story.md) | S | done | - |
-| 2 | [mermaid-viewer](mermaid-viewer/story.md) | M | done | page-assets |
-| 3 | [mermaid-accent-coloring](mermaid-accent-coloring/story.md) | M | in-review | mermaid-viewer |
+| - | [md-view-repo](md-view-repo/story.md) | M | retired | - |
+| - | [themes-tokyo-night](themes-tokyo-night/story.md) | M | retired | - |
+| 1 | [page-assets](page-assets/story.md) | S | retired | - |
+| 2 | [mermaid-viewer](mermaid-viewer/story.md) | M | retired | page-assets |
+| 3 | [mermaid-accent-coloring](mermaid-accent-coloring/story.md) | M | retired | mermaid-viewer |
 | 4 | [mermaid-accent-toolbar](mermaid-accent-toolbar/story.md) | M | planned | mermaid-accent-coloring |
-| 5 | [md-view-version](md-view-version/story.md) | M | in-review | mermaid-viewer |
+| 5 | [md-view-version](md-view-version/story.md) | M | retired | mermaid-viewer |
 
 ## Build order
 
