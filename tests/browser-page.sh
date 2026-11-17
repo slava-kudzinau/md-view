@@ -960,27 +960,36 @@ file_url() {
 }
 
 # The footer of the popover, in headless Chrome: the gear opens the popover,
-# and .md-version reads the text of the version meta. No Chrome: skip.
+# and .md-version reads the text of the version meta, or md-view when the page
+# has no meta. No Chrome: skip.
 case_page_version_footer() {
     CHROME=$(chrome_prog)
     [ -n "$CHROME" ] || skip "no Chrome"
     fresh
     md --tree off --no-open --out "$page" "$sample"
     [ "$rc" = 0 ] || bad "exit $rc"
+    # footer_title PAGE: the footer text of PAGE in headless Chrome.
     # The injected script runs after the page script wired its handlers.
     # It opens the popover with the gear and copies the footer text to the title.
-    awk -v s='<script>document.getElementById("md-gear").click();document.title=document.querySelector("#md-pop .md-version").textContent;</script>' \
-        '{ i = index($0, "</body>"); if (i) print substr($0, 1, i - 1) s substr($0, i); else print }' \
-        "$page" > "$d/injected.html" || bad "awk"
-    prof=$d/chrome
-    mkdir -p "$prof" || bad "mkdir Chrome profile"
-    dom=$("$CHROME" --headless=new --disable-gpu --no-first-run \
-        --use-mock-keychain --password-store=basic \
-        --user-data-dir="$prof" --virtual-time-budget=3000 --dump-dom \
-        "$(file_url "$d/injected.html")" 2>/dev/null)
-    rm -rf "$prof"
-    got=$(printf '%s\n' "$dom" | sed -n 's/.*<title>\(.*\)<\/title>.*/\1/p')
+    footer_title() {
+        awk -v s='<script>document.getElementById("md-gear").click();document.title=document.querySelector("#md-pop .md-version").textContent;</script>' \
+            '{ i = index($0, "</body>"); if (i) print substr($0, 1, i - 1) s substr($0, i); else print }' \
+            "$1" > "$d/injected.html" || bad "awk"
+        prof=$d/chrome
+        mkdir -p "$prof" || bad "mkdir Chrome profile"
+        dom=$("$CHROME" --headless=new --disable-gpu --no-first-run \
+            --use-mock-keychain --password-store=basic \
+            --user-data-dir="$prof" --virtual-time-budget=3000 --dump-dom \
+            "$(file_url "$d/injected.html")" 2>/dev/null)
+        rm -rf "$prof"
+        printf '%s\n' "$dom" | sed -n 's/.*<title>\(.*\)<\/title>.*/\1/p'
+    }
+    got=$(footer_title "$page")
     [ "$got" = 'md-view 0.1.0' ] || bad "the footer reads [$got], want [md-view 0.1.0]"
+    # The same page without the version meta: the footer reads the bare name.
+    sed '/^<meta name="md-view-version"/d' "$page" > "$page.nov" || bad "strip the meta"
+    got=$(footer_title "$page.nov")
+    [ "$got" = 'md-view' ] || bad "the footer with no meta reads [$got], want [md-view]"
     exit 0
 }
 
