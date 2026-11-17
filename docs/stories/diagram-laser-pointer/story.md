@@ -1,6 +1,6 @@
 ---
 description: Adds a laser pointer to the diagram viewer, a toolbar button and the key l that show a red dot following the pointer.
-status: in-progress
+status: in-review
 size: S
 risk: none
 ---

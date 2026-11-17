@@ -40,9 +40,9 @@ Open a Markdown file with a diagram (`md-view README.md`). Click the diagram (or
 
 ### A fresh reader's paraphrase
 
-**What this builds.** This story adds a laser pointer to the fullscreen diagram viewer: a red dot that follows the pointer over a diagram, so a presenter can point at a part of it during a talk. A `●` button in the viewer toolbar and the key `l` (or `L`) turn the laser on and off. The on/off state lives in memory: it survives closing and reopening the viewer within one page load, and a reload resets it. The dot anchors to the dialog, so it tracks the pointer itself rather than scrolling with the diagram content.
+**What this builds.** This story adds a laser pointer to the fullscreen diagram viewer. It is a red dot that follows the pointer over a diagram, so a presenter can point at a part of it during a talk. A `●` button in the viewer toolbar and the key `l` (or `L`) turn the laser on and off. The on/off state lives in memory. It survives closing and reopening the viewer within one page load; a reload resets it. The dot anchors to the dialog, so it tracks the pointer itself, not the scrolling diagram content.
 
-**How the parts fit, per this page.** Two inputs converge on a single toggle function, `toggleLaser`: the toolbar button calls it, and a new case in the viewer's existing keydown branch calls it for `l`/`L`. Toggling puts the class `md-laser-on` on the viewer dialog, and that class controls the visibility of the dot element (a `div` with class `md-laser`, painted above the diagram via `z-index`). The dot's position is driven by the box's existing `pointermove` listener, and on toggle-on it centers at the visible box center so the audience sees a mark before any pointer move. Panning (drag) and zooming (wheel) keep working while the laser is on. State lives on the in-memory viewer object — no new `localStorage` key — and the button's `aria-pressed` mirrors the state.
+**How the parts fit, per this page.** Two inputs converge on a single toggle function, `toggleLaser`. The toolbar button calls it, and a new case in the viewer's existing keydown branch calls it for `l`/`L`. Toggling puts the class `md-laser-on` on the viewer dialog. That class controls the visibility of the dot element: a `div` with class `md-laser`, painted above the diagram via `z-index`. The dot's position comes from the box's existing `pointermove` listener. On toggle-on the dot centers at the visible box center, so the audience sees a mark before any pointer move. Panning (drag) and zooming (wheel) keep working while the laser is on. State lives on the in-memory viewer object — no new `localStorage` key — and the button's `aria-pressed` mirrors the state.
 
 _(Fresh read 2 of 2: all sections paraphrase cleanly, no gaps; verdict "docs clear for build". The three remaining open choices are implementer-level: test coordinates, poll cadence, commit subjects.)_
 
@@ -55,12 +55,12 @@ _(Fresh read 2 of 2: all sections paraphrase cleanly, no gaps; verdict "docs cle
 
 ### Decisions changed during the build
 
-{{rows changed or added in the table above, with the reason; or "none"}}
+Decision 1 changed: the dot rule carries `z-index: 1` from the start, not as a later contingency. Reason: a fixed paint order needs no browser observation to trust.
 
 ### What the reviews caught
 
-{{the findings that changed code, one line each; or "nothing that changed code"}}
+Final review, Important: the `viewer: laser dot` row seeded a passing title, so it stayed green when the dot never painted. The fix seeds `laser=0` and asserts the paint as a flag (`190986f`).
 
 ### Run it
 
-{{the command or demo, and what you should see}}
+Open a diagram (`md-view docs/architecture/md-view.spec.md` from a checkout), press `F11`, click a diagram, then press `l`. A red dot tracks the pointer over the diagram; `●` toggles the same state; dragging pans underneath the dot.
