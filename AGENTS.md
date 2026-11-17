@@ -18,6 +18,8 @@ There is no build step. Run these commands from the repo root.
 
 A test that has no Chrome or no network prints `skip` lines and passes. Read the `skip` lines before you trust a pass. A pass with `skip all` proved only the tests that need no browser.
 
+A headless-Chrome row under `--virtual-time-budget` captures `document.title` at process exit. Seed the title up front. Gate on the paint (a stroke, or a stroke change), not on svg-node identity. Rewrite the full success title on every observed tick, so the dump captures the furthest stage.
+
 Use a temporary `PREFIX` to test the install. `PREFIX` must be absolute and must not hold a single quote.
 
 ## Where things are
@@ -52,6 +54,9 @@ Before you open files, get a list of all docs: `grep -r '^description:' docs REA
 **Tests**
 - If a test must catch a regression, run it against that regression before you trust it.
 - Do not remove a `skip` rule to make a run pass.
+- The reviewer brief must demand `### N. <Severity>:` headings under `## Issues`. `review-yield.mjs` counts only that shape.
+- A plan must name every existing test that pins a line it changes. `tests/browser-page.sh` pins the two print lines, the page script, and the keydown listener count.
+- Write a done-check row count as "at least N". A fix round in review can add rows.
 
 **Docs**
 - Every doc has frontmatter with `description`. A value does not contain `: ` or ` #`, does not end in `:`, and does not start with a backtick or a quote.
@@ -65,3 +70,5 @@ Before you open files, get a list of all docs: `grep -r '^description:' docs REA
 - Name each branch `{type}/{slug}`. The type is `feat`, `fix`, `refactor`, `test`, `doc` or `chore`.
 - Work on each story in its own git worktree, `.worktrees/{story}`, on the story branch. Make it with `git worktree add .worktrees/{story} -b {type}/{slug}`. Do not edit files in the main checkout during a story. Git ignores `.worktrees/` and `.build/` (the build workspace).
 - Do not push, merge or tag if the owner did not ask.
+- Write a commit message as a short imperative summary line. An optional body follows after a blank line. No trailer.
+- Before you send a new implementer, read `git log`. A prior implementer can commit late.

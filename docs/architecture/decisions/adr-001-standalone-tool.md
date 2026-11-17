@@ -65,3 +65,7 @@ This split changes these things.
 ### Loose mermaid security, or remote images allowed
 
 **Why rejected:** the file may come from anywhere.
+
+### `DESTDIR` for staged installs
+
+**Why rejected:** `make install PREFIX=...` is enough for this tool. One variable is simpler to test and to explain.

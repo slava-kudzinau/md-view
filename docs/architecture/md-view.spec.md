@@ -40,6 +40,7 @@ md-view [--out <page.html>] [--no-open] [--width 60|70|80|90]
         [--tree on|off] [--list-tree] <file.md>
 md-view --init-config
 md-view --print-association
+md-view --version
 ```
 
 | Input | Meaning |
@@ -55,6 +56,7 @@ md-view --print-association
 | `--no-cache` | Builds the page again, also if a current page exists. |
 | `--print-association` | Prints the far2l File associations entry (see "What starts it"). Exit 0. |
 | `--init-config` | Writes a commented sample `config.ini` if there is no file, and prints its path. An existing file, link or other entry is not changed. Exit 0. |
+| `--version` | Prints `md-view <version>` and exits 0. It reads no config and writes no page. |
 | `--` | The next argument is the file name, also if it starts with `-`. |
 | `TMPDIR` | The folder of the fallback page. Default is `/tmp`. |
 | `XDG_CACHE_HOME` | The base of the cache folder. It must be an absolute path. Else `$HOME/.cache`. |
@@ -134,7 +136,7 @@ Tree mode is on by default. It shows the opened file and the other Markdown file
 | Look | The body has the class `markdown-body`. The page holds one light and one dark GitHub style, and one light and one dark highlight theme. The page script enables one of each pair with the `media` attribute. |
 | Width | `html` has `data-width` with 60, 70, 80 or 90. The column is centered and has that width in percent. With the tree panel open, the percent applies to the space on its right. |
 | Narrow window | Below 700 px the column has the full width, and the gear and the tree panel are hidden. The keys still work, so `?` still opens the popover. |
-| Palette | `html` has `data-palette` only for `tokyo`. A color layer of rules, each starting with `html[data-palette]`, sets colors for the page text, the code, the tree panel, the gear and the popover. The layer sets colors only (no `display`, no `!important`). The page script holds one color table for Tokyo Night and Tokyo Day. It writes the `--p-*` variables on `html` and gives mermaid its `themeVariables`. A bad saved word is ignored. The accent cycle reuses the 8 keys `blue, cyan, green, magenta, orange, red, purple, yellow`. The `tokyo` key count stays 19. The `github` palette uses a fixed accent list in the page script, 8 hexes per mode. |
+| Palette | `html` has `data-palette` only for `tokyo`. A color layer of rules, each starting with `html[data-palette]`, sets colors for the page text, the code, the tree panel, the gear and the popover. The layer sets colors only (no `display`, no `!important`). The page script holds one color table for Tokyo Night and Tokyo Day. It writes the `--p-*` variables on `html` and gives mermaid its `themeVariables`. Changing a palette removes the `--p-*` variables of every palette of the table from `html`. A new palette is a new row of the table, with no new code. A bad saved word is ignored. The accent cycle reuses the 8 keys `blue, cyan, green, magenta, orange, red, purple, yellow`. The `tokyo` key count stays 19. The `github` palette uses a fixed accent list in the page script, 8 hexes per mode. |
 | Theme | `html` has `data-theme` with `light`, `dark` or `auto`. `auto` follows `prefers-color-scheme` and changes with it. |
 | Gear | One low-contrast button, fixed in the top-right corner. It takes no layout space. It opens a popover. |
 | Popover | Width buttons 60, 70, 80, 90. Theme buttons light, dark, auto. A `Style` row with the buttons github and tokyo. The keys. A line to paste into `config.ini`. A Reset button. A click outside or Esc closes it. |
@@ -143,7 +145,7 @@ Tree mode is on by default. It shows the opened file and the other Markdown file
 | Saved choice | The page saves the choice in `localStorage`, keys `md-view-width`, `md-view-theme`, `md-view-palette` and `md-view-tree`. Order of use: the saved choice (unless `data-forced`), then the start value. Reset removes the saved choice and applies the start values with no reload. |
 | Storage blocked | If a read or write throws, the page still works. The popover then shows a notice and the lines to paste: `[View]`, `width=N`, `theme=T`, `palette=P`, with the current values. |
 | Diagram bar | `.md-dbar`, the last child of each drawn `pre.mermaid`. It shows on hover and on keyboard focus, and always under `@media (hover: none)`. |
-| Diagram viewer | `dialog.md-viewer` on `body`, made at the first open. Buttons `−`, `+`, `Fit`, `1:1`, `×`. The backdrop is `rgba(0,0,0,0.5)`. The color layer colors the dialog and its buttons. It works below 700 px too. |
+| Diagram viewer | `dialog.md-viewer` on `body`, made at the first open. Buttons `−`, `+`, `Fit`, `1:1`, `×`. The `×` has the focus at open, so Enter or Space closes at once. The backdrop is `rgba(0,0,0,0.5)`. The color layer colors the dialog and its buttons. It works below 700 px too. |
 | Print | The gear, the popover, the tree panel and its toggle, and the diagram bars are hidden. |
 | Offline | Text, style and highlight show with no network. A mermaid block shows its source. |
 
@@ -155,9 +157,9 @@ A fence is a diagram when the first word of its language is `mermaid`. This matc
 2. On load, `mermaid.initialize` runs with `startOnLoad: false` and `securityLevel:'strict'`. With the palette `github`, the theme is `dark` or `default`, as the used page theme says. With `tokyo`, the theme is `base` with `themeVariables` from the palette table, and `securityLevel:'strict'` stays. When the used theme changes, the page draws each diagram again from its saved source text. A key, a button, or the system in `auto` can change it. One batch runs at a time, with a time limit of 10 s. A batch that waits is not added twice. A redraw is skipped if the drawn pair is the same. The pair is the palette and the used theme.
 3. `mermaid.parse` checks each diagram alone. A diagram that fails shows its source and its error. The others still draw.
 4. `mermaid.run` draws the good diagrams.
-5. After the draw, the page colors each drawn diagram's node, actor, and connector shapes with an accent palette (the Palette row above). A node in a subgraph takes its subgraph's hue. A node in no subgraph takes a positional hue. A diagram with no subgraph colors every node positionally. A connector takes its source node's hue.
-6. After the draw, each drawn diagram gets a small bar in its top-right corner with an Expand button (`.md-dbar`). A diagram that shows its source gets no bar. A click on Expand, or on the drawn diagram, opens the diagram viewer. A click that ends a text selection does not open it.
-7. The viewer is one `<dialog class="md-viewer">`, opened with `showModal()`. It fills the window (`width: 100%; height: 100%`). The `<svg>` moves into its scroll box with no clone, because its style and markers use ids. The full size comes from `svg.viewBox`. The viewer opens in Fit, with no cap at 1. The zoom range is 0.05 to 20, and one step is 1.25. The wheel zooms around the pointer. A mouse or pen drag pans, and a touch drag scrolls.
+5. After the draw, the page colors each drawn diagram with an accent palette (the Palette row above). It colors node, actor, and connector shapes. A node in a subgraph takes its subgraph's hue. A node in no subgraph takes a positional hue. A diagram with no subgraph colors every node positionally. A connector takes its source node's hue.
+6. After the draw, each drawn diagram gets a small bar in its top-right corner with an Expand button (`.md-dbar`). A diagram that shows its source gets no bar. A click on Expand, or on the drawn diagram, opens the diagram viewer. A click that ends a text selection does not open it. The page uses one click listener on the content, not one per diagram, so a redraw keeps it once.
+7. The viewer is one `<dialog class="md-viewer">`, opened with `showModal()`. It fills the window (`width: 100%; height: 100%`). The `<svg>` moves into its scroll box with no clone, because its style and markers use ids. The full size comes from `svg.viewBox`. The viewer opens in Fit, with no cap at 1. The zoom range is 0.05 to 20, and one step is 1.25. The wheel zooms around the pointer. A mouse or pen drag pans, and a touch drag scrolls. At open, the viewer copies the font, the size and the line height of the diagram block. Labels then keep the page layout in every palette and width. There are no values to keep in step. A window resize does not change the zoom; key `0` fits again.
 8. On close, the `<svg>` goes back into its `pre` with its old `style` attribute. If the `pre` was drawn again or is gone, the old `<svg>` is dropped. A theme or palette change, and a move to another file, close the viewer first.
 
 ### Content cases
@@ -174,6 +176,8 @@ A fence is a diagram when the first word of its language is `mermaid`. This matc
 | Remote image | `remote.md` | `img-src data: file:` blocks it. The text after it shows. |
 | Local image, relative link | none | These resolve against `<base href>`. |
 | Broken diagram | `broken-diagram.md` | The source and a `.mermaid-error` line show. The next diagram draws. |
+| Accent subgraphs | `accent-subgraphs.md` | Nodes in one subgraph share one accent stroke; groups differ. The group box keeps that hue. |
+| Sequence diagram | `accent-sequence.md` | The actor boxes take positional accent strokes. Messages and lifelines keep theme colors. |
 | Literal `<\/` and `<\!--` | `escapes.md` | They come back as written. |
 | CDN blocked or integrity failure | none | Each diagram shows as a code block, with no error line. |
 | CDN stalled | none | The text and the diagram source show while the script waits. |
@@ -256,7 +260,7 @@ The rows of `tests/hostile-dom.sh` are:
 | Paths with spaces, empty file, BOM and CRLF | `paths with spaces`, `empty file`, `BOM and CRLF` |
 | Diagrams, stalled and refused CDN | `diagram:`, `stalled CDN:`, `refused CDN:` |
 | Untrusted content | `hostile:`, `escapes:`, `remote image:`, `broken diagram:` |
-| Diagram viewer | ten `viewer:` rows: the bar, the open, Fit, zoom, the keys, the drag, the close and the close on redraw. A test cannot send a real Esc or a native `close` event to a headless page, so the close row sends the `close` event itself. A person checks Esc, pinch and the wheel. |
+| Diagram viewer | ten `viewer:` rows: the bar, the open, Fit, zoom, the keys, the drag, the close and the close on redraw. A test cannot send a real Esc or a native `close` event to a headless page, so the close row sends the `close` event itself. A person checks it in Chrome, Firefox and Safari. The checks: the Esc key, the wheel at the pointer, pinch, a real mouse drag, label selection, and the bar on hover. They also check the focus after close, labels at 1:1, and print while the viewer is open. |
 | Script interface | `usage:`, `leading dash`, `open:` |
 | Association text | `association:` rows |
 
@@ -285,6 +289,14 @@ These are parked findings, with the state checked against `lib/md-view`.
 - File names with `<`, `>` or a leading `#` break the printed command. An `--out` name that starts with `-` reaches `open`.
 - The install on Linux is not tested on a Linux host.
 - The stalled-CDN row of `tests/hostile-dom.sh` can pass if `nc` cannot bind.
+- No test proves that `show` (a move to another file, the back button) closes the viewer. Low risk; the page-text checks of the head cover part of it.
+- Print while the viewer is open prints the dialog, not the page. A `beforeprint` listener that calls `closeViewer()` would fix it. The person check covers it for now.
+- `openViewer` sets its state before it reads the `viewBox`; a guard is one line.
+- The close row does not check the place of the svg before the bar.
+- No test for the point under the pointer on wheel zoom, and none for the zoom clamp.
+- Two pointer listeners (`pointerup`, `pointercancel`) could be one `lostpointercapture` listener. Kept, because a synthetic pointer gets no capture.
+- `setPointerCapture` throws for a synthetic pointer id (tests only), so the `md-drag` class is not reached in the test.
+- Wheel `deltaMode` 2 (page) is not handled.
 
 ### Other risks
 

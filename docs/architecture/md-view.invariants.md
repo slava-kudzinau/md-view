@@ -15,6 +15,10 @@ Rules that always hold for md-view. Format: `- **[area]**: rule (Learned from: s
 - **[browser]**: The printed far2l command leaves `!.!` unquoted, because far2l escapes the file name. (Learned from: far2l story markdown-browser-view, first final review, 2026-11-06)
 - **[browser]**: No script edits the config file of a host. far2l rewrites its `config.ini` on exit. The user adds the File associations entry by hand. (Learned from: far2l story markdown-browser-view, gate, 2026-11-06)
 - **[browser]**: Each drawn diagram carries an accent pass. It sets inline `style` on child shapes only, and the pass adds no element. The `style` of the root `<svg>` stays unchanged. (Learned from: story mermaid-accent-coloring, spec, 2026-11-17)
+- **[browser]**: The page reads the used mode from the `paletteMode()` pair `<palette>:<mode>` (mode after the colon) and the palette name from `paletteSetting()`. Both accent color tables are indexed by mode: `PALETTES.<palette>.<mode>[key]`, `GITHUB_ACCENTS.<mode>[i]`. (Learned from: story mermaid-accent-coloring, 2026-11-17)
+- **[browser]**: The cluster of a node is the innermost `g.cluster` whose `rect` holds the node center: the smallest `width * height`. A tie keeps the later cluster in DOM order. Mermaid 12.3 puts `g.cluster` and `g.node` in sibling layers, so containment is geometry, not nesting. (Learned from: story mermaid-accent-coloring, 2026-11-17)
+- **[browser]**: Cluster bounds come from the `rect` `x`/`y`/`width`/`height` attributes, not `getBBox()`. The viewer zoom sits on the root and does not skew them. (Learned from: story mermaid-accent-coloring, 2026-11-17)
+- **[browser]**: Sequence actors take a positional accent in document order (`index % 8`). The paint target is `rect.actor, polygon.actor`: in mermaid 12.3 the `.actor` class sits on the box `rect` itself, which has no shape child. Messages, activations, and lifelines stay on theme colors. (Learned from: story mermaid-accent-coloring, 2026-11-17)
 
 ## Install and paths
 
@@ -26,3 +30,7 @@ Rules that always hold for md-view. Format: `- **[area]**: rule (Learned from: s
 
 - **[tests]**: A test with no Chrome or no network prints `skip` lines and exits 0. A pass with `skip` lines proves less, so read them before you trust a pass. (Learned from: story md-view-repo, spec, 2026-11-12)
 - **[palette]**: The Tokyo color layer sets colors only. Each rule starts with `html[data-palette]`, so it wins over the vendored styles by specificity. It has no `!important` and no `display` rule. The vendored files stay unmodified. (Learned from: story themes-tokyo-night, spec)
+
+## Repo
+
+- **[repo]**: Only `README.md`, `AGENTS.md`, `docs/`, the `--print-association` text and its tests, the old-config-path test, and git history name far2l. `git grep -i far2l` finds no other name. (Learned from: story md-view-repo, owner ruling, 2026-11-12)
