@@ -826,7 +826,7 @@ done
 # The page key and the state of config.ini go in the page head. The state is
 # the size and the modification time that ls shows, or "none".
 if [ "$tree_mode" = 1 ]; then tree_word=on; else tree_word=off; fi
-key_line="<meta name=\"md-view-key\" content=\"w=$width;t=$theme;p=$palette;f=$forced;tr=$tree_word;r=$root_mode;d=$tree_depth;n=$tree_max\">"
+key_line="<meta name=\"md-view-key\" content=\"w=$width;t=$theme;p=$palette;f=$forced;tr=$tree_word;r=$root_mode;d=$tree_depth;n=$tree_max;v=$version\">"
 ini_state=none
 if [ -f "$ini" ]; then
     ini_state=$(ls -lnLd -- "$ini" 2>/dev/null \
@@ -935,7 +935,7 @@ bom=$(printf '\357\273\277')
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'unsafe-inline'; img-src data: file:">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 HTML
-    printf '%s\n%s\n' "$key_line" "$ini_line"
+    printf '%s\n%s\n%s\n' "$key_line" "$ini_line" "<meta name=\"md-view-version\" content=\"$version\">"
     [ -n "$tree_line" ] && printf '%s\n' "$tree_line"
     printf '<base href="%s">\n' "$base_url"
     printf '<title>%s</title>\n' "$title"

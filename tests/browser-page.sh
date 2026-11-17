@@ -371,14 +371,14 @@ case_old_config_path_ignored() {
     md --no-open --out "$page" "$sample"
     [ "$rc" = 0 ] || bad "exit $rc"
     expect_tag 70 auto github 0
-    grep -qxF '<meta name="md-view-key" content="w=70;t=auto;p=github;f=0;tr=on;r=dir;d=6;n=500">' "$page" \
+    grep -qxF '<meta name="md-view-key" content="w=70;t=auto;p=github;f=0;tr=on;r=dir;d=6;n=500;v=0.1.0">' "$page" \
         || bad "the old config path set the width"
     write_ini '[View]' 'width=80'
     rm -f "$page"
     md --no-open --out "$page" "$sample"
     [ "$rc" = 0 ] || bad "exit $rc with config.ini"
     expect_tag 80 auto github 0
-    grep -qxF '<meta name="md-view-key" content="w=80;t=auto;p=github;f=0;tr=on;r=dir;d=6;n=500">' "$page" \
+    grep -qxF '<meta name="md-view-key" content="w=80;t=auto;p=github;f=0;tr=on;r=dir;d=6;n=500;v=0.1.0">' "$page" \
         || bad "config.ini did not set the width"
     exit 0
 }
@@ -708,20 +708,22 @@ case_page_start_values() {
     md --no-open --out "$page" "$sample"
     [ "$rc" = 0 ] || bad "exit $rc"
     expect_tag 70 auto github 0
-    grep -qxF '<meta name="md-view-key" content="w=70;t=auto;p=github;f=0;tr=on;r=dir;d=6;n=500">' "$page" \
+    grep -qxF '<meta name="md-view-key" content="w=70;t=auto;p=github;f=0;tr=on;r=dir;d=6;n=500;v=0.1.0">' "$page" \
         || bad "no page key for the defaults"
+    grep -qxF '<meta name="md-view-version" content="0.1.0">' "$page" \
+        || bad "no version meta in the page head"
     rm -f "$page"
     md --width 60 --theme light --no-open --out "$page" "$sample"
     [ "$rc" = 0 ] || bad "exit $rc for a flag run"
     expect_tag 60 light github 1
-    grep -qxF '<meta name="md-view-key" content="w=60;t=light;p=github;f=1;tr=on;r=dir;d=6;n=500">' "$page" \
+    grep -qxF '<meta name="md-view-key" content="w=60;t=light;p=github;f=1;tr=on;r=dir;d=6;n=500;v=0.1.0">' "$page" \
         || bad "no page key for a forced run"
     rm -f "$page"
     write_ini '[View]' 'width=80' 'theme=dark'
     md --no-open --out "$page" "$sample"
     [ "$rc" = 0 ] || bad "exit $rc with ini"
     expect_tag 80 dark github 0
-    grep -qxF '<meta name="md-view-key" content="w=80;t=dark;p=github;f=0;tr=on;r=dir;d=6;n=500">' "$page" \
+    grep -qxF '<meta name="md-view-key" content="w=80;t=dark;p=github;f=0;tr=on;r=dir;d=6;n=500;v=0.1.0">' "$page" \
         || bad "no page key from the ini file"
     grep -qF "getAttribute('data-start-width')" "$page" || bad "the page script does not read data-start-width"
     grep -qF "getAttribute('data-start-theme')" "$page" || bad "the page script does not read data-start-theme"
@@ -1042,7 +1044,7 @@ case_cache_path_stable() {
     expect_open "$cpage"
     [ "$(cache_files)" = 1 ] || bad "want one file in the cache folder, got $(ls -A "$XDG_CACHE_HOME/md-view")"
     [ -z "$(ls -A "$TMPDIR")" ] || bad "a page was made in TMPDIR: $(ls -A "$TMPDIR")"
-    grep -qxF '<meta name="md-view-key" content="w=70;t=auto;p=github;f=0;tr=on;r=dir;d=6;n=500">' "$cpage" || bad "no page key"
+    grep -qxF '<meta name="md-view-key" content="w=70;t=auto;p=github;f=0;tr=on;r=dir;d=6;n=500;v=0.1.0">' "$cpage" || bad "no page key"
     # The same file by an absolute path, by another relative path and through a
     # linked folder gives the same page.
     md --no-cache --no-open "$d/work/s.md"
@@ -1172,7 +1174,7 @@ case_cache_rebuild_on_flag() {
     md --width 80 --no-open s.md
     [ "$rc" = 0 ] || bad "exit $rc for --width 80"
     if marked; then bad "the page was not built again for --width 80"; fi
-    grep -qxF '<meta name="md-view-key" content="w=80;t=auto;p=github;f=1;tr=on;r=dir;d=6;n=500">' "$cpage" || bad "no key for --width 80"
+    grep -qxF '<meta name="md-view-key" content="w=80;t=auto;p=github;f=1;tr=on;r=dir;d=6;n=500;v=0.1.0">' "$cpage" || bad "no key for --width 80"
     expect_tag_at "$cpage" 80 auto github 1
     mark
     md --width 80 --no-open s.md
@@ -1186,7 +1188,7 @@ case_cache_rebuild_on_flag() {
     mark
     md --no-open s.md
     if marked; then bad "the page was not built again for no flag after a forced run"; fi
-    grep -qxF '<meta name="md-view-key" content="w=70;t=auto;p=github;f=0;tr=on;r=dir;d=6;n=500">' "$cpage" || bad "no key for no flag"
+    grep -qxF '<meta name="md-view-key" content="w=70;t=auto;p=github;f=0;tr=on;r=dir;d=6;n=500;v=0.1.0">' "$cpage" || bad "no key for no flag"
     exit 0
 }
 
@@ -1263,7 +1265,7 @@ case_cache_rebuild_on_ini() {
     write_ini '[View]' 'width=60'
     old "$ini"
     md --no-open s.md
-    grep -qxF '<meta name="md-view-key" content="w=60;t=auto;p=github;f=0;tr=on;r=dir;d=6;n=500">' "$cpage" || bad "no key from the new ini"
+    grep -qxF '<meta name="md-view-key" content="w=60;t=auto;p=github;f=0;tr=on;r=dir;d=6;n=500;v=0.1.0">' "$cpage" || bad "no key from the new ini"
     exit 0
 }
 
@@ -2331,19 +2333,19 @@ case_tree_off_same_page() {
     # Only the html line, the key line, the lines of the palette layer, the 90 width rule, the page
     # script and the viewer lines (see viewer_map) may differ.
     strip() {
-        viewer_map "$1" | sed -e '/^<html /d' -e '/^<meta name="md-view-key" /d' -e '/^html\[data-palette\] /d' -e '/^html\[data-width="90"\] /d' -e '/^(function () {$/,/^})();$/d'
+        viewer_map "$1" | sed -e '/^<html /d' -e '/^<meta name="md-view-key" /d' -e '/^<meta name="md-view-version" /d' -e '/^html\[data-palette\] /d' -e '/^html\[data-width="90"\] /d' -e '/^(function () {$/,/^})();$/d'
     }
     strip "$d/base.html" > "$d/a"
     strip "$page" > "$d/b"
     cmp -s "$d/a" "$d/b" || bad "the pages differ: $(diff "$d/a" "$d/b" | head -20)"
     [ "$(html_tag)" = "$(grep '^<html ' "$d/base.html" | sed 's/>$//') data-start-palette=\"github\" data-tree=\"off\" data-tree-why=\"flag\">" ] \
         || bad "html line is $(html_tag)"
-    [ "$(grep '^<meta name="md-view-key" ' "$page")" = "$(grep '^<meta name="md-view-key" ' "$d/base.html" | sed -e 's/;f=/;p=github;f=/' -e 's/">$//');tr=off;r=dir;d=6;n=500\">" ] \
+    [ "$(grep '^<meta name="md-view-key" ' "$page")" = "$(grep '^<meta name="md-view-key" ' "$d/base.html" | sed -e 's/;f=/;p=github;f=/' -e 's/">$//');tr=off;r=dir;d=6;n=500;v=0.1.0\">" ] \
         || bad "key line is $(grep '^<meta name="md-view-key" ' "$page")"
     # The page script is there in both.
     [ "$(grep -c '^(function () {$' "$page")" = 1 ] || bad "no page script"
     head_of "$page" > "$d/head-page" || bad "head"
-    [ "$(viewer_map "$d/head-page" | grep -v -e '^html\[data-palette\] ' -e '^html\[data-width="90"\] ' | wc -l)" = "$(head_of "$d/base.html" | wc -l)" ] || bad "the head has new lines"
+    [ "$(viewer_map "$d/head-page" | grep -v -e '^html\[data-palette\] ' -e '^html\[data-width="90"\] ' -e '^<meta name="md-view-version" ' | wc -l)" = "$(head_of "$d/base.html" | wc -l)" ] || bad "the head has new lines"
     exit 0
 }
 
@@ -2352,24 +2354,24 @@ case_tree_key_line() {
     mkdir -p proj/.git proj/sub || bad "mkdir"
     : > proj/a.md; : > proj/sub/o.md
     tpage proj/sub/o.md
-    key='<meta name="md-view-key" content="w=70;t=auto;p=github;f=0;tr=on;r=dir;d=6;n=500">'
+    key='<meta name="md-view-key" content="w=70;t=auto;p=github;f=0;tr=on;r=dir;d=6;n=500;v=0.1.0">'
     grep -qxF "$key" "$page" || bad "key: $(grep md-view-key "$page")"
     # The tree state goes after the ini comment, in the head.
     state_line proj/sub/o.md
     [ "$sline" = '<!-- md-view-tree: '"$ssum"' 1 -->' ] || bad "count in [$sline]"
-    head_of "$page" | grep -A1 -xF '<!-- md-view-ini: none -->' | sed -n 2p > "$d/next"
-    [ "$(cat "$d/next")" = "$sline" ] || bad "after the ini line: [$(cat "$d/next")], want [$sline]"
+    head_of "$page" | grep -A2 -xF '<!-- md-view-ini: none -->' | sed -n 3p > "$d/next"
+    [ "$(cat "$d/next")" = "$sline" ] || bad "after the version meta: [$(cat "$d/next")], want [$sline]"
     [ "$(grep -c 'md-view-tree:' "$page")" = 1 ] || bad "want one tree state line"
     write_ini '[View]' 'root=repo' 'tree_depth=3' 'tree_max_files=7'
     tpage proj/sub/o.md
-    grep -qxF '<meta name="md-view-key" content="w=70;t=auto;p=github;f=0;tr=on;r=repo;d=3;n=7">' "$page" \
+    grep -qxF '<meta name="md-view-key" content="w=70;t=auto;p=github;f=0;tr=on;r=repo;d=3;n=7;v=0.1.0">' "$page" \
         || bad "key with ini: $(grep md-view-key "$page")"
     state_line proj/sub/o.md
     [ "$sline" = '<!-- md-view-tree: '"$ssum"' 2 -->' ] || bad "count in [$sline]"
     head_of "$page" | grep -qxF "$sline" || bad "no tree state [$sline] for root=repo"
     write_ini '[View]' 'tree_depth=99' 'tree_max_files=99999'
     tpage proj/sub/o.md
-    grep -qxF '<meta name="md-view-key" content="w=70;t=auto;p=github;f=0;tr=on;r=dir;d=12;n=2000">' "$page" \
+    grep -qxF '<meta name="md-view-key" content="w=70;t=auto;p=github;f=0;tr=on;r=dir;d=12;n=2000;v=0.1.0">' "$page" \
         || bad "key with ceilings: $(grep md-view-key "$page")"
     write_ini '[View]' 'tree_depth=<script>' 'tree_max_files=-1' 'root=x"y'
     tpage proj/sub/o.md
@@ -2384,7 +2386,7 @@ case_tree_key_line() {
     head_of "$page" | grep -qxF "$sline" || bad "no capped tree state [$sline]"
     rm -f "$ini"
     tpage --tree off proj/sub/o.md
-    grep -qxF '<meta name="md-view-key" content="w=70;t=auto;p=github;f=0;tr=off;r=dir;d=6;n=500">' "$page" \
+    grep -qxF '<meta name="md-view-key" content="w=70;t=auto;p=github;f=0;tr=off;r=dir;d=6;n=500;v=0.1.0">' "$page" \
         || bad "--tree off key: $(grep md-view-key "$page")"
     if grep -qF 'md-view-tree:' "$page"; then bad "a one-file page has a tree state"; fi
     exit 0
