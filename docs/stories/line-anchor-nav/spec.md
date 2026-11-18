@@ -9,8 +9,8 @@ description: The testable contract of line anchors: stamps on rendered blocks, t
 | Call | Result |
 |---|---|
 | `show(enc, frag)` renders a file | Each top-level block element, each list item `<li>` at every nesting depth, and each table `<tr>` gets `data-line="<n>"` and `id="L<n>"`. `n` is the 1-based source line of that item's first line. |
-| Start line of a top-level token | `1 + Σ \n` over the `raw` of all preceding tokens. The lexer raws concatenate to the source, so the sum is exact. `space` and `def` tokens render no element; they advance the line counter and take no DOM child. |
-| Pairing of tokens and elements | One element root per token for every other gfm type, in document order. An unknown future token type counts as one root. |
+| Start line of a top-level token | `Σ \n` over the `raw` of all preceding tokens, from 0, because the embedded text starts with a newline. The lexer raws concatenate to the source, so the sum is exact. `space` and `def` tokens render no element; they advance the line counter and take no DOM child. |
+| Pairing of tokens and elements | One element root per token for every other gfm type, in document order. An unknown future token type counts as one root. An `html` token renders as escaped text and takes no root. The `text` token of a tight list item takes no root; only its inline elements do. A `checkbox` takes its `input` and no stamp. A list and a blockquote advance the line by their own `raw`. |
 | `marked.parser(marked.lexer(src))` under the page's renderer overrides | The same string as `marked.parse(src)`. Measured in node on a fixture with a list and a table, 2026-11-18. |
 | List items | Each `list_item`'s start line comes from the newlines of the preceding `item.raw` values inside the list's `raw`. Nesting recurses through `item.tokens`. |
 | Table rows | The table starts on its token line. The header row takes that line. Body row `i` (0-based) takes `start + 2 + i` (header line, separator line, then rows). |

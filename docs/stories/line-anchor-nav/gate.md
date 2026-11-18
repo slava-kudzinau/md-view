@@ -72,16 +72,28 @@ Rendering is a chain the page reruns on every route change: Markdown source -> m
 
 ### What was built
 
-{{against "What it builds": same, more, or less, and why}}
+The same as planned. A link with `#L<n>`, `#L<n>-<m>` or `#L<n>-L<m>` opens the file at that line and flashes the landing. This works on a one-file page and in tree mode. Old heading anchors keep working.
 
 ### Decisions changed during the build
 
-{{rows changed or added in the table above, with the reason; or "none"}}
+| Decision | Change | Why |
+|---|---|---|
+| The flash color | The rule has `!important` | The scoped selector lost to the even table-row stripe and to the Tokyo rules on rows, code blocks and rules. |
+| Pairing of tokens and elements | An `html` token, the text of a tight list item and a task box take no stamp | These tokens render no element of their own. Without this, the stamps moved to the wrong element. |
+| The start line | The count starts at 0 | The embedded text starts with a newline. |
+| What a range flashes | Only the stamps inside the range. A range with no stamp inside flashes the landing only | To flash every stamp from start to end failed the past-end row. |
+| A miss or a heading landing | Clears the old flash first | An old flash stayed on the page after a new landing. |
+| Ids | A heading keeps its `user-content-` id. A container and its first child can share one `L<n>` id | The scroll uses the first match, so a shared id lands correctly. |
 
 ### What the reviews caught
 
-{{the findings that changed code, one line each; or "nothing that changed code"}}
+- The task review found three Important issues. `L0` and a line above the first stamp did not land. A task box took a stamp and the flash. `tests/hostile-dom.sh` failed on the new markup. It also found that an old flash stayed after a miss. All four are fixed in `5ce86d1`.
+- The final review found that the flash did not paint on even table rows or under the Tokyo palette. This is fixed in `edfcc7f`, with the rows `dom_line_table_row` and `dom_line_palette_tokyo`.
+- The final review found a personal path and a name in this page. They are removed from the file. By the owner's decision, the branch history is not rewritten, so commit `04aaf50` still holds them.
+- The final review asked for more rows: `dom_line_range` (both range forms) and `dom_line_tree_link` (a tree-mode link). Both are added, and each failed against a broken copy of the code first.
 
 ### Run it
 
-{{the command or demo, and what you should see}}
+1. Run `make check`. It exits 0 with 212 `ok` lines and no `skip` lines.
+2. Run `sh bin/md-view plan.md` in a folder that also holds `cv.md`.
+3. Click a link to `cv.md#L85`. cv.md opens at the list item from line 85, with a yellow flash.
