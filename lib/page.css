@@ -79,3 +79,4 @@ html[data-palette] .hljs-doctag, html[data-palette] .hljs-template-tag { color: 
 html[data-palette] .hljs-code, html[data-palette] .hljs-formula { color: var(--p-fg) }
 html[data-palette] .hljs-emphasis { font-style: italic; color: inherit }
 html[data-palette] .hljs-strong { font-weight: bold; color: inherit }
+.markdown-body .md-line-target { background-color: light-dark(#fff8c5, rgba(187, 128, 9, .35)); }

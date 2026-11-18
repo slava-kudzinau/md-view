@@ -149,7 +149,7 @@ case_dom_start_file() {
     printf '# B-ONLY\n' > a.md || bad "write"
     build o.md
     dom > "$d/dom"
-    main_of < "$d/dom" | grep -qF '<main id="content" class="markdown-body"><h1 id="user-content-a-open">A-OPEN</h1>' \
+    main_of < "$d/dom" | grep -qF '<main id="content" class="markdown-body"><h1 data-line="1" id="user-content-a-open">A-OPEN</h1>' \
         || bad "the opened file is not shown"
     grep -qF 'A-OPEN' "$d/dom" || bad "no A-OPEN"
     exit 0
@@ -161,7 +161,7 @@ case_dom_route_file() {
     printf '# B-ONLY\n' > a.md || bad "write"
     build o.md
     dom '/a.md' > "$d/dom"
-    main_of < "$d/dom" | grep -qF '<h1 id="user-content-b-only">B-ONLY</h1>' || bad "the route file is not shown"
+    main_of < "$d/dom" | grep -qF '<h1 data-line="1" id="user-content-b-only">B-ONLY</h1>' || bad "the route file is not shown"
     grep -qxF '<title>a.md</title>' "$d/dom" || bad "the title is not the base name: $(grep -o '<title>[^<]*</title>' "$d/dom")"
     exit 0
 }
@@ -376,6 +376,71 @@ case_dom_one_file_anchor() {
     want='<a href="#sec">L-Sec</a>'
     main_of < "$d/dom" | grep -qF "$want" || bad "the one-file anchor is not a same-page link: $(main_of < "$d/dom")"
     main_of < "$d/dom" | grep -qF 'id="user-content-sec"' || bad "no heading id in one-file mode"
+    exit 0
+}
+
+# line_fixture: a one-file page with a known list and table. Line 1 is the
+# heading, 3 the link, 7 the list (alpha 7, beta 8, deep 9), 11 the table
+# (header 11, rows 13 and 14), 16 the end.
+line_fixture() {
+    printf '# T\n\n[go](#L8)\n\npara one\n\n- alpha\n- beta\n  - deep\n\n| a | b |\n| - | - |\n| 1 | 2 |\n| 3 | 4 |\n\nend\n' > o.md || bad "write"
+    build --tree off o.md
+}
+
+case_dom_line_list_item() {
+    fresh
+    line_fixture
+    dom 'L8' > "$d/dom"
+    main_of < "$d/dom" | grep -qF '<li data-line="8" id="L8" class="md-line-target">beta</li>' \
+        || bad "no flashed beta item: $(main_of < "$d/dom")"
+    main_of < "$d/dom" | grep -qF '<a href="#L8">go</a>' || bad "the line link lost its href"
+    exit 0
+}
+
+case_dom_line_table_row() {
+    fresh
+    line_fixture
+    dom 'L13' > "$d/dom"
+    main_of < "$d/dom" | grep -qF '<tr data-line="13" id="L13" class="md-line-target">' \
+        || bad "no flashed table row: $(main_of < "$d/dom")"
+    # The paint: the flash class must win over .markdown-body table tr.
+    with_script "$page" '<script>document.title="bg="+getComputedStyle(document.getElementById("L13")).backgroundColor;</script>'
+    page=$d/injected.html
+    dom 'L13' > "$d/dom2"
+    grep -qF '<title>bg=rgb(255, 248, 197)</title>' "$d/dom2" \
+        || bad "the row paint is not the flash color: $(grep -o '<title>[^<]*</title>' "$d/dom2")"
+    exit 0
+}
+
+case_dom_line_range() {
+    fresh
+    line_fixture
+    dom 'L7-L9' > "$d/dom"
+    main_of < "$d/dom" | grep -qF '<li data-line="9" id="L9" class="md-line-target">deep</li>' \
+        || bad "the range end is not marked: $(main_of < "$d/dom")"
+    main_of < "$d/dom" | grep -qF '<li data-line="7" id="L7" class="md-line-target">alpha' \
+        || bad "the range does not land on alpha: $(main_of < "$d/dom")"
+    exit 0
+}
+
+case_dom_line_past_end() {
+    fresh
+    line_fixture
+    dom 'L99' > "$d/dom"
+    main_of < "$d/dom" | grep -qF '<p data-line="16" id="L16" class="md-line-target">end</p>' \
+        || bad "no landing past the last line: $(main_of < "$d/dom")"
+    exit 0
+}
+
+case_dom_line_zero() {
+    fresh
+    line_fixture
+    dom 'L0' > "$d/dom"
+    m=$(main_of < "$d/dom")
+    echo "$m" | grep -qF '<h1 data-line="1"' || bad "the h1 has no line stamp: $m"
+    echo "$m" | grep -qF 'id="user-content-t"' || bad "the heading id did not win: $m"
+    echo "$m" | grep -qF '<h1 data-line="1" id="user-content-t" class="md-line-target">T</h1>' \
+        || bad "no flash on the first block: $m"
     exit 0
 }
 
@@ -798,7 +863,8 @@ for c in dom_start_file dom_route_file dom_route_unknown \
          dom_link_percent dom_link_big dom_other_link dom_image_base \
          dom_heading_ids dom_anchor_same_file dom_anchor_other_file \
          dom_one_file_anchor dom_one_file_links dom_names_hostile dom_raw_html_text \
-         dom_script_scheme dom_panel_tree dom_panel_current dom_panel_folders_open \
+         dom_line_list_item dom_line_table_row dom_line_range dom_line_past_end \
+         dom_line_zero dom_script_scheme dom_panel_tree dom_panel_current dom_panel_folders_open \
          dom_panel_root_name dom_panel_cap_note dom_panel_big_style \
          dom_panel_toggle_markup dom_panel_off_notice dom_panel_width_rule \
          dom_panel_gear_fixed dom_panel_names_hostile dom_panel_link_click dom_panel_focus \
