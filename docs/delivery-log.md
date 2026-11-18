@@ -14,3 +14,4 @@ description: One row for each retired story, with its size, its cost against the
 | mermaid-viewer | M | contract | 3 | 811ca07 | `811ca07` | $15.00 | $20.00 | $7.56 | $3.93 | $11.48 | ok | C0 I2 M14 | 2026-11-17 | verdict on the subtree only |
 | mermaid-accent-coloring | M | contract | 5 | b954259 | `3d0bd05` | - | - | - | - | - | - | C0 I1 M5 | 2026-11-17 | no cost record |
 | md-view-version | M | - | 6 | 9bd64b2 | `36b0814` | - | - | - | - | - | - | C0 I1 M9 | 2026-11-17 | no cost record |
+| diagram-laser-pointer | S | none | 8 | 4e2b238 | `a07442d` | - | - | - | - | - | - | C0 I1 M3 | 2026-11-18 | no cost record |

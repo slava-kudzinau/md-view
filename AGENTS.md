@@ -18,7 +18,7 @@ There is no build step. Run these commands from the repo root.
 
 A test that has no Chrome or no network prints `skip` lines and passes. Read the `skip` lines before you trust a pass. A pass with `skip all` proved only the tests that need no browser.
 
-A headless-Chrome row under `--virtual-time-budget` captures `document.title` at process exit. Seed the title up front. Gate on the paint (a stroke, or a stroke change), not on svg-node identity. Rewrite the full success title on every observed tick, so the dump captures the furthest stage.
+A headless-Chrome row under `--virtual-time-budget` captures `document.title` at process exit. Seed a failing title up front, so a row that never runs its check fails. Gate on the paint (a stroke, or a stroke change), not on svg-node identity. Rewrite the full success title on every observed tick, so the dump captures the furthest stage.
 
 Use a temporary `PREFIX` to test the install. `PREFIX` must be absolute and must not hold a single quote.
 
