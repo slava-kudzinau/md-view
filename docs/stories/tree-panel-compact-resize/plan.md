@@ -51,14 +51,16 @@ Add `wireResize()`, called from `wireControls` in tree mode only. It wires point
 It wires `dblclick` to `applyPanelWidth(300, true)`. It wires `treeResize.onkeydown` for `ArrowLeft` and `ArrowRight`, with Shift step 64; all keys keep the width.
 Add a `window` `resize` listener that re-applies the current width with `keep=false`.
 `resetChoice`: remove `KEY_PANEL` and apply 300 (tree-mode guard). Init applies `applyPanelWidth(loadPanelWidth(), false)` before `buildTree`.
-In `tests/browser-links-dom.sh` add three cases, registered like `dom_panel_width_rule` and using the `measured` and `title_is` helpers.
+In `tests/browser-links-dom.sh` add four cases, registered like `dom_panel_width_rule` and using the `measured` and `title_is` helpers.
 Events are synthetic scripts, as in `case_dom_panel_toggle_markup` (`:690`): a key is `document.getElementById('md-tree-resize').dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowRight'}))`.
 `case_dom_panel_resize_key`: seed `md-view-tree-w=300` with the `seed()` pattern (`:878`). In a measured script, dispatch `ArrowRight` on the grip. Push `html` `style.getPropertyValue('--md-panel-w')` and `localStorage.getItem('md-view-tree-w')` into the title.
-Dispatch `ArrowRight` with `shiftKey:true`, and push both values again. `title_is` asserts `316px 316 380px 380`.
+Dispatch `ArrowRight` with `shiftKey:true`, and push both values again. Then dispatch `ArrowLeft`, and push both values once more. `title_is` asserts the chain `316px 316 380px 380 364px 364`.
 `case_dom_panel_resize_reset`: seed 300. In a measured script, send the grip a `pointerdown` at `clientX 297`, a `pointermove` at `clientX 357`, and a `pointerup`.
 Push the panel `getBoundingClientRect().width` and the stored value into the title; assert `360 360`. Then dispatch `dblclick` on the grip and push width and store again. Assert `300 300` at the end of the title.
-`case_dom_panel_resize_seed`: set `WINDOW=1200,800` for the case. Seed `md-view-tree-w=420` with the seed-reload pattern (`:878`). Measure the painted `#md-tree-panel` `getBoundingClientRect().width` into the title and assert 420.
-A second build seeds the garbage value `300px`. It asserts width 300, with the stored value still `300px`.
+`case_dom_panel_reset`: build with no seed. In a measured script, find the `md-pop` button whose `textContent` is `Reset`, and click it. Push the panel width and the stored value into the title. `title_is` asserts `300 null`.
+`case_dom_panel_resize_seed`: set `WINDOW=1200,800` for the case. Seed `md-view-tree-w=400` with the seed-reload pattern (`:878`). Measure the painted `#md-tree-panel` `getBoundingClientRect().width` into the title and assert 400.
+A second build seeds `600` and asserts 560 (ceiling). A third seeds `100` and asserts 200 (floor). A fourth seeds the garbage value `300px` and asserts 300, with the stored value still `300px`.
+A fifth build sets `WINDOW=900,800`, seeds `480`, and asserts 450 (half-window cap), with the stored value `480`.
 `case_dom_panel_width_rule` keeps its shape; its `overflow-wrap` grep moves to the `summary` rule, which now carries the drop.
 
 ## T4: Durable docs

@@ -43,7 +43,14 @@ From the repo root run `bin/md-view README.md`. The panel lists the repo tree. D
 The screenshots in `closeout.md` show the deep fixture at default, dragged, and keyboard-widened, in both palettes.
 
 ### A fresh reader's paraphrase
-_Pasted from the fresh read before the build._
+**Reader's view.** The file tree panel shows depth visually. Each nesting level carries a guide rail. Folders get a chevron that rotates on open, and a bolder weight. Long names cut off with an ellipsis on a single line.
+A folder chain collapses onto one row. A chain is folders that each contain exactly one subfolder. The names on the row are joined by a `›` separator. The file under the chain lives in that one expandable box.
+A thin full-height grip sits on the panel's right edge. The reader drags it to widen the panel, or nudges it with the Arrow keys (16 px, 64 px with Shift). A double-click snaps back to 300 px. The page remembers the width (localStorage key `md-view-tree-w`, clamped 200-560 px and to half the window) and re-applies it on the next load. Reset clears it. Below 700 px, in print, and when the panel is closed, the panel, the toggle, and the grip hide.
+**Order of work.** The rules of T1 (CSS, grip markup, page-test pins) are what the DOM tests measure, so T1 comes first. T1 verifies without touching `lib/page.js`.
+T2 (chain rows in `buildTree`) follows. Its DOM tests use the moved geometry constants, which take effect once the CSS is in. T3 (resize) wires onto the grip markup and the finished tree, in the same files. T4 (durable docs) comes after behavior is frozen, because the doc rows are grep-pinned by tests. T5 runs the full `make check` and the screenshots.
+**Proof.** T1 runs `bash tests/browser-page.sh`. T2 and T3 run `bash tests/browser-links-dom.sh`. Chain summaries are pinned by literal serialized strings.
+The resize cases drive the page with synthetic scripts and gate on the title. The key chain asserts `316px 316 380px 380 364px 364`. The drag asserts `360 360`, then `300 300` after a double-click. The seed cases assert painted widths 400, 560, 200, 300, and the 450 half-window cap. T4 runs `check_ste.py`. T5 runs `make check` and posts screenshots.
+**Findings and rulings (fresh read).** (1) The story said init runs after `buildTree`; the plan said before. Ruling: before. The story line now says so. (2) "A tenth ArrowRight clamps at 560" was off - it reaches 460. The story now says successive presses clamp. The seed cases test the 560 and 200 clamps and the half-window cap. (3) The drag row moved to 60 px, `ArrowLeft` tests 380→364, and a new `case_dom_panel_reset` case covers Reset. (4) Synthetic drag is the acknowledged flaky part; the key and seed cases are the primary gates. (5) The chain pins are fixed to the serialization above; the first dump confirms them.
 
 ## At merge
 

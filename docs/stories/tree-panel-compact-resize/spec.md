@@ -50,11 +50,11 @@ Names go in with `textContent`: a hostile name cannot make an element. `decName`
 | Load, saved `md-view-tree-w` = `300px` (garbage) | Width 300 px; the stored value is untouched. |
 | `ArrowRight` on the focused grip, from 300 | Width 316 px; `localStorage.md-view-tree-w` is `316`. |
 | `Shift` + `ArrowRight`, from 316 | Width 380 px; saves `380`. |
-| `ArrowLeft` from 316 | Width 284 px; saves `284`. |
-| Width 544, `ArrowRight` | Width 560 px (ceiling). |
-| Width 216, `ArrowLeft` | Width 200 px (floor). |
-| Window 900 px wide, width 480 | Width 450 px (`floor(900/2)` cap, clamps on load and on window resize, store untouched). |
-| Pointer drag on the grip right by 50 px | Width 350 px; saves on release. |
+| `ArrowLeft`, after 380 | Width 364 px; saves `364`. |
+| Load, saved `md-view-tree-w` = `600` | Width 560 px (ceiling). |
+| Load, saved `md-view-tree-w` = `100` | Width 200 px (floor). |
+| Window 900 px wide, saved `md-view-tree-w` = `480` | Width 450 px (`floor(900/2)` cap on load; store untouched). |
+| Pointer drag on the grip right by 60 px | Width 360 px; saves on release. |
 | Double-click the grip | Width 300 px; saves `300`. |
 | Reset in the popover | Width 300 px; the key is removed. |
 
@@ -71,7 +71,7 @@ Constants: `KEY_PANEL = 'md-view-tree-w'`, `PANEL_MIN = 200`, `PANEL_MAX = 560`,
 
 `make check` exits 0 (read the `skip` lines). Every row above has a test.
 CSS and markup rows: `tests/browser-page.sh` (`case_page_tree_print_hidden`, `case_page_tree_narrow_rule`, `case_palette_layer`, `case_page_storage_try_catch`).
-DOM rows: `tests/browser-links-dom.sh` (`case_dom_panel_tree`, `case_dom_panel_folders_open`, `case_dom_panel_width_rule`, `case_dom_panel_gear_fixed`, new `case_dom_panel_chain_stop`, `case_dom_panel_resize_key`, `case_dom_panel_resize_reset`, `case_dom_panel_resize_seed`).
+DOM rows: `tests/browser-links-dom.sh` (`case_dom_panel_tree`, `case_dom_panel_folders_open`, `case_dom_panel_width_rule`, `case_dom_panel_gear_fixed`, and at least 4 new cases: `case_dom_panel_chain_stop`, `case_dom_panel_resize_key`, `case_dom_panel_resize_reset`, `case_dom_panel_resize_seed`, `case_dom_panel_reset`).
 `check_ste.py` is clean on the touched pages.
 
 ## Out of scope
