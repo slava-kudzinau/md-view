@@ -1,6 +1,6 @@
 ---
 description: Add a full-screen viewer for mermaid diagrams, with zoom, fit, 1 to 1 and drag to pan, so that a big diagram is easy to read without browser zoom.
-status: done
+status: retired
 size: M
 risk: contract
 depends-on:
