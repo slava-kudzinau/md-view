@@ -381,17 +381,19 @@ case_dom_one_file_anchor() {
 
 # line_fixture: a one-file page with a known list and table. Line 1 is the
 # heading, 3 the link, 7 the list (alpha 7, beta 8, deep 9), 11 the table
-# (header 11, rows 13 and 14), 16 the end.
+# (header 11, rows 13 and 14), 16 the end. The light theme keeps the paint
+# row the same on every system.
 line_fixture() {
     printf '# T\n\n[go](#L8)\n\npara one\n\n- alpha\n- beta\n  - deep\n\n| a | b |\n| - | - |\n| 1 | 2 |\n| 3 | 4 |\n\nend\n' > o.md || bad "write"
-    build --tree off o.md
+    build --tree off --theme light o.md
 }
 
 case_dom_line_list_item() {
     fresh
     line_fixture
     dom 'L8' > "$d/dom"
-    main_of < "$d/dom" | grep -qF '<li data-line="8" id="L8" class="md-line-target">beta</li>' \
+    # beta holds the nested list, so no </li> follows its text.
+    main_of < "$d/dom" | grep -qF '<li data-line="8" id="L8" class="md-line-target">beta' \
         || bad "no flashed beta item: $(main_of < "$d/dom")"
     main_of < "$d/dom" | grep -qF '<a href="#L8">go</a>' || bad "the line link lost its href"
     exit 0
@@ -441,6 +443,18 @@ case_dom_line_zero() {
     echo "$m" | grep -qF 'id="user-content-t"' || bad "the heading id did not win: $m"
     echo "$m" | grep -qF '<h1 data-line="1" id="user-content-t" class="md-line-target">T</h1>' \
         || bad "no flash on the first block: $m"
+    exit 0
+}
+
+# A list with no blank line after it, then a raw html block. The html renders
+# as escaped text, with no element. The stamp of the paragraph must still be 7.
+case_dom_line_after_block() {
+    fresh
+    printf '# T\n\n- one\n- two\n<div>raw</div>\n\npara\n' > o.md || bad "write"
+    build --tree off o.md
+    dom 'L7' > "$d/dom"
+    main_of < "$d/dom" | grep -qF '<p data-line="7" id="L7" class="md-line-target">para</p>' \
+        || bad "the paragraph after the list and the html is not line 7: $(main_of < "$d/dom")"
     exit 0
 }
 
@@ -864,7 +878,7 @@ for c in dom_start_file dom_route_file dom_route_unknown \
          dom_heading_ids dom_anchor_same_file dom_anchor_other_file \
          dom_one_file_anchor dom_one_file_links dom_names_hostile dom_raw_html_text \
          dom_line_list_item dom_line_table_row dom_line_range dom_line_past_end \
-         dom_line_zero dom_script_scheme dom_panel_tree dom_panel_current dom_panel_folders_open \
+         dom_line_zero dom_line_after_block dom_script_scheme dom_panel_tree dom_panel_current dom_panel_folders_open \
          dom_panel_root_name dom_panel_cap_note dom_panel_big_style \
          dom_panel_toggle_markup dom_panel_off_notice dom_panel_width_rule \
          dom_panel_gear_fixed dom_panel_names_hostile dom_panel_link_click dom_panel_focus \
