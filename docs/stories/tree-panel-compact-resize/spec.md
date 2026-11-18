@@ -69,7 +69,10 @@ Constants: `KEY_PANEL = 'md-view-tree-w'`, `PANEL_MIN = 200`, `PANEL_MAX = 560`,
 
 ## Done
 
-`make check` exits 0 (read the `skip` lines). Every row above has a test: CSS/markup rows in `tests/browser-page.sh` (`case_page_tree_print_hidden`, `case_page_tree_narrow_rule`, `case_palette_layer`, `case_page_storage_try_catch`), DOM rows in `tests/browser-links-dom.sh` (`case_dom_panel_tree`, `case_dom_panel_folders_open`, new `case_dom_panel_chain`, `case_dom_panel_chain_stop`, `case_dom_panel_resize_key`, `case_dom_panel_resize_reset`, `case_dom_panel_resize_seed`, `case_dom_panel_width_rule`, `case_dom_panel_gear_fixed`). `check_ste.py` is clean on the touched pages.
+`make check` exits 0 (read the `skip` lines). Every row above has a test.
+CSS and markup rows: `tests/browser-page.sh` (`case_page_tree_print_hidden`, `case_page_tree_narrow_rule`, `case_palette_layer`, `case_page_storage_try_catch`).
+DOM rows: `tests/browser-links-dom.sh` (`case_dom_panel_tree`, `case_dom_panel_folders_open`, `case_dom_panel_width_rule`, `case_dom_panel_gear_fixed`, new `case_dom_panel_chain_stop`, `case_dom_panel_resize_key`, `case_dom_panel_resize_reset`, `case_dom_panel_resize_seed`).
+`check_ste.py` is clean on the touched pages.
 
 ## Out of scope
 

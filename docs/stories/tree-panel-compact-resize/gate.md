@@ -5,7 +5,8 @@ _For the owner, who reads this instead of the code. One page per section. The mo
 ## Before build
 
 ### What it builds
-The file tree on the left gets visible depth: a guide rail per level, a chevron, bold folders, one row per folder chain, and names that end with an ellipsis. The panel starts 300 px wide and the reader can drag it wider, with keys, and the page keeps the width.
+The file tree on the left gets visible depth. Each level gets a guide rail, a chevron, and a bold folder name. A folder chain of single folders takes one row. Long names end with an ellipsis.
+The panel starts 300 px wide. The reader can drag it wider, or use the keys. The page keeps the width across reloads.
 
 ### Parts it touches
 ```mermaid
@@ -38,7 +39,8 @@ flowchart LR
 | Ellipsis, no `title` tooltips | Tooltips on clipped names | The pinned links-dom rows match bare `<a href="#/...">name</a>`. |
 
 ### How you'll see it working
-`bin/md-view tests/fixtures/plain.md` (needs the tree fixture folder): drag the right edge of the panel, press `→` / `⇧→` on it, double-click it; reload to see the saved width. The screenshots in `closeout.md` show the deep fixture at default, dragged, and keyboard-widened, in both palettes.
+From the repo root run `bin/md-view README.md`. The panel lists the repo tree. Drag the grip on the right edge of the panel. Focus it and press `→` and `⇧→`. Double-click resets it to 300 px. Reload to see the saved width.
+The screenshots in `closeout.md` show the deep fixture at default, dragged, and keyboard-widened, in both palettes.
 
 ### A fresh reader's paraphrase
 _Pasted from the fresh read before the build._
