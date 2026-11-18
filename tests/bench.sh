@@ -3,7 +3,8 @@
 # tree in a temporary folder, runs SCRIPT (default lib/md-view of this checkout)
 # on its index.md two times, and prints the time of a new page and of a cached
 # page. It is not part of make check: it measures, it does not check. A failed
-# run or a stderr line from a clean run fails the bench.
+# run, a stderr line from a clean run, or a second run that builds the page again
+# fails the bench.
 
 set -u
 
@@ -68,4 +69,13 @@ timed() {
 }
 
 timed 'new page'
+
+# Run 2 must reuse the page. A mark line is added to the page first. A build
+# writes the page again without the mark, so the cksum changes. Equal bytes alone
+# would not show a build, as a build of an unchanged tree writes the same bytes.
+page=$(find "$tmp/cache/md-view" -type f -name '*.html')
+[ -f "$page" ] || { echo "bench: want one cache page" >&2; exit 1; }
+printf '<!-- bench-mark -->\n' >> "$page" || exit 1
+before=$(cksum < "$page")
 timed 'cached page'
+[ "$(cksum < "$page")" = "$before" ] || { echo "bench: the second run built the page again" >&2; exit 1; }
