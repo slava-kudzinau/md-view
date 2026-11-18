@@ -2529,11 +2529,13 @@ case_cache_tree_added_file() {
     mark
     printf '# new-zq\n' > proj/sub/new.md || bad "write"
     old proj/sub/new.md
+    future proj/sub
     md_wd --no-open proj/o.md
     [ "$rc" = 0 ] || bad "exit $rc after the add"
-    if marked; then bad "the page was not built again after an old file was added"; fi
+    if marked; then bad "the page was not built again after a file was added"; fi
     grep -qF 'data-path="sub/new.md"' "$cpage" || bad "the new file is not in the page"
     grep -qF 'new-zq' "$cpage" || bad "the new text is not in the page"
+    old proj/sub
     mark
     md_wd --no-open proj/o.md
     marked || bad "no reuse after the build"
@@ -2548,6 +2550,7 @@ case_cache_tree_deleted_file() {
     mark
     grep -qF 'data-path="sub/b.md"' "$cpage" || bad "sub/b.md is not in the page"
     rm proj/sub/b.md || bad "rm"
+    future proj/sub
     md_wd --no-open proj/o.md
     [ "$rc" = 0 ] || bad "exit $rc after the delete"
     if marked; then bad "the page was not built again after a delete"; fi
@@ -2563,11 +2566,38 @@ case_cache_tree_renamed_file() {
     mark
     mv proj/a.md proj/a2.md || bad "mv"
     old proj/a2.md
+    future proj
     md_wd --no-open proj/o.md
     [ "$rc" = 0 ] || bad "exit $rc after the rename"
     if marked; then bad "the page was not built again after a rename"; fi
     grep -qF 'data-path="a2.md"' "$cpage" || bad "the renamed file is not in the page"
     no_tmp
+    exit 0
+}
+
+# The page limit is 8388608 bytes of tree files, the opened file included. A last
+# file that ends at the limit is in the page. One more byte cuts it.
+case_cache_tree_page_limit_edge() {
+    fresh
+    mkdir proj || bad "mkdir"
+    mkbytes proj/o.md 388608
+    for n in a b c d e f g z; do
+        mkbytes "proj/$n.md" 1000000
+    done
+    lt proj/o.md
+    want='page a.md
+page b.md
+page c.md
+page d.md
+page e.md
+page f.md
+page g.md
+page o.md
+page z.md'
+    [ "$(body)" = "$want" ] || bad "total 8388608 lists: $(body)"
+    mkbytes proj/z.md 1000001
+    lt proj/o.md
+    has 'cut z.md'
     exit 0
 }
 
@@ -2607,13 +2637,15 @@ case_cache_tree_one_walk() {
 }
 
 # A tree file that grows past 1 MiB is newer than the page, so the page is built
-# again and the file is listed as big.
+# again and the file is listed as big. The file time is set ahead, so the row does
+# not depend on the clock.
 case_cache_tree_grown_big() {
     fresh
     tree_proj
     md_wd --no-open proj/o.md
     mark
     mklong proj/a.md 1048577
+    future proj/a.md
     md_wd --no-open proj/o.md
     [ "$rc" = 0 ] || bad "exit $rc after the growth"
     if marked; then bad "the page was not built again after a file grew past 1 MiB"; fi
@@ -2980,7 +3012,8 @@ for c in flags_ok flag_width_bad flag_theme_bad flag_width_missing palette_setti
          tree_off_same_page tree_key_line cache_tree_reuse cache_tree_changed_file \
          cache_tree_added_file cache_tree_deleted_file cache_tree_head_only cache_tree_no_cache \
          cache_tree_renamed_file cache_tree_one_walk cache_tree_grown_big \
-         cache_tree_root_moved cache_tree_odd_name cache_tree_unreadable_folder tree_page_long_lines \
+         cache_tree_root_moved cache_tree_odd_name cache_tree_unreadable_folder \
+         cache_tree_page_limit_edge tree_page_long_lines \
          page_tree_key_guard page_tree_storage_try page_tree_print_hidden page_tree_narrow_rule page_tree_closed_grip_hidden \
          palette_layer; do
     run "$c"
