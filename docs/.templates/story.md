@@ -4,7 +4,7 @@ status: planned
 size: M
 ---
 
-<!-- status: planned | in-progress | in-review | done. size: S | M | L | XL: cap M; L needs size-approved with the owner's words; XL is split. Optional: size-approved, depends-on (story slugs), waiting (a gate with its slug, such as `G3-spend`, or `owner`, then what, as `owner - pick a fixture`, when it waits on more than review), refs. description: one sentence. -->
+<!-- status: planned | in-progress | in-review | done | retired. size: S | M | L | XL: cap M; L needs size-approved with the owner's words; XL is split. Optional: size-approved, depends-on (story slugs), waiting (a gate with its slug, such as `G3-spend`, or `owner`, then what, as `owner - pick a fixture`, when it waits on more than review), refs. description: one sentence. -->
 <!-- A stub has Goal, Scope, Size and Unknowns only. At G1-brief, deliver-story fills Context, Acceptance criteria and Notes, and re-sizes. -->
 
 # Story: <name>

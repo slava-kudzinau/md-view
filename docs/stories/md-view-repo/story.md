@@ -1,6 +1,6 @@
 ---
 description: Move the Alt-F3 Markdown browser view out of far2l into a standalone public repo md-view, with its history, its own docs and its own install.
-status: in-review
+status: retired
 size: M
 risk: contract, migration
 refs:

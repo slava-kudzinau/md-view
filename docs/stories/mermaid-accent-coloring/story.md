@@ -1,6 +1,6 @@
 ---
 description: Colors mermaid nodes and connectors with a Tokyo accent palette so blocks and flows read at a glance, the way Zed colors its diagrams.
-status: in-review
+status: retired
 size: M
 depends-on: mermaid-viewer
 risk: contract
