@@ -280,7 +280,7 @@ These are parked findings, with the state checked against `lib/md-view`.
 ### Parked findings that remain open
 
 - The reuse rule compares the Markdown file by modification time only. It misses a package upgrade that keeps the old times.
-- In tree mode, the reuse rule looks for an added, deleted or renamed tree file. It sees the change only when a folder time is newer than the page. It misses the change when a copy tool keeps old folder times. It also misses a change in the same clock tick as the page. Use `--no-cache` to build the page again.
+- In tree mode, the reuse rule looks for an added, deleted or renamed tree file. It sees the change only when a folder time, or the time of an added tree file, is newer than the page. It misses the change when a copy tool keeps old file and folder times. It also misses a change in the same clock tick as the page. Use `--no-cache` to build the page again.
 - A read error inside the page write is not detected, so a bad page can be reused.
 - A dark page can flash light before the page script runs.
 - The test of the page script is text only. A syntax error in the script would pass.
