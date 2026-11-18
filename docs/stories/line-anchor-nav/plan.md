@@ -20,6 +20,8 @@ Spec: `spec.md` (governs exact values). No design.md (the plan carries the desig
 
 **Depends on:** none
 **Done check:** `sh tests/browser-links-dom.sh` exits 0
+
+**Pinned tests:** `page_hljs_after_marked` and `page_gear_markup` in `tests/browser-page.sh` pin the line `tpl.innerHTML = marked.parse(files[enc]);`. Update each pin to the new render line; each pin still checks one exact line.
 **Role:** implementer — review task-reviewer-critical
 
 In `show()` (`lib/page.js:436-438`): replace `tpl.innerHTML = marked.parse(files[enc]);` with:
@@ -78,6 +80,8 @@ Register the five names in the `dom` list at the register (`tests/browser-links-
 
 **Depends on:** T1
 **Done check:** `sh tests/browser-page.sh && sh tests/browser-links-dom.sh` exits 0
+
+**Pinned tests:** `case_tree_off_same_page` in `tests/browser-page.sh` compares the page style with the base. Add the flash rule line to the `viewer_map` deletions.
 **Role:** implementer — review final
 
 Append to `lib/page.css`:
