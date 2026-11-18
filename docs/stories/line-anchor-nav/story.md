@@ -56,3 +56,4 @@ M: two new functions in `lib/page.js`, about 100 lines. One CSS rule set, one gr
 - Risk notes: `contract` — the meaning of a page fragment grows (new accepted values; every old input keeps working). `security` — the fragment is untrusted; the new parse is one anchored regex over the decoded text, consumed by `getElementById`/`scrollIntoView`/`setAttribute` only.
 - started: 2026-11-18T12:40:00Z
 - BASE: 4e2b238 (local main; `diagram-laser-pointer` merged as PR #8, no stack). Hooks: preflight none; verify `make check`; status none; cleanup none.
+- G2-design approved by owner, 2026-11-18: "continue" (confirmed: gate.md read, decisions accepted). Docs committed on the branch at `04aaf50`; budget 15 USD, hard stop 20 USD (M).
