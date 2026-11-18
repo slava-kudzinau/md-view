@@ -69,7 +69,7 @@ build o.md
 - `dom_line_table_row`: `dom '#L13'` → grep `<tr data-line="13" id="L13" class="md-line-target">`.
 - Then gate the paint. Use `with_script "$page"` with a script that runs after the page script. The script sets `document.title='bg='+getComputedStyle(document.getElementById('L13')).backgroundColor;`.
 - Set `page=$d/injected.html`, dump with `dom '#L13'`, and grep the dumped `<title>` for `bg=rgb(255, 248, 197)`.
-- The class alone can lose to `.markdown-body table tr` (`lib/page.css:48`). So this row proves the paint.
+- The class alone loses to the table-row and stripe rules (`lib/page.css:48-49`) and to the other palette rules. The flash rule uses `!important` to win. So this row proves the paint.
 - `dom_line_range`: `dom '#L7-L9'` → grep `<li data-line="9" id="L9" class="md-line-target">deep</li>` (the end of the range is marked) and `<li data-line="7" id="L7" class="md-line-target">alpha` (the landing).
 - `dom_line_past_end`: `dom '#L99'` → grep `<p data-line="16" id="L16" class="md-line-target">end</p>`.
 - `dom_line_zero`: `dom '#L0'` → grep `data-line="1"` and `id="user-content-t"` and `md-line-target` on the `h1` (three checks; the heading id overwrote the stamp id).
@@ -87,11 +87,11 @@ Register the five names in the `dom` list at the register (`tests/browser-links-
 Append to `lib/page.css`:
 
 ```css
-.markdown-body .md-line-target { background-color: light-dark(#fff8c5, rgba(187, 128, 9, .35)); }
+.markdown-body .md-line-target { background-color: light-dark(#fff8c5, rgba(187, 128, 9, .35)) !important; }
 ```
 
 The append sits after the last rule, outside the `viewer_map` sed range of `tests/browser-page.sh:2393-2398`, so the line-count check needs no edit.
-The `.markdown-body` prefix is required. `.markdown-body table tr` (`lib/page.css:48`) sets `background-color` on rows. Two class terms beat one class and two types, so a bare `.md-line-target` would lose on a stamped `<tr>`. The `dom_line_table_row` row gates on the computed `backgroundColor` for exactly this reason.
+The `.markdown-body` prefix keeps the flash rule scoped to the page content. The `!important` on `background-color` makes the flash win over the table-row, stripe and palette rules. Selector specificity does not do that. The `dom_line_table_row` row gates on the computed `backgroundColor`, so it proves the paint.
 
 ## T3: Docs
 

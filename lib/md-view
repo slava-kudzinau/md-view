@@ -950,12 +950,14 @@ HTML
     printf '\n</style>\n<style id="hl-dark" media="not all">\n'
     cat "$self_dir/hljs-github-dark.min.css"
     printf '\n</style>\n'
-    # The page style is in page.css. Its end is the palette layer: the lines that
-    # start with html[data-palette]. They set colors only, from the --p- variables,
-    # and only when html has the attribute, so the github look does not change.
-    # Each one takes the selector of the vendored rule that sets the same property
-    # and adds the prefix, so it is the more specific one. The tree rules of the
-    # layer are in the tree block below.
+    # The page style is in page.css. The palette layer is the lines that start with
+    # html[data-palette], before the flash rule at the end of the file. They set
+    # colors only, from the --p- variables, and only when html has the attribute,
+    # so the github look does not change. Each one takes the selector of the vendored
+    # rule that sets the same property and adds the prefix, so it is the more
+    # specific one. The flash rule, .markdown-body .md-line-target, is not in the
+    # layer. It has !important, so it wins over the table rows and the palette.
+    # The tree rules of the layer are in the tree block below.
     printf '<style id="page">\n'
     cat "$self_dir/page.css"
     # The panel CSS and markup are in tree mode only. In one-file mode the page
