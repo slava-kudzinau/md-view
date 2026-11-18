@@ -113,8 +113,8 @@ Tree mode is on by default. It shows the opened file and the other Markdown file
 
 | Part | Rule |
 |---|---|
-| Scan | `find` runs from the root. It skips `.git`, `node_modules`, hidden folders and hidden files, does not follow symlinks, and stops at `tree_depth` and `tree_max_files`. Names with a control byte are skipped. Only `*.md` and `*.markdown` match, in any letter case. The opened file joins the scan even if it is a symlink. A scan failure exits 2 with one line. A root of `$HOME` or `/` gives the one-file page. The scan uses POSIX `sh`, `sed`, `awk`, `grep`, `find`, `ls`, `sort` and `cksum` only. |
-| Files in the page | Each tree file with state `page` goes in the page, in tree order. The opened file is first and counts last. A file over 1 MiB is `big`. A file that would take the Markdown text over 8 MiB is `cut`. A `big` or `cut` file stays in the tree only. |
+| Scan | `find` runs from the root one time. `wc -c` gives the size of each file in the same walk. The script does not read a tree file to get its size. The scan skips `.git`, `node_modules`, hidden folders and hidden files, does not follow symlinks, and stops at `tree_depth` and `tree_max_files`. Names with a control byte are skipped. Only `*.md` and `*.markdown` match, in any letter case. The opened file joins the scan even if it is a symlink. A scan failure exits 2 with one line. A root of `$HOME` or `/` gives the one-file page. The scan uses POSIX `sh`, `sed`, `awk`, `grep`, `find`, `ls`, `sort`, `wc` and `cksum` only. |
+| Files in the page | Each tree file with state `page` goes in the page, in tree order. The opened file is first and counts last. A file over 1 MiB is `big`. A file that would take the Markdown text over 8 MiB is `cut`. A `big` or `cut` file stays in the tree only. A file that `wc` cannot read counts 0 bytes. |
 | Page contents | `<script type="text/markdown" id="md">` for the opened file. One `<script type="text/markdown" class="md-file" data-path="ENC">` per other file. A `<script type="text/plain" id="md-tree">` holds one `<state> <ENC>` line per tree file. |
 | Attributes on `html` | `data-tree="on"`, `data-root`, `data-files`, `data-cap`, `data-panel="open\|closed"`. The page uses a number only if it matches `^[0-9]+$`, and an `ENC` only if it matches `^[A-Za-z0-9._~/%-]*$`. |
 | Route | The page URL without a hash is the page. `#/ENC` shows that file. `#/ENC#FRAG` also scrolls to the anchor. A `FRAG` is a heading slug, a line `L<n>`, a range `L<n>-<m>`, or a range `L<n>-L<m>`. The page script stamps each rendered block, list item, and table row with its 1-based source line: the attribute `data-line="<n>"` first, then the id `L<n>`. A line anchor lands on the block, list item, or row of that source line. It uses the last stamp at or below it, and flashes the landed marks with the class `md-line-target`. A heading keeps its `user-content-` id and gets only `data-line`. A container and its first child can share one `L<n>` id, for example a list and its first item. Back and Forward move in the browser history. |
@@ -212,7 +212,7 @@ The policy is `default-src 'none'; script-src 'unsafe-inline' https://cdn.jsdeli
 
 | Need | Detail |
 |---|---|
-| Shell tools | POSIX `sh`, `awk`, `sed`, `cat`, `basename`, `dirname`, `cksum`, `cut`, `find`, `grep`, `ls`, `mv`, `mkdir`, `chmod`, `sort`. `make` and `install` for the install. |
+| Shell tools | POSIX `sh`, `awk`, `sed`, `cat`, `basename`, `dirname`, `cksum`, `cut`, `find`, `grep`, `ls`, `mv`, `mkdir`, `chmod`, `sort`, `wc`. `make` and `install` for the install. |
 | Opener | `open`, else `xdg-open`. If both are missing, the script prints the page path and exits 0. |
 | Browser | Any browser that the opener starts. Chrome is tested. Firefox is a manual check. |
 | Network | `cdn.jsdelivr.net` for a page with a diagram. No other network use. |

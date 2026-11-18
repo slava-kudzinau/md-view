@@ -412,7 +412,8 @@ enc_path() {
 # cannot change a pattern. It skips .git, node_modules and hidden folders,
 # hidden files, a name with a byte below 0x20 and a path deeper than
 # tree_depth. find does not follow a symlink, and -type f skips a symlink.
-# The extra primaries (for example -size) go before -print.
+# The extra primaries (for example -exec wc -c {} +) go before -print. Each file
+# still gives one ./<tree path> line, and the primaries give their own output.
 scan_find() {
     deep='./*'
     i=0
@@ -429,55 +430,55 @@ scan_find() {
     )
 }
 
-# scan_tree: scans the root. Sets tree_list to the "<state> <tree path>" lines
-# in tree order, up to the cap (state is page, big or cut), tree_count to their
-# number, tree_capped to 1 when more files exist, and opened_in_list to 1 when
-# the opened file is one of the lines. The opened file is always "page"; when it
-# is not in tree_list, list_tree_text adds it after the list. Its bytes count
-# first toward the page limit.
+# scan_tree: scans the root in one walk. The walk gives each tree file as a
+# ./<tree path> line and wc -c gives its size. Sets tree_list to the
+# "<state> <tree path>" lines in tree order, up to the cap (state is page, big or
+# cut), tree_count to their number, tree_capped to 1 when more files exist, and
+# opened_in_list to 1 when the opened file is one of the lines. The opened file
+# is always "page"; when it is not in tree_list, list_tree_text adds it after the
+# list. Its bytes count first toward the page limit. A file that wc cannot read
+# counts 0 bytes.
 scan_tree() {
     [ -d "$tree_root" ] || return 1
-    files=$(scan_find) || return 1
-    big=$(scan_find -size +1048576c) || return 1
+    walk=$(scan_find -exec wc -c {} +) || return 1
     # The opened file joins the scan unless its tree path has a byte below 0x20.
     ctlb=$(printf '\001-\037')
     case $tree_opened in
         *[$ctlb]*) extra= ;;
         *) extra=./$tree_opened ;;
     esac
+    # The path lines of the walk and the opened file, sorted into tree order.
     sorted=$(
-        { [ -n "$files" ] && printf '%s\n' "$files"; [ -n "$extra" ] && printf '%s\n' "$extra"; } |
-        awk '!seen[$0]++ { p = substr($0, 3); n = split(p, a, "/"); print n " " p }' |
+        { printf '%s\n' "$walk"; [ -n "$extra" ] && printf '%s\n' "$extra"; } |
+        awk '/^\.\// && !seen[$0]++ { p = substr($0, 3); n = split(p, a, "/"); print n " " p }' |
         LC_ALL=C sort -k1,1n -k2
-    )
+    ) || return 1
     res=$(
         cd "$tree_root" || exit 1
-        { [ -n "$big" ] && printf '%s\n' "$big"; echo; [ -n "$sorted" ] && printf '%s\n' "$sorted"; } |
-        MD_OPENED=$tree_opened MD_MAX=$tree_max awk '
-        # size(f, room): bytes of f as lines with a newline each, read with
-        # getline; the read stops once the count passes room.
-        function size(f, room,    n, line) {
-            n = 0
-            while ((getline line < f) > 0) {
-                n += length(line) + 1
-                if (n > room) break
-            }
-            close(f)
-            return n
-        }
+        opened_size=$(wc -c 2>/dev/null < "./$tree_opened")
+        # The walk, a blank line, then the sorted paths.
+        { printf '%s\n' "$walk"; echo; [ -n "$sorted" ] && printf '%s\n' "$sorted"; } |
+        MD_OPENED=$tree_opened MD_OPENED_SIZE=$opened_size MD_MAX=$tree_max awk '
         BEGIN {
             limit = 8388608
+            big_limit = 1048576
             opened = ENVIRON["MD_OPENED"]
+            total = ENVIRON["MD_OPENED_SIZE"] + 0
             max = ENVIRON["MD_MAX"] + 0
-            total = size("./" opened, limit + 1)
             phase = 0
             count = 0
             capped = 0
             inlist = 0
         }
+        # Phase 0 reads the walk. A wc line is "<bytes> ./<path>", with blanks
+        # in front. Path lines start with "./". A "total" line is skipped.
         phase == 0 {
             if ($0 == "") phase = 1
-            else isbig[$0] = 1
+            else if ($0 ~ /^[ 0-9]/) {
+                sub(/^ +/, "")
+                i = index($0, " ")
+                if (substr($0, i + 1, 2) == "./") bytes[substr($0, i + 1)] = substr($0, 1, i - 1) + 0
+            }
             next
         }
         $0 == "" { next }
@@ -488,11 +489,10 @@ scan_tree() {
             if (p == opened) {
                 state = "page"
                 inlist = 1
-            } else if (("./" p) in isbig) {
-                state = "big"
             } else {
-                n = size("./" p, limit - total)
-                if (total + n > limit) state = "cut"
+                n = (("./" p) in bytes) ? bytes["./" p] : 0
+                if (n > big_limit) state = "big"
+                else if (total + n > limit) state = "cut"
                 else { total += n; state = "page" }
             }
             print state " " p
@@ -855,8 +855,8 @@ fi
 
 # page_fresh: true if the cache page can be used as it is. No input is newer than
 # the page, and the head of the page has the key and the ini state of this run.
-# In tree mode the head also has the tree state of this scan, and no tree file
-# is newer than the page.
+# In tree mode the head also has the tree state that scan_tree set in this run,
+# and no tree file is newer than the page.
 page_fresh() {
     [ -f "$page" ] && [ ! -L "$page" ] || return 1
     abs_marked=$marked_js
