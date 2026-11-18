@@ -41,3 +41,4 @@ Rules that always hold for md-view. Format: `- **[area]**: rule (Learned from: s
 ## Cache
 
 - **[cache]**: `page_fresh` reuses a cached page only when the head `key_line` matches the page the run would write, byte for byte. The `key_line` carries every setting and the version (`;v=`). A bump then rebuilds the page on its own, with no cache code and no file-time check. (Learned from: story md-view-version, spec, 2026-11-17)
+- **[cache-tree]**: The script reuses a tree page with no scan only when two things hold. The head has the `<base href>` line of this root. One walk finds no tree folder and no tree file newer than the page. A test row that adds, deletes, renames or edits a tree file sets the changed folder or file ahead with `future`. It does not trust the clock: Linux file stamps can be one tick wide, and the page and the change can share a tick. (Learned from: story tree-scan-speed, final review, 2026-11-19)

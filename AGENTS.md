@@ -30,7 +30,7 @@ Use a temporary `PREFIX` to test the install. `PREFIX` must be absolute and must
 | `lib/page.js`, `lib/page.css` | The page script and the main page style. They are md-view code, not vendored. |
 | other `lib/*.js` and `lib/*.css`, `lib/*.LICENSE.md` | The nine vendored files and their licenses. |
 | `bin/md-view` | The launcher of the checkout. |
-| `tests/` | The four tests, `fixtures/` and `browser-page/`. |
+| `tests/` | The four tests, `fixtures/` and `browser-page/`. Also `bench.sh`, outside `make check`: it prints the time of a new and a cached tree page. |
 | `README.md` | Install, usage, config keys, far2l and Midnight Commander, the move from far2l. |
 | `docs/architecture/md-view.spec.md` | The behavior contract. |
 | `docs/architecture/md-view.invariants.md` | Rules that always hold. |

@@ -61,13 +61,31 @@ The reader found one gap: the diagram had no branch for a head that is not good.
 ## At merge
 
 ### What was built
-{{against "What it builds": same, more, or less, and why}}
+Same as planned, and a little more.
+- One walk with sizes from `wc -c`. No tree file is read to count its size.
+- A cached tree page is reused after one `find` walk, with no scan and no `wc`. A test row counts the calls through `find` and `wc` shims.
+- `tests/bench.sh` (outside `make check`) on a 3,000-file tree. Before the story: new page 0.57 s, cached page 0.35 s (median of four runs). After: new page 0.50 s, cached page 0.12 s.
+- More than planned: three extra test rows (`cache_tree_odd_name`, `cache_tree_unreadable_folder`, `cache_tree_page_limit_edge`), a spec "Parked findings" line on the folder-time limit, a `[cache-tree]` invariant, and one `head_has` function in place of four copies of the head check.
+- The page bytes are the same as before for the bench tree, `tests/fixtures` and a tree of hostile names (old and new pages compared with `cmp`).
 
 ### Decisions changed during the build
-{{rows changed or added in the table above, with the reason; or "none"}}
+| Decision | Alternative rejected | Why |
+|---|---|---|
+| An unreadable tree file has size 0 and state `page`, also when it is over 1 MiB. Before the story it was `big`. | Keep `big` with one more `find` primary. | It follows the documented rule that an unreadable file gives an empty element. It keeps one walk. |
+| Reuse trusts folder and file times. An add, delete or rename that leaves every folder time at or below the page time is missed (a copy tool that keeps old times, or a change while the page is built). `--no-cache` builds again. The spec "Parked findings" states it. | Scan on every run, as before. | The scan on every run is the cost this story removes. |
+| `scan_tree` ignores the exit status of its walk. `tree_newer` fails closed: a failed walk builds the page. | One status rule for both. | `find` returns 1 when `wc` cannot read a file, and that file must stay in the tree. |
+| The tree change rows set the changed folder or file ahead with `future`. | Trust the clock. | Linux file stamps can be one tick wide. |
 
 ### What the reviews caught
-{{the findings that changed code, one line each; or "nothing that changed code"}}
+- The first final review found one Important issue: the folder-time limit was not in the spec, and three rows depended on a clock tick. Fixed: the spec line, `future` in the rows, and the `[cache-tree]` invariant. The story moved from the lite to the standard tier for this fix round.
+- Also fixed from that review: the exact 8 MiB boundary row, a bench that fails when the second run builds the page, and the `head_has` function.
+- The second final review: Approved, Critical 0, Important 0, Minor 4. The minor findings not fixed are in `closeout.md`.
 
 ### Run it
-{{the command or demo, and what you should see}}
+1. `make check`. Result on 2026-11-19: exit 0, 218 `ok` rows, no `skip` lines.
+2. `sh tests/bench.sh`. Result on 2026-11-19:
+   ```
+   new page: 0.50 s
+   cached page: 0.12 s
+   ```
+3. Open a tree page two times: `bin/md-view <folder>/README.md`. The second open reuses the cached page.
