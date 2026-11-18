@@ -284,7 +284,7 @@ refused_page() {
         render_proxy "$tmp/refused.html" refused 9
 }
 check "refused CDN: each diagram shows as a code block" refused_page
-check "refused CDN: the code block holds the source" grep -F -q '<pre class="mermaid">flowchart LR' "$tmp/refused.dom"
+check "refused CDN: the code block holds the source" grep -E -q '<pre [^>]*class="mermaid"[^>]*>flowchart LR' "$tmp/refused.dom"
 
 # The accents are inline styles on the shapes of a drawn svg. With the CDN
 # refused the block keeps its source and has no svg, so no accent shows. The
@@ -614,7 +614,7 @@ bom_page() {
     printf '\357\273\277# Bom head\r\n\r\ntext\r\n' > "$tmp/bom.md" &&
         sh "$md_open" "$tmp/bom.md" --out "$tmp/bom.html" --no-open > /dev/null 2>&1 &&
         render "$tmp/bom.html" bom &&
-        grep -F -q '<h1 id="user-content-bom-head">Bom head</h1>' "$tmp/bom.dom"
+        grep -E -q '<h1 [^>]*id="user-content-bom-head"[^>]*>Bom head</h1>' "$tmp/bom.dom"
 }
 check "BOM and CRLF: heading rendered" bom_page
 

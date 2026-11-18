@@ -422,6 +422,8 @@ case_dom_line_range() {
         || bad "the range end is not marked: $(main_of < "$d/dom")"
     main_of < "$d/dom" | grep -qF '<li data-line="7" id="L7" class="md-line-target">alpha' \
         || bad "the range does not land on alpha: $(main_of < "$d/dom")"
+    main_of < "$d/dom" | grep -qF 'id="L13" class="md-line-target"' \
+        && bad "a row past the range end is marked: $(main_of < "$d/dom")"
     exit 0
 }
 
@@ -455,6 +457,43 @@ case_dom_line_after_block() {
     dom 'L7' > "$d/dom"
     main_of < "$d/dom" | grep -qF '<p data-line="7" id="L7" class="md-line-target">para</p>' \
         || bad "the paragraph after the list and the html is not line 7: $(main_of < "$d/dom")"
+    exit 0
+}
+
+# The first block is on line 2, so no stamp is at or below line 1. #L0 lands
+# on the first stamp.
+case_dom_line_before_first() {
+    fresh
+    printf '\npara one\n\nend\n' > o.md || bad "write"
+    build --tree off o.md
+    dom 'L0' > "$d/dom"
+    main_of < "$d/dom" | grep -qF '<p data-line="2" id="L2" class="md-line-target">para one</p>' \
+        || bad "#L0 does not land on the first block: $(main_of < "$d/dom")"
+    exit 0
+}
+
+# A tight task item renders its box as an input before its text. The line
+# anchor lands on the item. The box takes no stamp.
+case_dom_line_task_item() {
+    fresh
+    printf '# T\n\n- [ ] one\n- [x] two\n' > o.md || bad "write"
+    build --tree off o.md
+    dom 'L4' > "$d/dom"
+    main_of < "$d/dom" | grep -qF '<li data-line="4" id="L4" class="md-line-target"><input checked="" disabled="" type="checkbox"> two</li>' \
+        || bad "the task item is not the flashed line: $(main_of < "$d/dom")"
+    exit 0
+}
+
+# A same-page hash that misses clears the flash of the last line landing. The
+# title holds the flash before the hash change and after it.
+case_dom_line_clear_on_miss() {
+    fresh
+    line_fixture
+    with_script "$page" '<script>(function(){var l=document.getElementById("L8");var on=function(){return l.classList.contains("md-line-target")?"on":"off";};var before=on();document.title="before="+before;addEventListener("hashchange",function(){document.title="before="+before+" after="+on();});location.hash="nope";})();</script>'
+    page=$d/injected.html
+    dom 'L8' > "$d/dom"
+    grep -qF '<title>before=on after=off</title>' "$d/dom" \
+        || bad "the flash of L8 stays after a miss: $(grep -o '<title>[^<]*</title>' "$d/dom")"
     exit 0
 }
 
@@ -878,7 +917,8 @@ for c in dom_start_file dom_route_file dom_route_unknown \
          dom_heading_ids dom_anchor_same_file dom_anchor_other_file \
          dom_one_file_anchor dom_one_file_links dom_names_hostile dom_raw_html_text \
          dom_line_list_item dom_line_table_row dom_line_range dom_line_past_end \
-         dom_line_zero dom_line_after_block dom_script_scheme dom_panel_tree dom_panel_current dom_panel_folders_open \
+         dom_line_zero dom_line_after_block dom_line_before_first dom_line_task_item \
+         dom_line_clear_on_miss dom_script_scheme dom_panel_tree dom_panel_current dom_panel_folders_open \
          dom_panel_root_name dom_panel_cap_note dom_panel_big_style \
          dom_panel_toggle_markup dom_panel_off_notice dom_panel_width_rule \
          dom_panel_gear_fixed dom_panel_names_hostile dom_panel_link_click dom_panel_focus \
