@@ -13,7 +13,7 @@ description: The list of md-view stories in build order, with the status of each
 | 3 | [mermaid-accent-coloring](mermaid-accent-coloring/story.md) | M | retired | mermaid-viewer |
 | 4 | [mermaid-accent-toolbar](mermaid-accent-toolbar/story.md) | M | planned | mermaid-accent-coloring |
 | 5 | [md-view-version](md-view-version/story.md) | M | retired | mermaid-viewer |
-| 6 | [diagram-laser-pointer](diagram-laser-pointer/story.md) | S | in-review | - |
+| 6 | diagram-laser-pointer | S | retired | - |
 
 ## Build order
 

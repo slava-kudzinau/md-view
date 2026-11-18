@@ -35,3 +35,4 @@ Open items that do not block a shipped story. Each names the story that left it.
 ## Planned scope
 
 - Story `md-view-remove`: remove the Markdown view from far2l. Users need md-view installed before far2l drops the view. (story md-view-repo)
+- Laser pointer outside the diagram viewer: on normal-view text and on inline diagrams. The diagram-laser-pointer story kept it out of scope. (story diagram-laser-pointer)
