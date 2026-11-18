@@ -2571,6 +2571,124 @@ case_cache_tree_renamed_file() {
     exit 0
 }
 
+# shim TOOL...: puts a shim of each TOOL first in PATH. A shim appends its
+# arguments as one line to $d/TOOL.log, then runs the real TOOL by its absolute path.
+shim() {
+    mkdir -p "$d/shim" || bad "mkdir shim"
+    for t in "$@"; do
+        tool_path=$(command -v "$t") || bad "no $t"
+        case $tool_path in /*) ;; *) bad "no absolute path for $t" ;; esac
+        cat > "$d/shim/$t" <<EOF || bad "write shim $t"
+#!/bin/sh
+printf '%s\n' "\$*" >> '$d/$t.log'
+exec '$tool_path' "\$@"
+EOF
+        chmod 755 "$d/shim/$t" || bad "chmod shim $t"
+    done
+    PATH=$d/shim:$PATH
+    export PATH
+}
+
+# A reuse of a cached tree page runs one find of the root and no wc.
+case_cache_tree_one_walk() {
+    fresh
+    tree_proj
+    md_wd --no-open proj/o.md
+    mark
+    shim find wc
+    md_wd --no-open proj/o.md
+    [ "$rc" = 0 ] || bad "exit $rc: $(cat "$d/err")"
+    marked || bad "the page was built again with no change"
+    roots=$(awk '$1 == "." { n++ } END { print n + 0 }' "$d/find.log")
+    [ "$roots" = 1 ] || bad "want one find of the root, got $roots: $(cat "$d/find.log")"
+    [ ! -e "$d/wc.log" ] || bad "wc ran: $(cat "$d/wc.log")"
+    no_tmp
+    exit 0
+}
+
+# A tree file that grows past 1 MiB is newer than the page, so the page is built
+# again and the file is listed as big.
+case_cache_tree_grown_big() {
+    fresh
+    tree_proj
+    md_wd --no-open proj/o.md
+    mark
+    mklong proj/a.md 1048577
+    md_wd --no-open proj/o.md
+    [ "$rc" = 0 ] || bad "exit $rc after the growth"
+    if marked; then bad "the page was not built again after a file grew past 1 MiB"; fi
+    tree_index "$cpage" | grep -qxF 'big a.md' || bad "no big line for a.md: $(tree_index "$cpage")"
+    no_tmp
+    exit 0
+}
+
+# The root moves from proj (its .git is removed, with root=repo) to proj/sub.
+# Nothing under proj/sub is newer than the page, so the head must show the root.
+case_cache_tree_root_moved() {
+    fresh
+    write_ini '[View]' 'root=repo'
+    mkdir -p proj/.git proj/sub || bad "mkdir"
+    printf '# opened\n' > proj/sub/o.md || bad "write"
+    old proj/.git proj/sub/o.md
+    cache_page proj/sub/o.md
+    md_wd --no-open proj/sub/o.md
+    [ "$rc" = 0 ] || bad "exit $rc"
+    mark
+    rmdir proj/.git || bad "rmdir"
+    md_wd --no-open proj/sub/o.md
+    [ "$rc" = 0 ] || bad "exit $rc after the root moved"
+    if marked; then bad "the page was reused after the root moved"; fi
+    base=$(head_of "$cpage" | grep '^<base href=')
+    case $base in
+        *'/sub/">') ;;
+        *) bad "base is [$base], want the sub folder" ;;
+    esac
+    no_tmp
+    exit 0
+}
+
+# A changed tree file whose name has blanks and shell characters is not reused.
+case_cache_tree_odd_name() {
+    fresh
+    tree_proj
+    printf '# odd-old\n' > 'proj/x y $z*.md' || bad "write"
+    old 'proj/x y $z*.md'
+    md_wd --no-open proj/o.md
+    mark
+    printf '# odd-zq\n' > 'proj/x y $z*.md' || bad "write"
+    future 'proj/x y $z*.md'
+    md_wd --no-open proj/o.md
+    [ "$rc" = 0 ] || bad "exit $rc"
+    if marked; then bad "the page was reused after a change to a file whose name has blanks and shell characters"; fi
+    grep -qF 'odd-zq' "$cpage" || bad "the new text is not in the page"
+    no_tmp
+    exit 0
+}
+
+# A folder that becomes unreadable does not change its own time. The walk fails,
+# so the page is built again and the files of the folder are gone from it.
+case_cache_tree_unreadable_folder() {
+    fresh
+    [ "$(id -u)" = 0 ] && skip "root reads a folder with mode 000"
+    tree_proj
+    mkdir proj/locked || bad "mkdir"
+    printf '# locked-zq\n' > proj/locked/x.md || bad "write"
+    old proj/locked proj/locked/x.md
+    md_wd --no-open proj/o.md
+    [ "$rc" = 0 ] || bad "exit $rc before the change"
+    grep -qF 'locked-zq' "$cpage" || bad "the page has no file of the folder before the change"
+    mark
+    chmod 000 proj/locked || bad "chmod"
+    md_wd --no-open proj/o.md
+    st=$rc
+    chmod 700 proj/locked || bad "chmod back"
+    [ "$st" = 0 ] || bad "exit $st after the change"
+    if marked; then bad "the page was reused while a folder of the tree cannot be read"; fi
+    if grep -qF 'locked-zq' "$cpage"; then bad "a file of the unreadable folder is still in the page"; fi
+    no_tmp
+    exit 0
+}
+
 # repeat TEXT N: TEXT N times on one line.
 repeat() {
     awk -v t="$1" -v n="$2" 'BEGIN { for (i = 0; i < n; i++) printf "%s", t; printf "\n" }'
@@ -2861,7 +2979,8 @@ for c in flags_ok flag_width_bad flag_theme_bad flag_width_missing palette_setti
          tree_page_markup tree_page_index tree_page_attrs tree_page_cut tree_page_names_hostile \
          tree_off_same_page tree_key_line cache_tree_reuse cache_tree_changed_file \
          cache_tree_added_file cache_tree_deleted_file cache_tree_head_only cache_tree_no_cache \
-         cache_tree_renamed_file tree_page_long_lines \
+         cache_tree_renamed_file cache_tree_one_walk cache_tree_grown_big \
+         cache_tree_root_moved cache_tree_odd_name cache_tree_unreadable_folder tree_page_long_lines \
          page_tree_key_guard page_tree_storage_try page_tree_print_hidden page_tree_narrow_rule page_tree_closed_grip_hidden \
          palette_layer; do
     run "$c"
