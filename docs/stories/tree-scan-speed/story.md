@@ -1,6 +1,6 @@
 ---
 description: Make a tree page open fast on a large folder, with one walk of the tree and no read of file content to check the cache.
-status: planned
+status: in-progress
 size: S
 depends-on: line-anchor-nav
 risk: none
@@ -81,3 +81,9 @@ S. One script region (about 60 lines), one spec section, about five test rows, o
 - Branch: `refactor/tree-scan-speed`, worktree `.worktrees/tree-scan-speed`. Base: `origin/main`. Rebase after line-anchor-nav merges, because both stories edit `lib/md-view` and `tests/browser-page.sh`.
 - Budget: S, $8. Hard stop: $10.
 - Check: `make check` (AGENTS.md).
+- started: 2026-11-18T21:32:41Z
+- flow (2 tasks): `flow tier=lite docs=plan design=no orchestrator=no final=final-reviewer-light gate=read-later scan=no verifier=none`
+- Gate page: read later in the PR. Owner, 2026-11-18: "go in autonomous mode".
+- Hooks: preflight none, verify none, status none, cleanup none (AGENTS.md names no hooks).
+- Owner-checked paths: none named in AGENTS.md.
+- BASE: origin/main at 9e9dbfc. The branch was rebased onto it after line-anchor-nav merged.
