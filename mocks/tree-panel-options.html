@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en" data-palette="tokyo">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>md-view · tree panel design options (Tokyo Night)</title>
+<style>
+  :root{
+    --p-bg:#1a1b26; --p-bg-dark:#16161e; --p-bg-hl:#292e42; --p-bg-visual:#283457;
+    --p-fg:#c0caf5; --p-fg-dark:#a9b1d6; --p-border:#3b4261; --p-comment:#565f89;
+    --p-blue:#7aa2f7; --p-blue1:#2ac3de; --p-blue5:#89ddff; --p-cyan:#7dcfff;
+    --p-green:#9ece6a; --p-green1:#73daca; --p-magenta:#bb9af7; --p-orange:#ff9e64;
+    --p-purple:#9d7cd8; --p-red:#f7768e; --p-yellow:#e0af68;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--p-bg);color:var(--p-fg);
+    font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;padding:28px 22px 60px}
+  h1{color:var(--p-blue);font-size:22px;margin:0 0 4px}
+  h1 .sub{color:var(--p-fg-dark);font-weight:400;font-size:14px}
+  .intro{color:var(--p-fg-dark);max-width:92ch;margin:0 0 18px}
+  .intro code{background:var(--p-bg-hl);color:var(--p-orange);padding:1px 5px;border-radius:4px;font-size:12px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(430px,1fr));gap:20px}
+  .card{background:var(--p-bg-dark);border:1px solid var(--p-border);border-radius:10px;padding:16px 18px 14px}
+  .card h2{margin:0 0 2px;font-size:16px}
+  .tag{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;
+    padding:2px 8px;border-radius:999px;border:1px solid var(--p-border);margin-right:8px;vertical-align:2px}
+  .a .tag{color:var(--p-fg-dark);border-color:var(--p-fg-dark)}
+  .b .tag{color:var(--p-blue);border-color:var(--p-blue)}
+  .c .tag{color:var(--p-green);border-color:var(--p-green)}
+  .d .tag{color:var(--p-magenta);border-color:var(--p-magenta)}
+  .e .tag{color:var(--p-orange);border-color:var(--p-orange)}
+  .desc{color:var(--p-fg-dark);font-size:13px;margin:6px 0 12px}
+  .desc code{background:var(--p-bg-hl);color:var(--p-orange);padding:1px 5px;border-radius:4px;font-size:12px}
+  .frame{position:relative;width:fit-content;background:var(--p-bg);border:1px solid var(--p-border);
+    border-radius:8px;overflow:hidden}
+  .frame .note{position:absolute;right:14px;bottom:10px;font-size:11px;color:var(--p-comment);
+    background:var(--p-bg-dark);border:1px solid var(--p-border);border-radius:6px;padding:2px 7px}
+
+  /* shared panel base */
+  .panel{height:430px;overflow:auto;background:var(--p-bg-dark);color:var(--p-fg-dark);
+    font:13px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+  .panel .md-root{font-weight:600;color:var(--p-fg)}
+  .panel a{color:inherit;text-decoration:none}
+  .grip{position:absolute;top:0;bottom:0;right:0;width:5px;cursor:col-resize;
+    background:linear-gradient(to right, transparent 0 3px, var(--p-border) 3px 4px, transparent 4px)}
+  .grip:hover,.grip.on{background:linear-gradient(to right, transparent 0 2px, var(--p-blue) 2px 4px, transparent 4px)}
+
+  /* A. current */
+  .panel.a{width:260px;padding:8px}
+  .a details{margin:0}
+  .a summary{cursor:pointer}
+  .a .md-root{margin-bottom:4px;overflow-wrap:anywhere}
+  .a a{display:block;padding-left:12px;overflow-wrap:anywhere}
+  .a a[aria-current]{font-weight:600;background:var(--p-bg-visual);color:var(--p-fg);border-radius:4px}
+
+  /* B. guide rails + chevron + ellipsis, 300px, resizable */
+  .panel.b,.panel.e{padding:6px 10px 8px}
+  .panel.b{width:300px}
+  .panel.e{width:380px}
+  .b .md-root,.e .md-root{padding:6px 0;margin-bottom:2px}
+  .b details,.e details{margin:0}
+  .b details>div,.e details>div{margin-left:7px;padding-left:9px;border-left:1px solid var(--p-border)}
+  .b summary,.e summary{display:flex;align-items:baseline;gap:4px;padding:1px 4px;border-radius:4px;
+    font-weight:600;color:var(--p-fg);cursor:pointer;white-space:nowrap;overflow:hidden;
+    text-overflow:ellipsis;list-style:none}
+  .b summary::-webkit-details-marker,.e summary::-webkit-details-marker{display:none}
+  .b summary::before,.e summary::before{content:'\203A';flex:none;width:8px;color:var(--p-fg-dark);font-size:12px}
+  .b details[open]>summary::before,.e details[open]>summary::before{content:'\25BE';font-size:10px}
+  .b summary:hover,.e summary:hover{background:var(--p-bg-hl)}
+  .b a,.e a{display:block;padding:1px 4px 1px 16px;white-space:nowrap;overflow:hidden;
+    text-overflow:ellipsis;border-radius:4px}
+  .b a:hover,.e a:hover{background:var(--p-bg-hl);color:var(--p-fg)}
+  .b a[aria-current],.e a[aria-current]{background:var(--p-bg-visual);color:var(--p-fg);font-weight:600}
+
+  /* C. compact chains + rails */
+  .panel.c{width:300px;padding:6px 10px 8px}
+  .c .md-root{padding:6px 0;margin-bottom:2px}
+  .c details{margin:0}
+  .c details>div{margin-left:7px;padding-left:9px;border-left:1px solid var(--p-border)}
+  .c summary{display:flex;align-items:baseline;gap:4px;padding:1px 4px;border-radius:4px;
+    font-weight:600;color:var(--p-fg);cursor:pointer;white-space:nowrap;overflow:hidden;
+    text-overflow:ellipsis;list-style:none}
+  .c summary::-webkit-details-marker{display:none}
+  .c summary::before{content:'\203A';flex:none;width:8px;color:var(--p-fg-dark);font-size:12px}
+  .c details[open]>summary::before{content:'\25BE';font-size:10px}
+  .c summary:hover{background:var(--p-bg-hl)}
+  .c .sep{color:var(--p-comment);font-weight:400;padding:0 2px}
+  .c .tail{color:var(--p-fg-dark);font-weight:400}
+  .c a{display:block;padding:1px 4px 1px 16px;white-space:nowrap;overflow:hidden;
+    text-overflow:ellipsis;border-radius:4px}
+  .c a:hover{background:var(--p-bg-hl);color:var(--p-fg)}
+  .c a[aria-current]{background:var(--p-bg-visual);color:var(--p-fg);font-weight:600}
+
+  /* D. breadcrumb + active path */
+  .panel.d{width:300px;padding:6px 10px 8px}
+  .d .crumb{position:sticky;top:0;background:var(--p-bg-dark);font-size:11px;color:var(--p-fg-dark);
+    border-bottom:1px solid var(--p-border);padding:6px 0 5px;margin-bottom:4px;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .d .crumb .sep{color:var(--p-comment);padding:0 3px}
+  .d .crumb b{color:var(--p-fg);font-weight:600}
+  .d .md-root{display:none}
+  .d details{margin:0}
+  .d details>div{margin-left:7px;padding-left:9px;border-left:1px solid var(--p-border)}
+  .d details.on>div{border-left:1px solid color-mix(in srgb, var(--p-blue) 55%, transparent)}
+  .d details.dim{opacity:.55}
+  .d summary{display:flex;align-items:baseline;gap:4px;padding:1px 4px;border-radius:4px;
+    cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;list-style:none;
+    font-weight:600;color:var(--p-fg)}
+  .d summary::-webkit-details-marker{display:none}
+  .d summary::before{content:'\203A';flex:none;width:8px;color:var(--p-fg-dark);font-size:12px}
+  .d details[open]>summary::before{content:'\25BE';font-size:10px}
+  .d summary:hover{background:var(--p-bg-hl)}
+  .d a{display:block;padding:1px 4px 1px 16px;white-space:nowrap;overflow:hidden;
+    text-overflow:ellipsis;border-radius:4px}
+  .d a:hover{background:var(--p-bg-hl);color:var(--p-fg)}
+  .d a[aria-current]{background:var(--p-bg-visual);color:var(--p-fg);font-weight:600}
+</style>
+</head>
+<body>
+<h1>Tree panel design options <span class="sub">· same fixture, current file <code>adr-002-palette-table.md</code> · open/close works: real details elements</span></h1>
+<p class="intro">Fixture: 3 root files, depth up to 6, long folder and file names. Each card is the panel at its
+default width. <b>E</b> is <b>B</b> after a drag: it shows the resize affordance at 380 px.</p>
+<div class="grid">
+
+  <section class="card a">
+    <h2><span class="tag">A</span> Current baseline</h2>
+    <p class="desc">260 px, native disclosure triangles, flat 12 px padding, names wrap. Depth reads only
+    from the triangle column.</p>
+    <div class="frame"><nav class="panel a">
+      <div class="md-root">~/Projects/treeproj</div>
+      <a href="#/README.md">README.md</a>
+      <a href="#/release-notes-2026.md">release-notes-2026.md</a>
+      <details open><summary>docs</summary><div>
+        <details open><summary>architecture</summary><div>
+          <a href="#/docs/architecture/md-view.spec.md">md-view.spec.md</a>
+          <details open><summary>decisions</summary><div>
+            <a href="#/docs/architecture/decisions/adr-001-standalone-tool.md">adr-001-standalone-tool.md</a>
+            <a href="#/docs/architecture/decisions/adr-002-palette-table.md" aria-current="page">adr-002-palette-table.md</a>
+            <a href="#/docs/architecture/decisions/adr-003-version-literal.md">adr-003-version-literal.md</a>
+          </div></details>
+        </div></details>
+        <details open><summary>stories</summary><div>
+          <details><summary>mermaid-accent-coloring</summary><div>
+            <a href="#">story.md</a><a href="#">closeout.md</a>
+          </div></details>
+        </div></details>
+      </div></details>
+      <details open><summary>src</summary><div>
+        <details open><summary>components</summary><div>
+          <details open><summary>forms</summary><div>
+            <details open><summary>fields</summary><div>
+              <a href="#">text-input-with-validation.md</a>
+              <a href="#">date-range-picker.md</a>
+            </div></details>
+            <a href="#">validation.md</a>
+          </div></details>
+        </div></details>
+        <details><summary>pages</summary><div><a href="#">home.md</a></div></details>
+      </div></details>
+      <details open><summary>tests</summary><div>
+        <details open><summary>fixtures</summary><div>
+          <details open><summary>deep</summary><div>
+            <details open><summary>deeper</summary><div>
+              <details><summary>deepest</summary><div>
+                <a href="#">leaf-with-a-very-long-file-name.md</a>
+              </div></details>
+            </div></details>
+          </div></details>
+        </div></details>
+      </div></details>
+    </nav></div>
+  </section>
+
+  <section class="card b">
+    <h2><span class="tag">B</span> Guide rails + chevrons</h2>
+    <p class="desc">Per-level rail (border-left on the child box), CSS chevron, bold folders, ellipsis on
+    long names, 300 px, drag handle at the right edge (saved width).</p>
+    <div class="frame"><nav class="panel b">
+      <div class="md-root">~/Projects/treeproj</div>
+      <a href="#/README.md">README.md</a>
+      <a href="#/release-notes-2026.md">release-notes-2026.md</a>
+      <details open><summary>docs</summary><div>
+        <details open><summary>architecture</summary><div>
+          <a href="#/docs/architecture/md-view.spec.md">md-view.spec.md</a>
+          <details open><summary>decisions</summary><div>
+            <a href="#/docs/architecture/decisions/adr-001-standalone-tool.md">adr-001-standalone-tool.md</a>
+            <a href="#/docs/architecture/decisions/adr-002-palette-table.md" aria-current="page">adr-002-palette-table.md</a>
+            <a href="#/docs/architecture/decisions/adr-003-version-literal.md">adr-003-version-literal.md</a>
+          </div></details>
+        </div></details>
+        <details open><summary>stories</summary><div>
+          <details><summary>mermaid-accent-coloring</summary><div>
+            <a href="#">story.md</a><a href="#">closeout.md</a>
+          </div></details>
+        </div></details>
+      </div></details>
+      <details open><summary>src</summary><div>
+        <details open><summary>components</summary><div>
+          <details open><summary>forms</summary><div>
+            <details open><summary>fields</summary><div>
+              <a href="#">text-input-with-validation.md</a>
+              <a href="#">date-range-picker.md</a>
+            </div></details>
+            <a href="#">validation.md</a>
+          </div></details>
+        </div></details>
+        <details><summary>pages</summary><div><a href="#">home.md</a></div></details>
+      </div></details>
+      <details open><summary>tests</summary><div>
+        <details open><summary>fixtures</summary><div>
+          <details open><summary>deep</summary><div>
+            <details open><summary>deeper</summary><div>
+              <details><summary>deepest</summary><div>
+                <a href="#">leaf-with-a-very-long-file-name.md</a>
+              </div></details>
+            </div></details>
+          </div></details>
+        </div></details>
+      </div></details>
+    </nav><div class="grip"></div></div>
+  </section>
+
+  <section class="card c">
+    <h2><span class="tag">C</span> Compact chains</h2>
+    <p class="desc">B, plus folders with a single folder child collapse into one row
+    (<code>src › components › forms › fields</code>). Deep chains cost one row, not four.</p>
+    <div class="frame"><nav class="panel c">
+      <div class="md-root">~/Projects/treeproj</div>
+      <a href="#/README.md">README.md</a>
+      <a href="#/release-notes-2026.md">release-notes-2026.md</a>
+      <details open><summary>docs</summary><div>
+        <details open><summary>architecture</summary><div>
+          <a href="#/docs/architecture/md-view.spec.md">md-view.spec.md</a>
+          <details open><summary>decisions</summary><div>
+            <a href="#/docs/architecture/decisions/adr-001-standalone-tool.md">adr-001-standalone-tool.md</a>
+            <a href="#/docs/architecture/decisions/adr-002-palette-table.md" aria-current="page">adr-002-palette-table.md</a>
+            <a href="#/docs/architecture/decisions/adr-003-version-literal.md">adr-003-version-literal.md</a>
+          </div></details>
+        </div></details>
+        <details open><summary>stories</summary><div>
+          <details><summary>mermaid-accent-coloring</summary><div>
+            <a href="#">story.md</a><a href="#">closeout.md</a>
+          </div></details>
+        </div></details>
+      </div></details>
+      <details open><summary>src<span class="sep">›</span><span class="tail">components<span class="sep">›</span><span class="tail">forms<span class="sep">›</span><span class="tail">fields</span></span></span></summary><div>
+        <a href="#">text-input-with-validation.md</a>
+        <a href="#">date-range-picker.md</a>
+        <a href="#">validation.md</a>
+      </div></details>
+      <details><summary>pages</summary><div><a href="#">home.md</a></div></details>
+      <details open><summary>tests<span class="sep">›</span><span class="tail">fixtures<span class="sep">›</span><span class="tail">deep<span class="sep">›</span><span class="tail">deeper<span class="sep">›</span><span class="tail">deepest</span></span></span></span></summary><div>
+        <a href="#">leaf-with-a-very-long-file-name.md</a>
+      </div></details>
+    </nav><div class="grip"></div></div>
+  </section>
+
+  <section class="card d">
+    <h2><span class="tag">D</span> Breadcrumb + active path</h2>
+    <p class="desc">Sticky path of the current file on top; rails on the open path get the accent color;
+    off-path folders sit at 55% opacity. Depth reads from the path row, not from indentation.</p>
+    <div class="frame"><nav class="panel d">
+      <div class="crumb">docs<span class="sep">›</span>architecture<span class="sep">›</span>decisions<span class="sep">›</span><b>adr-002-palette-table.md</b></div>
+      <a href="#/README.md">README.md</a>
+      <a href="#/release-notes-2026.md">release-notes-2026.md</a>
+      <details class="on" open><summary>docs</summary><div>
+        <details class="on" open><summary>architecture</summary><div>
+          <a href="#/docs/architecture/md-view.spec.md">md-view.spec.md</a>
+          <details class="on" open><summary>decisions</summary><div>
+            <a href="#/docs/architecture/decisions/adr-001-standalone-tool.md">adr-001-standalone-tool.md</a>
+            <a href="#/docs/architecture/decisions/adr-002-palette-table.md" aria-current="page">adr-002-palette-table.md</a>
+            <a href="#/docs/architecture/decisions/adr-003-version-literal.md">adr-003-version-literal.md</a>
+          </div></details>
+        </div></details>
+        <details class="dim" open><summary>stories</summary><div>
+          <details><summary>mermaid-accent-coloring</summary><div>
+            <a href="#">story.md</a><a href="#">closeout.md</a>
+          </div></details>
+        </div></details>
+      </div></details>
+      <details class="dim" open><summary>src</summary><div>
+        <details open><summary>components</summary><div>
+          <details open><summary>forms</summary><div>
+            <details open><summary>fields</summary><div>
+              <a href="#">text-input-with-validation.md</a>
+              <a href="#">date-range-picker.md</a>
+            </div></details>
+            <a href="#">validation.md</a>
+          </div></details>
+        </div></details>
+        <details><summary>pages</summary><div><a href="#">home.md</a></div></details>
+      </div></details>
+      <details class="dim" open><summary>tests</summary><div>
+        <details open><summary>fixtures</summary><div>
+          <details open><summary>deep</summary><div>
+            <details open><summary>deeper</summary><div>
+              <details><summary>deepest</summary><div>
+                <a href="#">leaf-with-a-very-long-file-name.md</a>
+              </div></details>
+            </div></details>
+          </div></details>
+        </div></details>
+      </div></details>
+    </nav><div class="grip"></div></div>
+  </section>
+
+  <section class="card e">
+    <h2><span class="tag">E</span> B, dragged to 380 px</h2>
+    <p class="desc">The same panel after a drag (width saved in localStorage). Deep levels keep full names;
+    no ellipsis needed at this width. Keyboard: arrows on the handle, double-click resets to 300 px.</p>
+    <div class="frame"><nav class="panel e">
+      <div class="md-root">~/Projects/treeproj</div>
+      <a href="#/README.md">README.md</a>
+      <a href="#/release-notes-2026.md">release-notes-2026.md</a>
+      <details open><summary>docs</summary><div>
+        <details open><summary>architecture</summary><div>
+          <a href="#/docs/architecture/md-view.spec.md">md-view.spec.md</a>
+          <details open><summary>decisions</summary><div>
+            <a href="#/docs/architecture/decisions/adr-001-standalone-tool.md">adr-001-standalone-tool.md</a>
+            <a href="#/docs/architecture/decisions/adr-002-palette-table.md" aria-current="page">adr-002-palette-table.md</a>
+            <a href="#/docs/architecture/decisions/adr-003-version-literal.md">adr-003-version-literal.md</a>
+          </div></details>
+        </div></details>
+        <details open><summary>stories</summary><div>
+          <details><summary>mermaid-accent-coloring</summary><div>
+            <a href="#">story.md</a><a href="#">closeout.md</a>
+          </div></details>
+        </div></details>
+      </div></details>
+      <details open><summary>src</summary><div>
+        <details open><summary>components</summary><div>
+          <details open><summary>forms</summary><div>
+            <details open><summary>fields</summary><div>
+              <a href="#">text-input-with-validation.md</a>
+              <a href="#">date-range-picker.md</a>
+            </div></details>
+            <a href="#">validation.md</a>
+          </div></details>
+        </div></details>
+        <details><summary>pages</summary><div><a href="#">home.md</a></div></details>
+      </div></details>
+      <details open><summary>tests</summary><div>
+        <details open><summary>fixtures</summary><div>
+          <details open><summary>deep</summary><div>
+            <details open><summary>deeper</summary><div>
+              <details><summary>deepest</summary><div>
+                <a href="#">leaf-with-a-very-long-file-name.md</a>
+              </div></details>
+            </div></details>
+          </div></details>
+        </div></details>
+      </div></details>
+    </nav><div class="grip on"></div></div>
+  </section>
+
+</div>
+</body>
+</html>
