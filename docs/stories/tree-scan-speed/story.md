@@ -86,4 +86,5 @@ S. One script region (about 60 lines), one spec section, about five test rows, o
 - Gate page: read later in the PR. Owner, 2026-11-18: "go in autonomous mode".
 - Hooks: preflight none, verify none, status none, cleanup none (AGENTS.md names no hooks).
 - Owner-checked paths: none named in AGENTS.md.
+- Promoted to standard, 2026-11-18: the lite final review found one Important issue (reuse trusts folder times). `flow tier=standard docs=spec,plan design=no orchestrator=yes final=final-reviewer-light gate=read-later scan=no verifier=none`
 - BASE: origin/main at 9e9dbfc. The branch was rebased onto it after line-anchor-nav merged.
