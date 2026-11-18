@@ -1,6 +1,6 @@
 ---
 description: Adds line anchors to the page, so a link with a hash like L85 opens the file at the block that came from that source line, with a flash.
-status: planned
+status: in-progress
 size: M
 risk: contract, security
 ---
@@ -54,3 +54,5 @@ M: two new functions in `lib/page.js`, about 100 lines. One CSS rule set, one gr
 - Budget M ($15, hard stop $20). Check: `make check`; the new rows need Chrome (skip with `skip` lines otherwise). Owner-checked paths: the nine vendored `lib/` files and their licenses. The stamps add no vendored change.
 - flow tier=full docs=spec,plan design=no orchestrator=yes final=final-reviewer gate=stop scan=yes verifier=none. Gate: the owner reads gate.md before the build (risk flags contract, security).
 - Risk notes: `contract` — the meaning of a page fragment grows (new accepted values; every old input keeps working). `security` — the fragment is untrusted; the new parse is one anchored regex over the decoded text, consumed by `getElementById`/`scrollIntoView`/`setAttribute` only.
+- started: 2026-11-18T12:40:00Z
+- BASE: 4e2b238 (local main; `diagram-laser-pointer` merged as PR #8, no stack). Hooks: preflight none; verify `make check`; status none; cleanup none.
