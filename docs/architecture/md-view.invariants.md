@@ -31,6 +31,9 @@ Rules that always hold for md-view. Format: `- **[area]**: rule (Learned from: s
 - **[tests]**: A test with no Chrome or no network prints `skip` lines and exits 0. A pass with `skip` lines proves less, so read them before you trust a pass. (Learned from: story md-view-repo, spec, 2026-11-12)
 - **[palette]**: The Tokyo color layer sets colors only. Each rule starts with `html[data-palette]`, so it wins over the vendored styles by specificity. It has no `!important` and no `display` rule. The vendored files stay unmodified. (Learned from: story themes-tokyo-night, spec)
 
+- **[tests]**: The page script stamps `data-line` and `id` on every rendered block, list item and table row. A test that greps the rendered markup must match the element and its text, not a full tag with a fixed attribute list. (Learned from: story line-anchor-nav, `tests/hostile-dom.sh`, 2026-11-18)
+- **[style]**: A page rule that paints a background over rendered Markdown must win over the even table-row stripe and the Tokyo palette rules. A test of such a rule paints an even row and a Tokyo page. (Learned from: story line-anchor-nav, final review, 2026-11-18)
+
 ## Repo
 
 - **[repo]**: Only `README.md`, `AGENTS.md`, `docs/`, the `--print-association` text and its tests, the old-config-path test, and git history name far2l. `git grep -i far2l` finds no other name. (Learned from: story md-view-repo, owner ruling, 2026-11-12)

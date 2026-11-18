@@ -50,7 +50,7 @@ md-view [options] <file.md>
 | `--print-association` | Print the far2l File associations entry. |
 | `--version` | Print the version, and exit. |
 
-The page goes to `${XDG_CACHE_HOME:-$HOME/.cache}/md-view/` and md-view reuses it while no input changed. In the page, press `t` to change the theme, `s` to change the palette and `w` to change the width. Press `b` to open or close the file tree. Press `?` for help. In the diagram viewer, press `l` for the laser pointer.
+The page goes to `${XDG_CACHE_HOME:-$HOME/.cache}/md-view/` and md-view reuses it while no input changed. In the page, press `t` to change the theme, `s` to change the palette and `w` to change the width. Press `b` to open or close the file tree. Press `?` for help. In the diagram viewer, press `l` for the laser pointer. A link with `#L85` opens the file at that source line.
 
 A diagram needs internet, because mermaid loads from a CDN. Without it, the page shows the source of the diagram.
 
