@@ -16,12 +16,15 @@ pre.mermaid[data-processed] > svg { cursor: zoom-in }
 pre.mermaid:hover .md-dbar, .md-dbar:focus-within { opacity: 1 }
 @media (hover: none) { .md-dbar { opacity: 1 } }
 .md-dbar button, .md-vtools button { font: 16px/1 sans-serif; min-width: 28px; height: 28px; padding: 0 6px; border: 1px solid GrayText; border-radius: 6px; background: ButtonFace; color: ButtonText; cursor: pointer }
-.md-viewer { width: 100%; height: 100%; max-width: none; max-height: none; margin: 0; padding: 0; border: 0; background: Canvas; color: CanvasText }
+.md-viewer { position: relative; width: 100%; height: 100%; max-width: none; max-height: none; margin: 0; padding: 0; border: 0; background: Canvas; color: CanvasText }
 .md-viewer[open] { display: flex; flex-direction: column }
 .md-viewer::backdrop { background: rgba(0,0,0,0.5) }
 .md-vtools { display: flex; justify-content: flex-end; gap: 4px; padding: 6px }
 .md-vbox { flex: 1; overflow: auto; display: flex; cursor: grab; -webkit-user-select: none; user-select: none }
 .md-drag { cursor: grabbing }
+.md-viewer.md-laser-on .md-vbox { cursor: none }
+.md-laser { display: none; position: absolute; z-index: 1; width: 18px; height: 18px; margin: -9px 0 0 -9px; border-radius: 50%; pointer-events: none; background: radial-gradient(circle, rgba(255,0,0,.95) 0, rgba(255,0,0,.5) 5px, rgba(255,0,0,.12) 12px); }
+.md-viewer.md-laser-on .md-laser { display: block }
 .md-vbox > svg { flex: none; margin: auto }
 .markdown-body pre code.hljs { padding: 0; background: transparent; }
 #md-gear { position: fixed; top: 8px; right: 8px; z-index: 20; box-sizing: border-box; width: 28px; height: 28px; margin: 0; padding: 0; border: 1px solid GrayText; border-radius: 6px; background: Canvas; color: CanvasText; font: 16px/1 sans-serif; cursor: pointer; opacity: .45 }

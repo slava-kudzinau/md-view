@@ -582,6 +582,17 @@ drag_page() {
         grep -F -q '<title>drag=1111</title>' "$tmp/drag.dom"
 }
 net_check "viewer: a drag pans, and the scroll bar does not" drag_page
+# The laser row: the Laser pointer button turns the red dot on, a pointer move on the
+# box moves the dot to the pointer point in dialog coordinates, key l turns the dot off
+# and key L turns it on again. The paint gate is the dot display, not the node. The
+# waiting tick rewrites the seed title, and each later tick rewrites the full success
+# title. The title is laser=all ok when every check passes.
+laser_page() {
+    viewer_page laser "${WHEN_BAR}document.querySelector('.md-dbar button').click();var d=document.querySelector('dialog');var box=d.querySelector('.md-vbox');var dot=d.querySelector('.md-laser');var btn=[].filter.call(d.querySelectorAll('button'),function(x){return x.getAttribute('aria-label')==='Laser pointer'})[0];var r=[];var ok=function(){return r.join('').indexOf('0')<0?'all ok':r.join('')};btn.click();document.title='laser=0';(function tick(){if(getComputedStyle(dot).display==='none'){document.title='laser=0';setTimeout(tick,50);return;}r.push(getComputedStyle(dot).display!=='none'?1:0);r.push(btn.getAttribute('aria-pressed')==='true'?1:0);r.push(d.classList.contains('md-laser-on')?1:0);var b=box.getBoundingClientRect();var X=b.left+b.width/2;var Y=b.top+b.height/2;box.dispatchEvent(new PointerEvent('pointermove',{pointerId:1,pointerType:'mouse',clientX:X,clientY:Y,bubbles:true}));var dr=d.getBoundingClientRect();r.push(Math.abs(parseFloat(dot.style.left)-(X-dr.left))<=1&&Math.abs(parseFloat(dot.style.top)-(Y-dr.top))<=1?1:0);d.dispatchEvent(new KeyboardEvent('keydown',{key:'l',bubbles:true}));r.push(getComputedStyle(dot).display==='none'&&btn.getAttribute('aria-pressed')==='false'?1:0);d.dispatchEvent(new KeyboardEvent('keydown',{key:'L',bubbles:true}));r.push(getComputedStyle(dot).display!=='none'&&btn.getAttribute('aria-pressed')==='true'?1:0);r.push(getComputedStyle(box).cursor==='none'?1:0);d.dispatchEvent(new KeyboardEvent('keydown',{key:'l',bubbles:true}));r.push(getComputedStyle(box).cursor==='grab'?1:0);document.title='laser='+ok();})();$WHEN_BAR_END" &&
+        grep -F -q '<title>laser=all ok</title>' "$tmp/laser.dom"
+}
+net_check "viewer: laser dot" laser_page
+
 # The page keys t and w are sent to the open dialog. The theme and the width do not change.
 keys_page() {
     viewer_page keys "${WHEN_BAR}document.querySelector('.md-dbar button').click();var d=document.querySelector('dialog');var h=document.documentElement;var before=h.getAttribute('data-theme')+h.getAttribute('data-width');d.dispatchEvent(new KeyboardEvent('keydown',{key:'t',bubbles:true}));d.dispatchEvent(new KeyboardEvent('keydown',{key:'w',bubbles:true}));document.title='open='+(d.open?1:0)+' keys='+(before===h.getAttribute('data-theme')+h.getAttribute('data-width')?'still':'changed');$WHEN_BAR_END" &&
