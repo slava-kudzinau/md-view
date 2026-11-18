@@ -777,7 +777,7 @@ case_page_hljs_after_marked() {
     line_of "  var MERMAID_URL = 'https://cdn.jsdelivr.net/npm/mermaid@12.3.0/dist/mermaid.min.js';"; l_page=$ln
     [ "$l_md" -lt "$l_marked" ] && [ "$l_marked" -lt "$l_hl" ] && [ "$l_hl" -lt "$l_page" ] \
         || bad "the scripts are not in the order text, marked, highlight, page"
-    line_of 'tpl.innerHTML = marked.parse(files[enc]);'; l_parse=$ln
+    line_of 'tpl.innerHTML = marked.parser(mdTokens);'; l_parse=$ln
     line_of 'hljs.highlightElement(code)'; l_hlel=$ln
     [ "$l_parse" -lt "$l_hlel" ] || bad "highlight runs before marked renders the text"
     exit 0
@@ -847,7 +847,7 @@ case_page_gear_markup() {
     printf '%s\n' "$pop" | grep -qF 'position: fixed' || bad "the popover is not fixed"
     # Values reach the page through textContent. The one innerHTML is the marked output.
     [ "$(iife | grep -c -F 'innerHTML')" = 1 ] || bad "innerHTML is used for more than the marked output"
-    iife | grep -qF 'tpl.innerHTML = marked.parse(files[enc]);' || bad "the marked output does not use innerHTML"
+    iife | grep -qF 'tpl.innerHTML = marked.parser(mdTokens);' || bad "the marked output does not use innerHTML"
     exit 0
 }
 
@@ -2394,6 +2394,7 @@ case_tree_off_same_page() {
         sed -e '/^\.md-dbar { position: absolute/,/^\.md-vbox > svg { flex: none; margin: auto }$/d' \
             -e '/^pre\.mermaid\[data-processed\] > svg { cursor: zoom-in }$/d' \
             -e '/^#md-pop \.md-version {/d' \
+            -e '/^\.markdown-body \.md-line-target { background-color: light-dark(#fff8c5, rgba(187, 128, 9, \.35)) !important; }$/d' \
             -e 's/^pre\.mermaid\[data-processed\] { position: relative; /pre.mermaid[data-processed] { /' \
             -e 's/^@media print { #md-gear, #md-pop, \.md-dbar { display: none !important } }$/@media print { #md-gear, #md-pop { display: none !important } }/' "$1"
     }

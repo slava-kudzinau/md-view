@@ -103,7 +103,7 @@ The script starts each command with `exec` in a subshell. The page path is one a
 2. `sed` removes a UTF-8 BOM and each CR at a line end. It doubles each `\`, then writes `</` as `<\/` and `<!--` as `<\!--`.
 3. The text goes into `<script type="text/markdown" id="md">`.
 4. The script adds `marked.min.js` inline, then `highlight.min.js`, then the page script `page.js`.
-5. In the browser, the page script reverses the escapes and calls `marked.parse`. The result goes into `<main id="content">`, so the text shows before any network use. Then `highlight.js` marks each `pre > code` block that has a known language. A fence with no language, an unknown language or `mermaid` stays plain, and a highlight error leaves the plain block.
+5. In the browser, the page script reverses the escapes, splits the text into tokens with `marked.lexer` and renders them with `marked.parser`. The result is the same HTML as `marked.parse`. The result goes into `<main id="content">`, so the text shows before any network use. Then `highlight.js` marks each `pre > code` block that has a known language. A fence with no language, an unknown language or `mermaid` stays plain, and a highlight error leaves the plain block.
 
 The start values are the attributes `data-start-width`, `data-start-theme` and `data-start-palette` of `html`. They can hold only an accepted word. A flag that sets the width or the theme adds `data-forced="1"`.
 
@@ -117,8 +117,8 @@ Tree mode is on by default. It shows the opened file and the other Markdown file
 | Files in the page | Each tree file with state `page` goes in the page, in tree order. The opened file is first and counts last. A file over 1 MiB is `big`. A file that would take the Markdown text over 8 MiB is `cut`. A `big` or `cut` file stays in the tree only. |
 | Page contents | `<script type="text/markdown" id="md">` for the opened file. One `<script type="text/markdown" class="md-file" data-path="ENC">` per other file. A `<script type="text/plain" id="md-tree">` holds one `<state> <ENC>` line per tree file. |
 | Attributes on `html` | `data-tree="on"`, `data-root`, `data-files`, `data-cap`, `data-panel="open\|closed"`. The page uses a number only if it matches `^[0-9]+$`, and an `ENC` only if it matches `^[A-Za-z0-9._~/%-]*$`. |
-| Route | The page URL without a hash is the page. `#/ENC` shows that file. `#/ENC#FRAG` also scrolls to the anchor. Back and Forward move in the browser history. |
-| Links | The page script reads each link of the rendered text. A relative target is resolved against the file of the link. `%XX` is decoded once before the check. A target is in the root if no `..` segment leaves the root and it stays under the root as a real path. A target outside the root, an absolute path or a `file:` target shows as text with the note `not in this tree`. A link to a page file gets `href` = page URL `#/ENC` and the note is not added. A link to a `big` or `cut` file goes there, and that file shows its limit note. |
+| Route | The page URL without a hash is the page. `#/ENC` shows that file. `#/ENC#FRAG` also scrolls to the anchor. A `FRAG` is a heading slug, a line `L<n>`, a range `L<n>-<m>`, or a range `L<n>-L<m>`. The page script stamps each rendered block, list item, and table row with its 1-based source line: the attribute `data-line="<n>"` first, then the id `L<n>`. A line anchor lands on the block, list item, or row of that source line. It uses the last stamp at or below it, and flashes the landed marks with the class `md-line-target`. A heading keeps its `user-content-` id and gets only `data-line`. A container and its first child can share one `L<n>` id, for example a list and its first item. Back and Forward move in the browser history. |
+| Links | The page script reads each link of the rendered text. A relative target is resolved against the file of the link. `%XX` is decoded once before the check. A target is in the root if no `..` segment leaves the root and it stays under the root as a real path. A target outside the root, an absolute path or a `file:` target shows as text with the note `not in this tree`. A link to a page file gets `href` = page URL `#/ENC[#FRAG]` and the note is not added. A link to a `big` or `cut` file goes there, and that file shows its limit note. |
 | Raw HTML | Raw HTML shows as text in tree mode, as in one-file mode. |
 | Panel | Fixed on the left, full height, 260 px wide, own scroll. The root name at the top. Folders are `details` with the name in `summary`. Files are links. The folders on the path of the shown file are open. The shown file has `aria-current="page"` and the panel scrolls it into view. A `big` or `cut` file has a low-contrast style. At the cap the last line is `Showing the first N files.`. |
 | Toggle | One button at the top-left, at the right edge of the panel when open, at the left edge when closed. `aria-expanded` and `aria-controls`. The key `b` does the same, and follows the rule of the other keys. |
@@ -185,6 +185,7 @@ A fence is a diagram when the first word of its language is `mermaid`. This matc
 | Link out of the root | `../outside.md`, `/etc/x.md`, `file:` URL, `%2e%2e/x.md` | Text, with the note `not in this tree`. |
 | Link to a page file | two files in one root | The other file shows in the same page, and Back returns. |
 | Link to a `big` or `cut` file | a file over 1 MiB | The file shows its note, `This file is too large for the page.` or `This file is over the page limit.` |
+| Link with a line anchor | `[go](o.md#L8)` | The page shows `o.md`, and line 8 shows flashed. |
 | Tree over the cap | `tree_max_files=5` | Five files and the line `Showing the first 5 files.` |
 | `tree=off`, `--tree off`, root `$HOME` or `/` | none | The page of one file, and the popover says why. |
 
@@ -246,7 +247,7 @@ The policy is `default-src 'none'; script-src 'unsafe-inline' https://cdn.jsdeli
 | Test | Holds |
 |---|---|
 | `tests/browser-page.sh` | Needs only `sh`. It drives `lib/md-view` with `--no-open`. It checks the flags, the exit codes and `config.ini`. It checks that an old far2l config file has no effect. It also checks the page name, the reuse rule, the temporary file, the key and the page text. The gear, the popover, the keys and the saved choice are checked as page text only. A person checks them in Firefox and Chrome. |
-| `tests/browser-links-dom.sh` | Headless Chrome. The hash route, the link rules, images, heading ids and anchors. |
+| `tests/browser-links-dom.sh` | Headless Chrome. The hash route, the link rules, images, heading ids, anchors and line anchors. |
 | `tests/hostile-dom.sh` | Headless Chrome. The untrusted content rows, the CSP, the page written with `--out`, and the `--print-association` text with a hostile file name. |
 | `tests/launcher.sh` | The checkout launcher, the installed launcher, `make install` and `make uninstall`. |
 

@@ -149,7 +149,7 @@ case_dom_start_file() {
     printf '# B-ONLY\n' > a.md || bad "write"
     build o.md
     dom > "$d/dom"
-    main_of < "$d/dom" | grep -qF '<main id="content" class="markdown-body"><h1 id="user-content-a-open">A-OPEN</h1>' \
+    main_of < "$d/dom" | grep -qF '<main id="content" class="markdown-body"><h1 data-line="1" id="user-content-a-open">A-OPEN</h1>' \
         || bad "the opened file is not shown"
     grep -qF 'A-OPEN' "$d/dom" || bad "no A-OPEN"
     exit 0
@@ -161,7 +161,7 @@ case_dom_route_file() {
     printf '# B-ONLY\n' > a.md || bad "write"
     build o.md
     dom '/a.md' > "$d/dom"
-    main_of < "$d/dom" | grep -qF '<h1 id="user-content-b-only">B-ONLY</h1>' || bad "the route file is not shown"
+    main_of < "$d/dom" | grep -qF '<h1 data-line="1" id="user-content-b-only">B-ONLY</h1>' || bad "the route file is not shown"
     grep -qxF '<title>a.md</title>' "$d/dom" || bad "the title is not the base name: $(grep -o '<title>[^<]*</title>' "$d/dom")"
     exit 0
 }
@@ -376,6 +376,168 @@ case_dom_one_file_anchor() {
     want='<a href="#sec">L-Sec</a>'
     main_of < "$d/dom" | grep -qF "$want" || bad "the one-file anchor is not a same-page link: $(main_of < "$d/dom")"
     main_of < "$d/dom" | grep -qF 'id="user-content-sec"' || bad "no heading id in one-file mode"
+    exit 0
+}
+
+# line_fixture: a one-file page with a known list and table. Line 1 is the
+# heading, 3 the link, 7 the list (alpha 7, beta 8, deep 9), 11 the table
+# (header 11, rows 13 and 14), 16 the end. The light theme keeps the paint
+# row the same on every system.
+line_fixture() {
+    printf '# T\n\n[go](#L8)\n\npara one\n\n- alpha\n- beta\n  - deep\n\n| a | b |\n| - | - |\n| 1 | 2 |\n| 3 | 4 |\n\nend\n' > o.md || bad "write"
+    build --tree off --theme light o.md
+}
+
+case_dom_line_list_item() {
+    fresh
+    line_fixture
+    dom 'L8' > "$d/dom"
+    # beta holds the nested list, so no </li> follows its text.
+    main_of < "$d/dom" | grep -qF '<li data-line="8" id="L8" class="md-line-target">beta' \
+        || bad "no flashed beta item: $(main_of < "$d/dom")"
+    main_of < "$d/dom" | grep -qF '<a href="#L8">go</a>' || bad "the line link lost its href"
+    exit 0
+}
+
+# paint_on: adds a script that titles the page "<id> <background>" of the
+# flashed element. After it, dom HASH dumps the paint of HASH.
+paint_on() {
+    with_script "$page" '<script>var e=document.querySelector(".md-line-target");document.title=e.id+" "+getComputedStyle(e).backgroundColor;</script>'
+    page=$d/injected.html
+}
+
+case_dom_line_table_row() {
+    fresh
+    line_fixture
+    dom 'L13' > "$d/dom"
+    main_of < "$d/dom" | grep -qF '<tr data-line="13" id="L13" class="md-line-target">' \
+        || bad "no flashed table row: $(main_of < "$d/dom")"
+    # The paint: the flash must win over the stripes of .markdown-body table tr,
+    # on the odd row 13 and on the even row 14.
+    paint_on
+    for h in L13 L14; do
+        dom "$h" > "$d/dom2"
+        grep -qF "<title>$h rgb(255, 248, 197)</title>" "$d/dom2" \
+            || bad "the $h paint is not the flash color: $(grep -o '<title>[^<]*</title>' "$d/dom2")"
+    done
+    exit 0
+}
+
+# Under the Tokyo palette the stripe, code block and rule rules are more
+# specific than the flash rule, and the flash must win over each. Lines: 3 the
+# header, 5 and 6 the rows (6 is even), 8 the rule, 10 to 12 the code block.
+case_dom_line_palette_tokyo() {
+    fresh
+    printf '# T\n\n| a | b |\n| - | - |\n| 1 | 2 |\n| 3 | 4 |\n\n---\n\n```\ncode\n```\n' > o.md || bad "write"
+    build --tree off --palette tokyo --theme dark o.md
+    paint_on
+    for h in L6 L8 L10; do
+        dom "$h" > "$d/dom"
+        grep -qF "<title>$h rgba(187, 128, 9, 0.35)</title>" "$d/dom" \
+            || bad "the $h paint is not the flash color: $(grep -o '<title>[^<]*</title>' "$d/dom")"
+    done
+    exit 0
+}
+
+case_dom_line_range() {
+    fresh
+    line_fixture
+    # The short form L7-9 and the long form L7-L9 mark the same items.
+    for h in L7-9 L7-L9; do
+        dom "$h" > "$d/dom"
+        main_of < "$d/dom" | grep -qF '<li data-line="9" id="L9" class="md-line-target">deep</li>' \
+            || bad "$h: the range end is not marked: $(main_of < "$d/dom")"
+        main_of < "$d/dom" | grep -qF '<li data-line="7" id="L7" class="md-line-target">alpha' \
+            || bad "$h: the range does not land on alpha: $(main_of < "$d/dom")"
+        main_of < "$d/dom" | grep -qF 'id="L13" class="md-line-target"' \
+            && bad "$h: a row past the range end is marked: $(main_of < "$d/dom")"
+    done
+    exit 0
+}
+
+# A line link from one tree file to another. The route keeps the line, and the
+# other file lands on it. Line 8 of o.md is the item beta.
+case_dom_line_tree_link() {
+    fresh
+    printf '# A-OPEN\n\n[go](o.md#L8)\n' > a.md || bad "write"
+    printf '# T\n\n[up](a.md)\n\npara one\n\n- alpha\n- beta\n' > o.md || bad "write"
+    build a.md
+    dom > "$d/dom"
+    want='<a href="'"$(file_url "$page")"'#/o.md#L8">go</a>'
+    main_of < "$d/dom" | grep -qF "$want" || bad "the line link is not a route: $(main_of < "$d/dom")"
+    dom '/o.md#L8' > "$d/dom2"
+    main_of < "$d/dom2" | grep -qF '<li data-line="8" id="L8" class="md-line-target">beta</li>' \
+        || bad "the route does not land on line 8 of o.md: $(main_of < "$d/dom2")"
+    exit 0
+}
+
+case_dom_line_past_end() {
+    fresh
+    line_fixture
+    dom 'L99' > "$d/dom"
+    main_of < "$d/dom" | grep -qF '<p data-line="16" id="L16" class="md-line-target">end</p>' \
+        || bad "no landing past the last line: $(main_of < "$d/dom")"
+    exit 0
+}
+
+case_dom_line_zero() {
+    fresh
+    line_fixture
+    dom 'L0' > "$d/dom"
+    m=$(main_of < "$d/dom")
+    echo "$m" | grep -qF '<h1 data-line="1"' || bad "the h1 has no line stamp: $m"
+    echo "$m" | grep -qF 'id="user-content-t"' || bad "the heading id did not win: $m"
+    echo "$m" | grep -qF '<h1 data-line="1" id="user-content-t" class="md-line-target">T</h1>' \
+        || bad "no flash on the first block: $m"
+    exit 0
+}
+
+# A list with no blank line after it, then a raw html block. The html renders
+# as escaped text, with no element. The stamp of the paragraph must still be 7.
+case_dom_line_after_block() {
+    fresh
+    printf '# T\n\n- one\n- two\n<div>raw</div>\n\npara\n' > o.md || bad "write"
+    build --tree off o.md
+    dom 'L7' > "$d/dom"
+    main_of < "$d/dom" | grep -qF '<p data-line="7" id="L7" class="md-line-target">para</p>' \
+        || bad "the paragraph after the list and the html is not line 7: $(main_of < "$d/dom")"
+    exit 0
+}
+
+# The first block is on line 2, so no stamp is at or below line 1. #L0 lands
+# on the first stamp.
+case_dom_line_before_first() {
+    fresh
+    printf '\npara one\n\nend\n' > o.md || bad "write"
+    build --tree off o.md
+    dom 'L0' > "$d/dom"
+    main_of < "$d/dom" | grep -qF '<p data-line="2" id="L2" class="md-line-target">para one</p>' \
+        || bad "#L0 does not land on the first block: $(main_of < "$d/dom")"
+    exit 0
+}
+
+# A tight task item renders its box as an input before its text. The line
+# anchor lands on the item. The box takes no stamp.
+case_dom_line_task_item() {
+    fresh
+    printf '# T\n\n- [ ] one\n- [x] two\n' > o.md || bad "write"
+    build --tree off o.md
+    dom 'L4' > "$d/dom"
+    main_of < "$d/dom" | grep -qF '<li data-line="4" id="L4" class="md-line-target"><input checked="" disabled="" type="checkbox"> two</li>' \
+        || bad "the task item is not the flashed line: $(main_of < "$d/dom")"
+    exit 0
+}
+
+# A same-page hash that misses clears the flash of the last line landing. The
+# title holds the flash before the hash change and after it.
+case_dom_line_clear_on_miss() {
+    fresh
+    line_fixture
+    with_script "$page" '<script>(function(){var l=document.getElementById("L8");var on=function(){return l.classList.contains("md-line-target")?"on":"off";};var before=on();document.title="before="+before;addEventListener("hashchange",function(){document.title="before="+before+" after="+on();});location.hash="nope";})();</script>'
+    page=$d/injected.html
+    dom 'L8' > "$d/dom"
+    grep -qF '<title>before=on after=off</title>' "$d/dom" \
+        || bad "the flash of L8 stays after a miss: $(grep -o '<title>[^<]*</title>' "$d/dom")"
     exit 0
 }
 
@@ -798,7 +960,9 @@ for c in dom_start_file dom_route_file dom_route_unknown \
          dom_link_percent dom_link_big dom_other_link dom_image_base \
          dom_heading_ids dom_anchor_same_file dom_anchor_other_file \
          dom_one_file_anchor dom_one_file_links dom_names_hostile dom_raw_html_text \
-         dom_script_scheme dom_panel_tree dom_panel_current dom_panel_folders_open \
+         dom_line_list_item dom_line_table_row dom_line_palette_tokyo dom_line_range dom_line_past_end \
+         dom_line_zero dom_line_after_block dom_line_before_first dom_line_task_item \
+         dom_line_clear_on_miss dom_line_tree_link dom_script_scheme dom_panel_tree dom_panel_current dom_panel_folders_open \
          dom_panel_root_name dom_panel_cap_note dom_panel_big_style \
          dom_panel_toggle_markup dom_panel_off_notice dom_panel_width_rule \
          dom_panel_gear_fixed dom_panel_names_hostile dom_panel_link_click dom_panel_focus \
