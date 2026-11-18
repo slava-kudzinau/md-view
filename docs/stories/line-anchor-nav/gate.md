@@ -35,11 +35,12 @@ flowchart LR
 ### Decisions the model made
 
 | Decision | Alternative rejected | Why |
+|---|---|---|
 | Land on the last stamped element at or below the line | Require an element that starts exactly at the line | GitHub's behavior; a quote line inside a paragraph must land on that paragraph. |
 | Grammar is case-sensitive: `L` only | Accept `l85` too | GitHub is case-sensitive; one spelling keeps the spec row short. |
 | Stamp both `id="L85"` and `data-line="85"` | Stamp only `data-line` | The id lets a one-file page's native fragment jump work beside the script; `data-line` drives the landing search. |
 | The flash stays until the next landing | A timed fade-out | No timer to tune; the DOM dump proves the class for the test. |
-| Fixed flash color `light-dark(#fff8c5, rgba(187,128,9,.35))`, scoped `.markdown-body .md-line-target` | A palette-driven accent; a bare `.md-line-target` selector | The flash is a transient mark, not theme content; GitHub uses one yellow. The scoped selector wins over `.markdown-body table tr` on a flashed table row; the bare one loses. |
+| Fixed flash color `light-dark(#fff8c5, rgba(187,128,9,.35))`, scoped `.markdown-body .md-line-target` | A palette-driven accent; a bare `.md-line-target` selector | The flash is a transient mark, not theme content; GitHub uses one yellow. The `!important` on its color makes it win over the table stripes, the Tokyo palette rules and the code and rule rules. The scoped selector alone does not: those rules are more specific. |
 | A range marks every stamped element inside it | Mark only the landing element | The range is a quote of several items; all of them are the quote. |
 | Stamp table rows at `<tr>`, header row at the table's start | Stamp each `<td>` | A row is the unit a quote points at; cells double the stamp count for no gain. |
 | Stamps run on every render, no cache | Cache stamps per file | `show()` rebuilds the DOM on every route change; cached nodes would be detached. Lex is cheap at the 8 MiB cap; measure in T1, cache only if slow. |
@@ -47,17 +48,19 @@ flowchart LR
 ### Terms on this page
 
 - stamp: write a source line number onto an element, as `data-line` and `id`.
-- quote: a link that cites a line of another file, like the `cv.md#L85` links in interview-plan.md. Landing (land on): the element a line anchor scrolls to.
+- quote: a link that cites a line of another file, like the `cv.md#L85` links in plan.md. Landing (land on): the element a line anchor scrolls to.
 - reading pane: the content area (`#content`) that shows the current file. Route (hash route): the page's URL hash picks the file and anchor; see the Route row in the spec. `#FRAG`: the anchor part of that hash.
 - `show()`: the function in `lib/page.js` that renders one file into the reading pane. `md-view`: this tool; run it with `sh bin/md-view <file>`.
 - marked: the vendored Markdown engine (`lib/marked.min.js`). `.markdown-body`: the class the vendored GitHub stylesheet (`lib/github-markdown-*.css`) puts on the rendered Markdown. Vendored files: the nine third-party `lib/` files with their licenses.
 - palette-driven accent: the page setting that tints diagrams from a palette (`palette=` in the config). 8 MiB cap: the spec's limit on the page text.
 - T1, T2, T3: task labels in `plan.md`. `dom_line_*` rows: the new test cases in `tests/browser-links-dom.sh`, named like the existing `dom_*` cases.
-- cv.md, interview-plan.md: the owner's files in `/Users/Viachaslau_Kudzinau/Projects/ai-sa-fde-interview/candidates/artiom-negara/`.
+- cv.md, plan.md: example file names. The quotes on this page point at them; they are not in this repo.
 
 ### How you'll see it working
 
-`md-view /Users/Viachaslau_Kudzinau/Projects/ai-sa-fde-interview/candidates/artiom-negara/interview-plan.md`, then click a `cv.md#L85` quote. cv.md opens scrolled to the list item from line 85, with a yellow flash. Test rows: `sh tests/browser-links-dom.sh` (five new `dom_line_*` rows).
+Run `md-view plan.md` in a folder that also holds `cv.md`. Then click a `cv.md#L85` quote. cv.md opens scrolled to the list item from line 85, with a yellow flash.
+
+Test rows: `sh tests/browser-links-dom.sh` (at least 11 new `dom_line_*` rows).
 
 ### A fresh reader's paraphrase
 

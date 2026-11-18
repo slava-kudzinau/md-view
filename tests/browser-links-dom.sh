@@ -399,31 +399,75 @@ case_dom_line_list_item() {
     exit 0
 }
 
+# paint_on: adds a script that titles the page "<id> <background>" of the
+# flashed element. After it, dom HASH dumps the paint of HASH.
+paint_on() {
+    with_script "$page" '<script>var e=document.querySelector(".md-line-target");document.title=e.id+" "+getComputedStyle(e).backgroundColor;</script>'
+    page=$d/injected.html
+}
+
 case_dom_line_table_row() {
     fresh
     line_fixture
     dom 'L13' > "$d/dom"
     main_of < "$d/dom" | grep -qF '<tr data-line="13" id="L13" class="md-line-target">' \
         || bad "no flashed table row: $(main_of < "$d/dom")"
-    # The paint: the flash class must win over .markdown-body table tr.
-    with_script "$page" '<script>document.title="bg="+getComputedStyle(document.getElementById("L13")).backgroundColor;</script>'
-    page=$d/injected.html
-    dom 'L13' > "$d/dom2"
-    grep -qF '<title>bg=rgb(255, 248, 197)</title>' "$d/dom2" \
-        || bad "the row paint is not the flash color: $(grep -o '<title>[^<]*</title>' "$d/dom2")"
+    # The paint: the flash must win over the stripes of .markdown-body table tr,
+    # on the odd row 13 and on the even row 14.
+    paint_on
+    for h in L13 L14; do
+        dom "$h" > "$d/dom2"
+        grep -qF "<title>$h rgb(255, 248, 197)</title>" "$d/dom2" \
+            || bad "the $h paint is not the flash color: $(grep -o '<title>[^<]*</title>' "$d/dom2")"
+    done
+    exit 0
+}
+
+# Under the Tokyo palette the stripe, code block and rule rules are more
+# specific than the flash rule, and the flash must win over each. Lines: 3 the
+# header, 5 and 6 the rows (6 is even), 8 the rule, 10 to 12 the code block.
+case_dom_line_palette_tokyo() {
+    fresh
+    printf '# T\n\n| a | b |\n| - | - |\n| 1 | 2 |\n| 3 | 4 |\n\n---\n\n```\ncode\n```\n' > o.md || bad "write"
+    build --tree off --palette tokyo --theme dark o.md
+    paint_on
+    for h in L6 L8 L10; do
+        dom "$h" > "$d/dom"
+        grep -qF "<title>$h rgba(187, 128, 9, 0.35)</title>" "$d/dom" \
+            || bad "the $h paint is not the flash color: $(grep -o '<title>[^<]*</title>' "$d/dom")"
+    done
     exit 0
 }
 
 case_dom_line_range() {
     fresh
     line_fixture
-    dom 'L7-L9' > "$d/dom"
-    main_of < "$d/dom" | grep -qF '<li data-line="9" id="L9" class="md-line-target">deep</li>' \
-        || bad "the range end is not marked: $(main_of < "$d/dom")"
-    main_of < "$d/dom" | grep -qF '<li data-line="7" id="L7" class="md-line-target">alpha' \
-        || bad "the range does not land on alpha: $(main_of < "$d/dom")"
-    main_of < "$d/dom" | grep -qF 'id="L13" class="md-line-target"' \
-        && bad "a row past the range end is marked: $(main_of < "$d/dom")"
+    # The short form L7-9 and the long form L7-L9 mark the same items.
+    for h in L7-9 L7-L9; do
+        dom "$h" > "$d/dom"
+        main_of < "$d/dom" | grep -qF '<li data-line="9" id="L9" class="md-line-target">deep</li>' \
+            || bad "$h: the range end is not marked: $(main_of < "$d/dom")"
+        main_of < "$d/dom" | grep -qF '<li data-line="7" id="L7" class="md-line-target">alpha' \
+            || bad "$h: the range does not land on alpha: $(main_of < "$d/dom")"
+        main_of < "$d/dom" | grep -qF 'id="L13" class="md-line-target"' \
+            && bad "$h: a row past the range end is marked: $(main_of < "$d/dom")"
+    done
+    exit 0
+}
+
+# A line link from one tree file to another. The route keeps the line, and the
+# other file lands on it. Line 8 of o.md is the item beta.
+case_dom_line_tree_link() {
+    fresh
+    printf '# A-OPEN\n\n[go](o.md#L8)\n' > a.md || bad "write"
+    printf '# T\n\n[up](a.md)\n\npara one\n\n- alpha\n- beta\n' > o.md || bad "write"
+    build a.md
+    dom > "$d/dom"
+    want='<a href="'"$(file_url "$page")"'#/o.md#L8">go</a>'
+    main_of < "$d/dom" | grep -qF "$want" || bad "the line link is not a route: $(main_of < "$d/dom")"
+    dom '/o.md#L8' > "$d/dom2"
+    main_of < "$d/dom2" | grep -qF '<li data-line="8" id="L8" class="md-line-target">beta</li>' \
+        || bad "the route does not land on line 8 of o.md: $(main_of < "$d/dom2")"
     exit 0
 }
 
@@ -916,9 +960,9 @@ for c in dom_start_file dom_route_file dom_route_unknown \
          dom_link_percent dom_link_big dom_other_link dom_image_base \
          dom_heading_ids dom_anchor_same_file dom_anchor_other_file \
          dom_one_file_anchor dom_one_file_links dom_names_hostile dom_raw_html_text \
-         dom_line_list_item dom_line_table_row dom_line_range dom_line_past_end \
+         dom_line_list_item dom_line_table_row dom_line_palette_tokyo dom_line_range dom_line_past_end \
          dom_line_zero dom_line_after_block dom_line_before_first dom_line_task_item \
-         dom_line_clear_on_miss dom_script_scheme dom_panel_tree dom_panel_current dom_panel_folders_open \
+         dom_line_clear_on_miss dom_line_tree_link dom_script_scheme dom_panel_tree dom_panel_current dom_panel_folders_open \
          dom_panel_root_name dom_panel_cap_note dom_panel_big_style \
          dom_panel_toggle_markup dom_panel_off_notice dom_panel_width_rule \
          dom_panel_gear_fixed dom_panel_names_hostile dom_panel_link_click dom_panel_focus \

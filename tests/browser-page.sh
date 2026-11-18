@@ -2394,7 +2394,7 @@ case_tree_off_same_page() {
         sed -e '/^\.md-dbar { position: absolute/,/^\.md-vbox > svg { flex: none; margin: auto }$/d' \
             -e '/^pre\.mermaid\[data-processed\] > svg { cursor: zoom-in }$/d' \
             -e '/^#md-pop \.md-version {/d' \
-            -e '/^\.markdown-body \.md-line-target { background-color: light-dark(#fff8c5, rgba(187, 128, 9, \.35)); }$/d' \
+            -e '/^\.markdown-body \.md-line-target { background-color: light-dark(#fff8c5, rgba(187, 128, 9, \.35)) !important; }$/d' \
             -e 's/^pre\.mermaid\[data-processed\] { position: relative; /pre.mermaid[data-processed] { /' \
             -e 's/^@media print { #md-gear, #md-pop, \.md-dbar { display: none !important } }$/@media print { #md-gear, #md-pop { display: none !important } }/' "$1"
     }
