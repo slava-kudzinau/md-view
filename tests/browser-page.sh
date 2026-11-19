@@ -2705,6 +2705,17 @@ case_page_tree_narrow_rule() {
     exit 0
 }
 
+case_page_tree_closed_grip_hidden() {
+    fresh
+    mkdir proj || bad "mkdir"
+    printf '# A\n' > proj/o.md || bad "write"
+    tpage proj/o.md
+    sed -n '/^<style id="page">$/,/^<\/style>$/p' "$page" > "$d/page-style" || bad "sed"
+    grep -qxF 'html[data-panel="closed"] #md-tree-resize { display: none }' "$d/page-style" \
+        || bad "no closed-state rule that hides the resize grip"
+    exit 0
+}
+
 # --- the color layer of the palette ----------------------------------------
 
 # layer_rows FILE: reads rows from stdin, each "SELECTORS|DECLARATIONS". FILE
@@ -2848,7 +2859,7 @@ for c in flags_ok flag_width_bad flag_theme_bad flag_width_missing palette_setti
          tree_off_same_page tree_key_line cache_tree_reuse cache_tree_changed_file \
          cache_tree_added_file cache_tree_deleted_file cache_tree_head_only cache_tree_no_cache \
          cache_tree_renamed_file tree_page_long_lines \
-         page_tree_key_guard page_tree_storage_try page_tree_print_hidden page_tree_narrow_rule \
+         page_tree_key_guard page_tree_storage_try page_tree_print_hidden page_tree_narrow_rule page_tree_closed_grip_hidden \
          palette_layer; do
     run "$c"
 done

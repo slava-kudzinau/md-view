@@ -970,6 +970,7 @@ html[data-panel="closed"] #md-tree-panel { display: none }
 #md-tree-toggle { position: fixed; top: 8px; left: calc(var(--md-panel-w, 300px) + 8px); z-index: 20; box-sizing: border-box; width: 28px; height: 28px; margin: 0; padding: 0; border: 1px solid GrayText; border-radius: 6px; background: Canvas; color: CanvasText; font: 14px/1 sans-serif; cursor: pointer }
 html[data-panel="closed"] #md-tree-toggle { left: 8px }
 #md-tree-resize { position: fixed; top: 0; left: calc(var(--md-panel-w, 300px) - 3px); bottom: 0; z-index: 15; width: 6px; cursor: col-resize; touch-action: none }
+html[data-panel="closed"] #md-tree-resize { display: none }
 #md-tree-panel .md-root { position: sticky; top: 0; margin: 0 0 6px; padding: 2px 0; font-weight: 600; overflow-wrap: anywhere; background: inherit }
 #md-tree-panel details { margin: 0 }
 #md-tree-panel details > div { margin-left: 12px; padding-left: 8px; border-left: 1px solid GrayText }
