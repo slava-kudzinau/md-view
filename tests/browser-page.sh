@@ -2685,6 +2685,8 @@ case_page_tree_print_hidden() {
         || bad "no print rule that hides the panel and the toggle"
     grep -qF '#md-tree-panel { position: fixed' "$d/page-style" \
         || bad "no panel rule head #md-tree-panel { position: fixed"
+    grep -qxF '#md-tree-panel a { display: block; padding-left: 1em; color: color-mix(in srgb, CanvasText 70%, Canvas); text-decoration: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis }' "$d/page-style" \
+        || bad "no file link rule with 1em padding and the mixed file color"
     grep -qxF '@media print { #md-tree-resize { display: none !important } }' "$d/page-style" \
         || bad "no print rule that hides the resize grip"
     exit 0
@@ -2830,6 +2832,7 @@ case_palette_layer() {
     ! grep -q 'md-tree' "$d/layer1" || bad "the one-file page has a tree rule in the layer"
     layer_rows "$d/layer2" <<'ROWS'
 #md-tree-panel|background-color:bg-dark color:fg-dark border-color:border
+#md-tree-panel a|color:fg
 #md-tree-panel .md-root|color:fg
 #md-tree-panel a:hover, #md-tree-panel a:focus|color:blue
 #md-tree-panel a[aria-current="page"]|background-color:bg-visual color:fg

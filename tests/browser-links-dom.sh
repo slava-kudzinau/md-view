@@ -611,9 +611,9 @@ case_dom_panel_tree() {
     printf '%s\n' "$t" | grep -qF 'href="'"$(file_url "$page")"'#/sub/a.md">a.md</a>' || bad "no link of sub/a.md: $t"
     printf '%s\n' "$t" | grep -qF 'href="'"$(file_url "$page")"'#/deep/a/d.md">d.md</a>' || bad "no link of deep/a/d.md: $t"
     printf '%s\n' "$t" | grep -qF 'href="'"$(file_url "$page")"'#/o.md"' || bad "no link of o.md: $t"
-    # The tree order: b.md before o.md before sub before deep.
+    # The tree order: folders first (sub, deep), then the files (b, o).
     printf '%s\n' "$t" | grep -o 'href="[^"]*"' | sed 's|.*#/||; s|"$||' > "$d/order"
-    printf 'b.md\no.md\nsub/a.md\ndeep/a/d.md\n' > "$d/want"
+    printf 'sub/a.md\ndeep/a/d.md\nb.md\no.md\n' > "$d/want"
     cmp -s "$d/want" "$d/order" || bad "tree order: $(cat "$d/order")"
     exit 0
 }
