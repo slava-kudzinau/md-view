@@ -607,7 +607,7 @@ case_dom_panel_tree() {
     t=$(tree_of < "$d/dom")
     printf '%s\n' "$t" | grep -qF '<div class="md-root">proj</div>' || bad "no root name: $t"
     printf '%s\n' "$t" | grep -qF '<summary>sub</summary>' || bad "no folder sub: $t"
-    printf '%s\n' "$t" | grep -qF '<summary>a</summary>' || bad "no nested folder a: $t"
+    printf '%s\n' "$t" | grep -qF 'deep<span class="md-sep">›</span>a</summary>' || bad "no chain summary deep > a: $t"
     printf '%s\n' "$t" | grep -qF 'href="'"$(file_url "$page")"'#/sub/a.md">a.md</a>' || bad "no link of sub/a.md: $t"
     printf '%s\n' "$t" | grep -qF 'href="'"$(file_url "$page")"'#/deep/a/d.md">d.md</a>' || bad "no link of deep/a/d.md: $t"
     printf '%s\n' "$t" | grep -qF 'href="'"$(file_url "$page")"'#/o.md"' || bad "no link of o.md: $t"
@@ -634,16 +634,35 @@ case_dom_panel_current() {
 
 case_dom_panel_folders_open() {
     fresh
-    mkdir -p deep/a else || bad "mkdir"
-    printf '# X\n' > deep/a/x.md || bad "write"
+    mkdir -p deep/x/y else || bad "mkdir"
+    printf '# X\n' > deep/x/y/z.md || bad "write"
     printf '# Y\n' > else/y.md || bad "write"
     printf '# O\n' > o.md || bad "write"
     build o.md
-    dom '/deep/a/x.md' > "$d/dom"
+    dom '/deep/x/y/z.md' > "$d/dom"
     t=$(tree_of < "$d/dom")
-    printf '%s\n' "$t" | grep -qF '<details open=""' || bad "no folder is open: $t"
-    [ "$(printf '%s\n' "$t" | grep -o '<details open="">' | wc -l | tr -d ' ')" = 2 ] || bad "the folders of the file are not open: $t"
+    printf '%s\n' "$t" | grep -qF '<details open=""><summary>deep<span class="md-sep">›</span>x<span class="md-sep">›</span>y</summary>' || bad "no open chain summary deep > x > y: $t"
+    [ "$(printf '%s\n' "$t" | grep -o '<details open="">' | wc -l | tr -d ' ')" = 1 ] || bad "the chain of the file is not one open row: $t"
     printf '%s\n' "$t" | grep -qF '<details><summary>else</summary>' || bad "an unrelated folder is open: $t"
+    exit 0
+}
+
+# A file sibling stops the chain: forms has two children, so its box holds
+# the v.md link and the plain fields chain below it.
+case_dom_panel_chain_stop() {
+    fresh
+    mkdir -p forms/fields || bad "mkdir"
+    printf '# V\n' > forms/v.md || bad "write"
+    printf '# F\n' > forms/fields/f.md || bad "write"
+    printf '# O\n' > o.md || bad "write"
+    build o.md
+    dom > "$d/dom"
+    t=$(tree_of < "$d/dom")
+    printf '%s\n' "$t" | grep -qF '<summary>forms</summary>' || bad "no plain forms summary: $t"
+    if printf '%s\n' "$t" | grep -qF '<summary>forms<span class="md-sep">'; then bad "the forms chain did not stop at the file sibling: $t"; fi
+    printf '%s\n' "$t" | grep -qF '<summary>fields</summary>' || bad "no fields summary inside forms: $t"
+    printf '%s\n' "$t" | grep -qF 'href="'"$(file_url "$page")"'#/forms/fields/f.md">f.md</a>' || bad "no link of forms/fields/f.md: $t"
+    printf '%s\n' "$t" | grep -qF 'href="'"$(file_url "$page")"'#/forms/v.md">v.md</a>' || bad "no link of forms/v.md: $t"
     exit 0
 }
 
@@ -962,7 +981,7 @@ for c in dom_start_file dom_route_file dom_route_unknown \
          dom_one_file_anchor dom_one_file_links dom_names_hostile dom_raw_html_text \
          dom_line_list_item dom_line_table_row dom_line_palette_tokyo dom_line_range dom_line_past_end \
          dom_line_zero dom_line_after_block dom_line_before_first dom_line_task_item \
-         dom_line_clear_on_miss dom_line_tree_link dom_script_scheme dom_panel_tree dom_panel_current dom_panel_folders_open \
+         dom_line_clear_on_miss dom_line_tree_link dom_script_scheme dom_panel_tree dom_panel_current dom_panel_folders_open dom_panel_chain_stop \
          dom_panel_root_name dom_panel_cap_note dom_panel_big_style \
          dom_panel_toggle_markup dom_panel_off_notice dom_panel_width_rule \
          dom_panel_gear_fixed dom_panel_names_hostile dom_panel_link_click dom_panel_focus \
