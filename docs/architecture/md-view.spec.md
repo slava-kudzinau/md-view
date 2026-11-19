@@ -148,6 +148,7 @@ Tree mode is on by default. It shows the opened file and the other Markdown file
 | Diagram viewer | `dialog.md-viewer` on `body`, made at the first open. Buttons `−`, `+`, `Fit`, `1:1`, `●`, `×`. `●` toggles the laser pointer, a red dot that follows the pointer. The laser state survives close and reopen in the page session. The `×` has the focus at open, so Enter or Space closes at once. The backdrop is `rgba(0,0,0,0.5)`. The color layer colors the dialog and its buttons. It works below 700 px too. |
 | Print | The gear, the popover, the tree panel and its toggle, and the diagram bars are hidden. |
 | Offline | Text, style and highlight show with no network. A mermaid block draws its diagram, because mermaid is inlined. |
+| SharePoint preview | The SharePoint one-up preview puts the file in a `<iframe sandbox="allow-scripts">` and parses the inline script elements inert, so none runs at load. The page shows the shell only: text, highlight and diagrams need a script, so they stay empty there. The inline mermaid removes the `cdn.jsdelivr.net` dependency and fixes the offline case; it does not add a SharePoint-only paint. A SharePoint paint needs the markup built at write time (no script), a later story. |
 
 ### How diagrams render
 
