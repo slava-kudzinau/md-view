@@ -1,6 +1,6 @@
 ---
 description: Makes the file tree panel readable in a narrow width: depth rails, chevrons, one row per folder chain, ellipsized names, and a resizable saved width.
-status: planned
+status: done
 size: M
 risk: contract
 ---
