@@ -1054,7 +1054,7 @@ for c in dom_start_file dom_route_file dom_route_unknown \
          dom_line_zero dom_line_after_block dom_line_before_first dom_line_task_item \
          dom_line_clear_on_miss dom_line_tree_link dom_script_scheme dom_panel_tree dom_panel_current dom_panel_folders_open dom_panel_chain_stop \
          dom_panel_root_name dom_panel_cap_note dom_panel_big_style \
-         dom_panel_resize_key dom_panel_resize_reset dom_panel_reset dom_panel_resize_seed \
+         dom_panel_toggle_markup dom_panel_off_notice dom_panel_width_rule dom_panel_resize_key dom_panel_resize_reset dom_panel_reset dom_panel_resize_seed \
          dom_panel_gear_fixed dom_panel_names_hostile dom_panel_link_click dom_panel_focus \
          dom_panel_narrow dom_palette_start dom_palette_mode dom_palette_key_s \
          dom_palette_popover dom_palette_saved dom_palette_bad_saved; do
