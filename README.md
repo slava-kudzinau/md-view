@@ -4,7 +4,7 @@ description: md-view shows a Markdown file as a web page in your browser, with G
 
 # md-view
 
-md-view turns a Markdown file into one web page and opens it in your browser. The page has the GitHub look, colored code blocks and mermaid diagrams. It shows the other Markdown files of the folder in a file tree. The tree panel is resizable: drag its right edge, use the arrow keys, or double-click to restore the default width. A folder chain with one child folder shows on one row. It is a POSIX shell script. Run it by hand, or let a file manager such as far2l or Midnight Commander start it.
+md-view turns a Markdown file into one web page and opens it in your browser. The page has the GitHub look, colored code blocks and mermaid diagrams. It shows the other Markdown files of the folder in a file tree. The tree panel is resizable: drag its right edge, use the arrow keys, or double-click to restore the default width. A folder chain with one child folder shows on one row. In each folder, files show after the folders, left-aligned with them, in a lighter color. It is a POSIX shell script. Run it by hand, or let a file manager such as far2l or Midnight Commander start it.
 
 The file can come from anywhere, so md-view treats it as untrusted. Raw HTML shows as text. Remote images do not load. Mermaid runs in strict mode.
 
