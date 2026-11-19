@@ -993,6 +993,35 @@ case_page_version_footer() {
     exit 0
 }
 
+# The diagram paints offline: the page is built with mermaid inline, so a page
+# under a CSP whose script-src lacks cdn.jsdelivr.net (the SharePoint
+# intersection) still draws. In headless Chrome with no network (every host
+# maps to NOTFOUND, so the jsdelivr script element cannot load), the mermaid
+# pre gains a processed svg child. No Chrome: skip.
+case_page_mermaid_offline_svg() {
+    CHROME=$(chrome_prog)
+    [ -n "$CHROME" ] || skip "no Chrome"
+    fresh
+    md --tree off --no-open --out "$page" "$sample"
+    [ "$rc" = 0 ] || bad "exit $rc"
+    # Seed a failing title, gate on the paint, rewrite the success title once on
+    # the tick that first sees the processed svg.
+    awk -v s='<script>document.title="nosvg";(function w(){var p=document.querySelector("pre.mermaid[data-processed] > svg");if(p){document.title="svg";return;}setTimeout(w,50);})();</script>' \
+        '{ i = index($0, "</body>"); if (i) print substr($0, 1, i - 1) s substr($0, i); else print }' \
+        "$page" > "$d/injected.html" || bad "awk"
+    prof=$d/chrome
+    mkdir -p "$prof" || bad "mkdir Chrome profile"
+    dom=$("$CHROME" --headless=new --disable-gpu --no-first-run \
+        --use-mock-keychain --password-store=basic \
+        --host-resolver-rules="MAP * ~NOTFOUND" \
+        --user-data-dir="$prof" --virtual-time-budget=5000 --dump-dom \
+        "$(file_url "$d/injected.html")" 2>/dev/null)
+    rm -rf "$prof"
+    got=$(printf '%s\n' "$dom" | sed -n 's/.*<title>\(.*\)<\/title>.*/\1/p')
+    [ "$got" = 'svg' ] || bad "the offline diagram is [$got], want [svg]"
+    exit 0
+}
+
 # --- vendored files ---------------------------------------------------------
 
 vendored='github-markdown-light.css github-markdown-dark.css highlight.min.js hljs-github.min.css hljs-github-dark.min.css marked.min.js'
@@ -2849,7 +2878,7 @@ for c in flags_ok flag_width_bad flag_theme_bad flag_width_missing palette_setti
          page_has_github_css page_width_rules page_start_values page_policy_unchanged \
          page_narrow_rule page_hljs_after_marked page_mermaid_theme_hook \
          page_gear_markup page_print_hidden page_storage_try_catch page_keys_guard page_paste_line \
-         page_version_footer \
+         page_version_footer page_mermaid_offline_svg \
          vendor_no_close_tag vendor_sha384 \
          cache_path_stable cache_two_files cache_reuse cache_rebuild_on_edit cache_rebuild_on_flag \
          cache_rebuild_on_ini palette_cache cache_no_cache_flag cache_dir_mode cache_dir_fallback cache_name_safe \
