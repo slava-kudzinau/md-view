@@ -13,7 +13,7 @@ There is no build step. Run these commands from the repo root.
 | Command | Result |
 |---|---|
 | `make check` | Runs `tests/browser-page.sh`, `tests/browser-links-dom.sh`, `tests/hostile-dom.sh` and `tests/launcher.sh`. It stops at the first failure. |
-| `make install PREFIX=$p` | Writes `$p/share/md-view/` (the script, `page.js`, `page.css` and nine vendored files) and `$p/bin/md-view`. Default `PREFIX` is `/usr/local`. |
+| `make install PREFIX=$p` | Writes `$p/share/md-view/` (the script, `page.js`, `page.css` and eleven vendored files) and `$p/bin/md-view`. Default `PREFIX` is `/usr/local`. |
 | `make uninstall PREFIX=$p` | Removes the files that install wrote. |
 
 A test that has no Chrome or no network prints `skip` lines and passes. Read the `skip` lines before you trust a pass. A pass with `skip all` proved only the tests that need no browser.
@@ -28,7 +28,7 @@ Use a temporary `PREFIX` to test the install. `PREFIX` must be absolute and must
 |---|---|
 | `lib/md-view` | The script. It reads the page code and the vendored files from its own folder (`self_dir`). |
 | `lib/page.js`, `lib/page.css` | The page script and the main page style. They are md-view code, not vendored. |
-| other `lib/*.js` and `lib/*.css`, `lib/*.LICENSE.md` | The nine vendored files and their licenses. |
+| other `lib/*.js` and `lib/*.css`, `lib/*.LICENSE.md` | The eleven vendored files and their licenses. |
 | `bin/md-view` | The launcher of the checkout. |
 | `tests/` | The four tests, `fixtures/` and `browser-page/`. |
 | `README.md` | Install, usage, config keys, far2l and Midnight Commander, the move from far2l. |

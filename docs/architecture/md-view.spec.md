@@ -13,7 +13,7 @@ refs:
 **Problem:** the terminal cannot draw every mermaid type, images or real typography.
 **Approach:** a shell script writes one self-contained page and gives it to the system opener. No file manager is part of this path. A file manager runs the command like any other external viewer.
 
-The code is `lib/md-view`. The Markdown parser is the vendored `lib/marked.min.js` (marked v18.1.3). The page has the GitHub look from two vendored style files, and `highlight.js` marks the code. The vendored files, with their versions and licenses, are in `lib/`. Each has a `*.LICENSE.md` file that names its source.
+The code is `lib/md-view`. The Markdown parser is the vendored `lib/marked.min.js` (marked v18.1.3). The page has the GitHub look from two vendored style files, `highlight.js` marks the code, and the vendored `lib/mermaid.min.js` (mermaid 12.3.0) draws the diagrams. The vendored files, with their versions and licenses, are in `lib/`. Each has a `*.LICENSE.md` file that names its source.
 
 ## Contract
 
@@ -69,7 +69,7 @@ md-view --version
 | 0 | The page is written, and it is opened or its path is printed. With `--no-open`, nothing is printed. |
 | 1 | The page cannot be written, or the opener fails. |
 | 2 | No file, an unreadable file, an unknown option, a missing `--width`, `--theme` or `--palette` value, or a value that is not accepted. Also a page folder that does not exist. No page is written. |
-| 3 | `marked.min.js`, a vendored style file, `highlight.min.js`, `page.js` or `page.css` is not found or not readable. Stderr is `md-view: cannot find <name>`. No page is written. |
+| 3 | `marked.min.js`, `mermaid.min.js`, a vendored style file, `highlight.min.js`, `page.js` or `page.css` is not found or not readable. Stderr is `md-view: cannot find <name>`. No page is written. |
 
 A `--browser` value or a `browser=` key that is not accepted is not an error. It gives one line on stderr and the script uses `auto`.
 
@@ -102,7 +102,7 @@ The script starts each command with `exec` in a subshell. The page path is one a
 1. The script writes the head. It holds a `Content-Security-Policy` meta, the page key, the state of `config.ini` (see "Page file and reuse") and the styles. `<title>` is the base name of the file. `<base href>` is the `file://` URL of its folder. The styles are four inlined vendored files (GitHub light and dark, highlight light and dark). The page stylesheet `page.css` follows them.
 2. `sed` removes a UTF-8 BOM and each CR at a line end. It doubles each `\`, then writes `</` as `<\/` and `<!--` as `<\!--`.
 3. The text goes into `<script type="text/markdown" id="md">`.
-4. The script adds `marked.min.js` inline, then `highlight.min.js`, then the page script `page.js`.
+4. The script adds `marked.min.js` inline, then `highlight.min.js`, then `mermaid.min.js`, then the page script `page.js`.
 5. In the browser, the page script reverses the escapes, splits the text into tokens with `marked.lexer` and renders them with `marked.parser`. The result is the same HTML as `marked.parse`. The result goes into `<main id="content">`, so the text shows before any network use. Then `highlight.js` marks each `pre > code` block that has a known language. A fence with no language, an unknown language or `mermaid` stays plain, and a highlight error leaves the plain block.
 
 The start values are the attributes `data-start-width`, `data-start-theme` and `data-start-palette` of `html`. They can hold only an accepted word. A flag that sets the width or the theme adds `data-forced="1"`.
@@ -147,13 +147,13 @@ Tree mode is on by default. It shows the opened file and the other Markdown file
 | Diagram bar | `.md-dbar`, the last child of each drawn `pre.mermaid`. It shows on hover and on keyboard focus, and always under `@media (hover: none)`. |
 | Diagram viewer | `dialog.md-viewer` on `body`, made at the first open. Buttons `−`, `+`, `Fit`, `1:1`, `●`, `×`. `●` toggles the laser pointer, a red dot that follows the pointer. The laser state survives close and reopen in the page session. The `×` has the focus at open, so Enter or Space closes at once. The backdrop is `rgba(0,0,0,0.5)`. The color layer colors the dialog and its buttons. It works below 700 px too. |
 | Print | The gear, the popover, the tree panel and its toggle, and the diagram bars are hidden. |
-| Offline | Text, style and highlight show with no network. A mermaid block shows its source. |
+| Offline | Text, style and highlight show with no network. A mermaid block draws its diagram, because mermaid is inlined. |
 
 ### How diagrams render
 
 A fence is a diagram when the first word of its language is `mermaid`. This match is case-sensitive. Other fences stay plain code.
 
-1. The page adds one script element for mermaid 12.3.0 from `cdn.jsdelivr.net`, with a `sha384` integrity hash and `crossorigin="anonymous"`. It does this only if the page has a diagram.
+1. The page inlines mermaid 12.3.0 (the vendored `mermaid.min.js`) as a script element before the page script, so the page finds the global `mermaid` with no network. A page built without the inline block falls back to one script element for the same mermaid 12.3.0 from `cdn.jsdelivr.net`, with a `sha384` integrity hash and `crossorigin="anonymous"`, and only if it has a diagram.
 2. On load, `mermaid.initialize` runs with `startOnLoad: false` and `securityLevel:'strict'`. With the palette `github`, the theme is `dark` or `default`, as the used page theme says. With `tokyo`, the theme is `base` with `themeVariables` from the palette table, and `securityLevel:'strict'` stays. When the used theme changes, the page draws each diagram again from its saved source text. A key, a button, or the system in `auto` can change it. One batch runs at a time, with a time limit of 10 s. A batch that waits is not added twice. A redraw is skipped if the drawn pair is the same. The pair is the palette and the used theme.
 3. `mermaid.parse` checks each diagram alone. A diagram that fails shows its source and its error. The others still draw.
 4. `mermaid.run` draws the good diagrams.
@@ -179,8 +179,8 @@ A fence is a diagram when the first word of its language is `mermaid`. This matc
 | Accent subgraphs | `accent-subgraphs.md` | Nodes in one subgraph share one accent stroke; groups differ. The group box keeps that hue. |
 | Sequence diagram | `accent-sequence.md` | The actor boxes take positional accent strokes. Messages and lifelines keep theme colors. |
 | Literal `<\/` and `<\!--` | `escapes.md` | They come back as written. |
-| CDN blocked or integrity failure | none | Each diagram shows as a code block, with no error line. |
-| CDN stalled | none | The text and the diagram source show while the script waits. |
+| No inline mermaid, CDN blocked | none | The page script loads mermaid from the CDN; a blocked CDN shows each diagram as a code block, with no error line. |
+| No inline mermaid, CDN stalled | none | The text shows, and the diagram source shows while the CDN script waits. |
 | Tree with a hostile name | a file named `\"><script>.md` | The name shows as text in the tree. No element is made. |
 | Link out of the root | `../outside.md`, `/etc/x.md`, `file:` URL, `%2e%2e/x.md` | Text, with the note `not in this tree`. |
 | Link to a page file | two files in one root | The other file shows in the same page, and Back returns. |
@@ -191,7 +191,7 @@ A fence is a diagram when the first word of its language is `mermaid`. This matc
 
 The fixtures are in `tests/fixtures/`.
 
-The policy is `default-src 'none'; script-src 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'unsafe-inline'; img-src data: file:`. The GitHub look did not change it, because the script inlines every vendored file.
+The policy is `default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: file:`. The script inlines every vendored file, mermaid included, so `script-src` needs no remote origin. An injected CSP (the SharePoint one-up preview) intersects with this meta; the result keeps `'unsafe-inline'`, and the inline mermaid script survives the intersection.
 
 ### Page file and reuse
 
@@ -215,8 +215,8 @@ The policy is `default-src 'none'; script-src 'unsafe-inline' https://cdn.jsdeli
 | Shell tools | POSIX `sh`, `awk`, `sed`, `cat`, `basename`, `dirname`, `cksum`, `cut`, `find`, `grep`, `ls`, `mv`, `mkdir`, `chmod`, `sort`. `make` and `install` for the install. |
 | Opener | `open`, else `xdg-open`. If both are missing, the script prints the page path and exits 0. |
 | Browser | Any browser that the opener starts. Chrome is tested. Firefox is a manual check. |
-| Network | `cdn.jsdelivr.net` for a page with a diagram. No other network use. |
-| Install | `make install PREFIX=$p` puts `md-view` (mode 755), the page code `page.js` and `page.css`, and the nine vendored files (mode 644) in `$p/share/md-view/`, and the launcher in `$p/bin/md-view`. The default `PREFIX` is `/usr/local`. `PREFIX` must be absolute and must not hold a single quote. `make uninstall` removes exactly these files. |
+| Network | `cdn.jsdelivr.net` only for a page that has a diagram and no inline mermaid. No other network use. |
+| Install | `make install PREFIX=$p` puts `md-view` (mode 755), the page code `page.js` and `page.css`, and the eleven vendored files (mode 644) in `$p/share/md-view/`, and the launcher in `$p/bin/md-view`. The default `PREFIX` is `/usr/local`. `PREFIX` must be absolute and must not hold a single quote. `make uninstall` removes exactly these files. |
 
 `md-view` reads `page.js`, `page.css`, `marked.min.js` and the other vendored files from its own folder (`self_dir`), so the files must stay together. The checkout launcher `bin/md-view` finds `lib/` from its own folder and does not follow symlinks.
 
@@ -258,9 +258,9 @@ The rows of `tests/hostile-dom.sh` are:
 
 | Part | Check rows |
 |---|---|
-| Page shape, CSP, pinned CDN script | `plain:` rows |
+| Page shape, CSP, pinned CDN fallback | `plain:` rows |
 | Paths with spaces, empty file, BOM and CRLF | `paths with spaces`, `empty file`, `BOM and CRLF` |
-| Diagrams, stalled and refused CDN | `diagram:`, `stalled CDN:`, `refused CDN:` |
+| Diagrams (inline), and the stalled and refused CDN fallback | `diagram:`, `stalled CDN:`, `refused CDN:` |
 | Untrusted content | `hostile:`, `escapes:`, `remote image:`, `broken diagram:` |
 | Diagram viewer | eleven `viewer:` rows: the bar, the open, Fit, zoom, the keys, the drag, the laser, the close and the close on redraw. A test cannot send a real Esc or a native `close` event to a headless page, so the close row sends the `close` event itself. A person checks it in Chrome, Firefox and Safari. The checks: the Esc key, the wheel at the pointer, pinch, a real mouse drag, label selection, and the bar on hover. They also check the focus after close, labels at 1:1, and print while the viewer is open. |
 | Script interface | `usage:`, `leading dash`, `open:` |

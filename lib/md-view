@@ -813,6 +813,11 @@ if [ ! -r "$marked_js" ]; then
     echo 'md-view: cannot find marked.min.js' >&2
     exit 3
 fi
+mermaid_js=${MERMAID_JS:-$self_dir/mermaid.min.js}
+if [ ! -r "$mermaid_js" ]; then
+    echo 'md-view: cannot find mermaid.min.js' >&2
+    exit 3
+fi
 # The page inlines these vendored files and the page files (page.js, page.css).
 # Each must be there before a page is written.
 for f in github-markdown-light.css github-markdown-dark.css hljs-github.min.css \
@@ -864,7 +869,12 @@ page_fresh() {
         /*) ;;
         *) abs_marked=$(pwd)/$abs_marked ;;
     esac
-    set -- "$real" "$self_dir/$(basename -- "$0")" "$abs_marked"
+    abs_mermaid=$mermaid_js
+    case $abs_mermaid in
+        /*) ;;
+        *) abs_mermaid=$(pwd)/$abs_mermaid ;;
+    esac
+    set -- "$real" "$self_dir/$(basename -- "$0")" "$abs_marked" "$abs_mermaid"
     for f in github-markdown-light.css github-markdown-dark.css hljs-github.min.css \
              hljs-github-dark.min.css highlight.min.js page.js page.css; do
         set -- "$@" "$self_dir/$f"
@@ -932,7 +942,7 @@ bom=$(printf '\357\273\277')
     cat <<'HTML'
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'unsafe-inline'; img-src data: file:">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: file:">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 HTML
     printf '%s\n%s\n%s\n' "$key_line" "$ini_line" "<meta name=\"md-view-version\" content=\"$version\">"
@@ -1030,6 +1040,12 @@ HTML
     cat "$marked_js"
     printf '\n</script>\n<script>\n'
     cat "$self_dir/highlight.min.js"
+    printf '\n</script>\n<script id="md-mermaid">\n'
+    # Mermaid goes in inline, before the page script, so the page finds the
+    # global mermaid with no network. It survives a CSP whose script-src lacks
+    # cdn.jsdelivr.net (the SharePoint intersection of the page meta with the
+    # meta SharePoint injects), where a remote script element would be dropped.
+    cat "$mermaid_js"
     printf '\n</script>\n<script>\n'
     # The page script is in page.js. It goes in as it is.
     cat "$self_dir/page.js"

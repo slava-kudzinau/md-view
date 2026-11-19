@@ -21,7 +21,7 @@ make install PREFIX=$HOME/.local
 `PREFIX` is `/usr/local` by default. It must be an absolute path and must not hold a single quote. The install writes these files:
 
 - `$PREFIX/bin/md-view`, a two-line launcher.
-- `$PREFIX/share/md-view/md-view`, the script, its page code `page.js` and `page.css`, and the nine vendored files. The script reads them from its own folder.
+- `$PREFIX/share/md-view/md-view`, the script, its page code `page.js` and `page.css`, and the eleven vendored files. The script reads them from its own folder.
 
 Put `$PREFIX/bin` on your `PATH`. To remove md-view, run `make uninstall PREFIX=...` with the same `PREFIX`.
 

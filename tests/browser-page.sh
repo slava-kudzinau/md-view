@@ -677,7 +677,7 @@ case_page_has_github_css() {
         mkdir "$d/missing" || bad "mkdir"
         cp "$md_open" "$d/missing/md-view" || bad "cp script"
         for g in marked.min.js github-markdown-light.css github-markdown-dark.css \
-                 hljs-github.min.css hljs-github-dark.min.css highlight.min.js page.js page.css; do
+                 hljs-github.min.css hljs-github-dark.min.css highlight.min.js page.js page.css mermaid.min.js; do
             [ "$g" = "$f" ] || cp "$vendor/$g" "$d/missing/" || bad "cp $g"
         done
         rm -f "$page"
@@ -734,7 +734,7 @@ case_page_policy_unchanged() {
     fresh
     md --no-open --out "$page" "$sample"
     [ "$rc" = 0 ] || bad "exit $rc"
-    grep -qxF "<meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'none'; script-src 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'unsafe-inline'; img-src data: file:\">" "$page" \
+    grep -qxF "<meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: file:\">" "$page" \
         || bad "the page policy changed"
     [ "$(grep -c -F 'Content-Security-Policy' "$page")" = 1 ] || bad "want one policy"
     [ "$(grep -c -F 'unsafe-eval' "$page")" = 0 ] || bad "the page allows eval"
@@ -973,7 +973,7 @@ case_page_version_footer() {
     # It opens the popover with the gear and copies the footer text to the title.
     footer_title() {
         awk -v s='<script>document.getElementById("md-gear").click();document.title=document.querySelector("#md-pop .md-version").textContent;</script>' \
-            '{ i = index($0, "</body>"); if (i) print substr($0, 1, i - 1) s substr($0, i); else print }' \
+            '{ print } /^<\/html>$/ { print s }' \
             "$1" > "$d/injected.html" || bad "awk"
         prof=$d/chrome
         mkdir -p "$prof" || bad "mkdir Chrome profile"
@@ -1004,32 +1004,36 @@ case_page_mermaid_offline_svg() {
     fresh
     md --tree off --no-open --out "$page" "$sample"
     [ "$rc" = 0 ] || bad "exit $rc"
-    # Seed a failing title, gate on the paint, rewrite the success title once on
-    # the tick that first sees the processed svg.
-    awk -v s='<script>document.title="nosvg";(function w(){var p=document.querySelector("pre.mermaid[data-processed] > svg");if(p){document.title="svg";return;}setTimeout(w,50);})();</script>' \
-        '{ i = index($0, "</body>"); if (i) print substr($0, 1, i - 1) s substr($0, i); else print }' \
+    # Seed a failing gate, gate on the paint (a stroke), and rewrite the gate on
+    # every tick, so the dump captures the furthest stage. Inject after </html>,
+    # the only line that is the true end (the first </body> is inside a vendored
+    # minified script). The gate is a node, not the title, so the page script
+    # cannot clobber it.
+    awk -v s='<i id="md-gate">nosvg</i><script>(function w(){var p=document.querySelector("pre.mermaid[data-processed] > svg path, pre.mermaid[data-processed] > svg line, pre.mermaid[data-processed] > svg polygon");if(p)document.getElementById("md-gate").textContent="svg";setTimeout(w,50);})();</script>' \
+        '{ print } /^<\/html>$/ { print s }' \
         "$page" > "$d/injected.html" || bad "awk"
     prof=$d/chrome
     mkdir -p "$prof" || bad "mkdir Chrome profile"
     dom=$("$CHROME" --headless=new --disable-gpu --no-first-run \
         --use-mock-keychain --password-store=basic \
         --host-resolver-rules="MAP * ~NOTFOUND" \
-        --user-data-dir="$prof" --virtual-time-budget=5000 --dump-dom \
+        --user-data-dir="$prof" --virtual-time-budget=8000 --dump-dom \
         "$(file_url "$d/injected.html")" 2>/dev/null)
     rm -rf "$prof"
-    got=$(printf '%s\n' "$dom" | sed -n 's/.*<title>\(.*\)<\/title>.*/\1/p')
+    got=$(printf '%s\n' "$dom" | sed -n 's/.*<i id="md-gate">\([^<]*\)<\/i>.*/\1/p')
     [ "$got" = 'svg' ] || bad "the offline diagram is [$got], want [svg]"
     exit 0
 }
 
 # --- vendored files ---------------------------------------------------------
 
-vendored='github-markdown-light.css github-markdown-dark.css highlight.min.js hljs-github.min.css hljs-github-dark.min.css marked.min.js'
+vendored='github-markdown-light.css github-markdown-dark.css highlight.min.js hljs-github.min.css hljs-github-dark.min.css marked.min.js mermaid.min.js'
 # The page code. These files are not vendored, so they are not in $vendored.
 page_code='page.js page.css'
 
 # The page puts each vendored file inside a style or script element, so no file
-# may end that element. Only marked.min.js and highlight.min.js may hold one "<!--".
+# may end that element. marked.min.js and highlight.min.js may hold one "<!--",
+# and mermaid.min.js may hold three.
 case_vendor_no_close_tag() {
     for f in $vendored; do
         p=$vendor/$f
@@ -1039,6 +1043,7 @@ case_vendor_no_close_tag() {
         n=$(grep -o -e '<!--' "$p" | wc -l | tr -d ' ')
         case $f in
             marked.min.js|highlight.min.js) [ "$n" -le 1 ] || bad "$f holds $n <!--" ;;
+            mermaid.min.js) [ "$n" -le 3 ] || bad "$f holds $n <!--" ;;
             *) [ "$n" = 0 ] || bad "$f holds $n <!--" ;;
         esac
     done
@@ -2430,7 +2435,7 @@ case_tree_off_same_page() {
     # Only the html line, the key line, the lines of the palette layer, the 90 width rule, the page
     # script and the viewer lines (see viewer_map) may differ.
     strip() {
-        viewer_map "$1" | sed -e '/^<html /d' -e '/^<meta name="md-view-key" /d' -e '/^<meta name="md-view-version" /d' -e '/^html\[data-palette\] /d' -e '/^html\[data-width="90"\] /d' -e '/^(function () {$/,/^})();$/d'
+        viewer_map "$1" | sed -e '/^<html /d' -e '/^<meta name="md-view-key" /d' -e '/^<meta name="md-view-version" /d' -e '/^<meta http-equiv="Content-Security-Policy" /d' -e '/^html\[data-palette\] /d' -e '/^html\[data-width="90"\] /d' -e '/^<script id="md-mermaid">$/,/^<\/script>$/d' -e '/^(function () {$/,/^})();$/d'
     }
     strip "$d/base.html" > "$d/a"
     strip "$page" > "$d/b"
