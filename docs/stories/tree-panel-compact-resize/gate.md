@@ -55,13 +55,13 @@ The resize cases drive the page with synthetic scripts and gate on the title. Th
 ## At merge
 
 ### What was built
-{{against "What it builds": same, more, or less, and why}}
+Same, plus one addition from the final review: the grip hides with a closed panel (one CSS rule and one page-test pin).
 
 ### Decisions changed during the build
-{{rows changed or added in the table above, with the reason; or "none"}}
+None. Two build rulings kept the plan. The grip keys use element `onkeydown` assignment. That keeps the keydown-listener pin at 1. The `overflow-wrap` grep move is a no-op, because no such pin exists. `.md-root` keeps its long-name safety net.
 
 ### What the reviews caught
-{{the findings that changed code, one line each; or "nothing that changed code"}}
+T3 Critical: the links-dom run loop replaced three pre-existing cases with the four new ones; the run loop now lists all seven (58a6314). Final review Minor: the grip stayed visible and draggable with a closed panel; a closed-state hide rule and pin fix it (3d32552).
 
 ### Run it
-{{the command or demo, and what you should see}}
+`bin/md-view --tree docs/stories/tree-panel-compact-resize/shots` — drag the right edge, press `ArrowRight` and `Shift+ArrowRight`, double-click the grip; the width saves. `docs/stories/tree-panel-compact-resize/shots/` holds six screenshots (github and tokyo palettes; default, drag, keys).
