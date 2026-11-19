@@ -666,6 +666,24 @@ case_dom_panel_chain_stop() {
     exit 0
 }
 
+# Files after folders: in the root box and in a folder box with file and
+# folder children, the file links come after the folder rows. The title holds
+# the child tags of the root box and of the forms box.
+case_dom_panel_files_after_folders() {
+    fresh
+    mkdir -p sub forms/zz || bad "mkdir"
+    printf '# B\n' > b.md || bad "write"
+    printf '# Z\n' > z.md || bad "write"
+    printf '# A\n' > sub/a.md || bad "write"
+    printf '# U\n' > forms/u.md || bad "write"
+    printf '# V\n' > forms/v.md || bad "write"
+    printf '# D\n' > forms/zz/d.md || bad "write"
+    build b.md
+    measured "<script>var p=document.getElementById('md-tree-panel'),root=null,fbox=null,i,ds;function tags(e){var a=[],j;for(j=0;j<e.children.length;j++)a.push(e.children[j].tagName);return a.join('+')};for(i=0;i<p.children.length;i++)if(p.children[i].tagName==='DIV'&&!p.children[i].className)root=p.children[i];ds=p.getElementsByTagName('details');for(i=0;i<ds.length;i++){var sum=ds[i].getElementsByTagName('summary')[0];if(sum&&sum.textContent==='forms'){fbox=ds[i].lastChild;break}}document.title=tags(root)+' '+tags(fbox);</script>" > "$d/dom"
+    title_is 'DETAILS+DETAILS+A+A DETAILS+A+A'
+    exit 0
+}
+
 case_dom_panel_root_name() {
     fresh 'pro ject <r>'
     printf '# A-OPEN\n' > o.md || bad "write"
@@ -1053,6 +1071,7 @@ for c in dom_start_file dom_route_file dom_route_unknown \
          dom_line_list_item dom_line_table_row dom_line_palette_tokyo dom_line_range dom_line_past_end \
          dom_line_zero dom_line_after_block dom_line_before_first dom_line_task_item \
          dom_line_clear_on_miss dom_line_tree_link dom_script_scheme dom_panel_tree dom_panel_current dom_panel_folders_open dom_panel_chain_stop \
+         dom_panel_files_after_folders \
          dom_panel_root_name dom_panel_cap_note dom_panel_big_style \
          dom_panel_toggle_markup dom_panel_off_notice dom_panel_width_rule dom_panel_resize_key dom_panel_resize_reset dom_panel_reset dom_panel_resize_seed \
          dom_panel_gear_fixed dom_panel_names_hostile dom_panel_link_click dom_panel_focus \
