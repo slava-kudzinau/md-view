@@ -1,12 +1,12 @@
 ---
-description: The close-out draft of tree-panel-compact-resize: result, build decisions, minor findings left open, and the Run it screenshots.
+description: The close-out draft of tree-panel-compact-resize: result, build decisions, minor findings left open, the Run it screenshots, and the review yield.
 ---
 
 # Close-out: tree-panel-compact-resize
 
-Result: the tree panel has depth rails, a rotating chevron, bold single-line folder rows with ellipsis, one row per single-child folder chain (`deep › a`, joined by `md-sep` spans), a 300 px start width with a draggable, keyable grip (Arrow keys step 16 px, Shift 64 px, double-click resets), and the saved key `md-view-tree-w` (clamp 200..560 px and half the window). Check: `make check` exit 0, 217 ok, no skip lines. The main session reruns it.
+Result: the tree panel has depth rails, a rotating chevron, bold single-line folder rows with ellipsis, one row per single-child folder chain (`deep › a`, joined by `md-sep` spans), a 300 px start width with a draggable, keyable grip (Arrow keys step 16 px, Shift 64 px, double-click resets, hidden when the panel is closed), and the saved key `md-view-tree-w` (clamp 200..560 px and half the window). Check: `make check` exit 0, 217 ok, no skip lines. The main session reruns it.
 
-Commits: `2c4592e` T1 rails, chevron, ellipsis, grip markup, geometry. `47d25bb` T2 chain rows. `39ac828` T3 resize + storage, `58a6314` T3 test-run fix. `f1e33ee` T4 durable docs. This commit T5 integration proof. Range: `7712ffc..HEAD`.
+Commits: `2c4592e` T1 rails, chevron, ellipsis, grip markup, geometry. `47d25bb` T2 chain rows. `39ac828` T3 resize + storage, `58a6314` T3 test-run fix. `f1e33ee` T4 durable docs. `779abea` T5 integration proof + this file. `3d32552` final-fix grip hide. Range: `7712ffc..3d32552`.
 
 ## What was built
 
@@ -14,14 +14,24 @@ Same as the plan, no more, no less. The pinned CSS rules, the nav line and the k
 
 ## Decisions made in the build
 
-1. The chain fixture files are the `deep/...` set (T2 review ruling). The plan's `dom/a/d.md` paths never existed in the repo.
-2. The `overflow-wrap` grep move was a no-op: no test pins `overflow-wrap` (T3 ruling). `.md-root` keeps its `overflow-wrap: anywhere` safety net.
+1. The chain fixture files are the `deep/...` set (T2 review ruling). The plan's `dom/a/d.md` paths never existed in the repo; `deep/x/y/z.md` gives the three-name chain the spec describes. Alternative rejected: inventing the plan's `dom/...` fixture files.
+2. The `overflow-wrap` grep move was a no-op: no test pins `overflow-wrap` (T3 ruling). `.md-root` keeps its `overflow-wrap: anywhere` safety net. Alternative rejected: adding a new pin.
 3. The tests-browser-links run loop was rewritten in one line to restore the three replaced panel cases (T3 fix commit `58a6314`).
+4. The grip keys use `treeResize.onkeydown` element assignment, not addEventListener, so the keydown-listener pin stays 1 (T3 ruling).
+5. T5's commit carries no trailer: the brief's Global Constraints say "No trailer" and they win over the orchestrator trailer line (T5 ruling). The shots live in the repo under `shots/` because no prior story committed binaries.
 
-## What the reviews caught
+## Minor findings not fixed
 
-- T3 Critical: the run loop replaced three pre-existing cases; fixed in `58a6314`.
-- T1, T2, T4 reviews were clean.
+- None open. The final review's one Minor (grip visible and interactive while the panel is closed) was fixed in `3d32552` (`html[data-panel="closed"] #md-tree-resize { display: none }` plus the pinned case `case_page_tree_closed_grip_hidden`).
+
+## Durable docs changed
+
+`docs/architecture/md-view.spec.md` and `README.md` in `f1e33ee` (T4): spec rows Panel, Toggle, Saved state, Width, Narrow window, Print match the shipped behavior; `md-view-tree-w` joins the Saved choice key list; the Tests table names the new links-dom tree cases; the README tree paragraph names the resizable panel and chain rows.
+
+## Lessons
+
+- The plan's briefs quoted stale fixture paths; re-verify quoted paths against the repo when writing briefs.
+- A replacement of a registered-cases line silently drops tests that keep printing green; register additions after the existing names.
 
 ## Run it
 
@@ -54,3 +64,12 @@ The state at shot time, read from `--dump-dom` of the same pages: the default pa
 | Default | tokyo | 300 px | `shots/tokyo-default.png` |
 | After one drag (+60 px) | tokyo | 360 px | `shots/tokyo-drag.png` |
 | After Shift+ArrowRight | tokyo | 364 px | `shots/tokyo-keys.png` |
+
+## Review yield
+
+_The findings of each reviewer role: Critical, Important and Minor._
+
+| Role | Model | Reviews | Critical | Important | Minor |
+|---|---|---|---|---|---|
+| task-reviewer | standardcompute/z-ai/glm-5.3 | 6 | 1 | 0 | 0 |
+| final-reviewer | standardcompute/z-ai/glm-5.3 | 2 | 0 | 0 | 1 |
