@@ -607,13 +607,13 @@ case_dom_panel_tree() {
     t=$(tree_of < "$d/dom")
     printf '%s\n' "$t" | grep -qF '<div class="md-root">proj</div>' || bad "no root name: $t"
     printf '%s\n' "$t" | grep -qF '<summary>sub</summary>' || bad "no folder sub: $t"
-    printf '%s\n' "$t" | grep -qF '<summary>a</summary>' || bad "no nested folder a: $t"
+    printf '%s\n' "$t" | grep -qF 'deep<span class="md-sep">›</span>a</summary>' || bad "no chain summary deep > a: $t"
     printf '%s\n' "$t" | grep -qF 'href="'"$(file_url "$page")"'#/sub/a.md">a.md</a>' || bad "no link of sub/a.md: $t"
     printf '%s\n' "$t" | grep -qF 'href="'"$(file_url "$page")"'#/deep/a/d.md">d.md</a>' || bad "no link of deep/a/d.md: $t"
     printf '%s\n' "$t" | grep -qF 'href="'"$(file_url "$page")"'#/o.md"' || bad "no link of o.md: $t"
-    # The tree order: b.md before o.md before sub before deep.
+    # The tree order: folders first (sub, deep), then the files (b, o).
     printf '%s\n' "$t" | grep -o 'href="[^"]*"' | sed 's|.*#/||; s|"$||' > "$d/order"
-    printf 'b.md\no.md\nsub/a.md\ndeep/a/d.md\n' > "$d/want"
+    printf 'sub/a.md\ndeep/a/d.md\nb.md\no.md\n' > "$d/want"
     cmp -s "$d/want" "$d/order" || bad "tree order: $(cat "$d/order")"
     exit 0
 }
@@ -634,16 +634,58 @@ case_dom_panel_current() {
 
 case_dom_panel_folders_open() {
     fresh
-    mkdir -p deep/a else || bad "mkdir"
-    printf '# X\n' > deep/a/x.md || bad "write"
+    mkdir -p deep/x/y else || bad "mkdir"
+    printf '# X\n' > deep/x/y/z.md || bad "write"
     printf '# Y\n' > else/y.md || bad "write"
     printf '# O\n' > o.md || bad "write"
     build o.md
-    dom '/deep/a/x.md' > "$d/dom"
+    dom '/deep/x/y/z.md' > "$d/dom"
     t=$(tree_of < "$d/dom")
-    printf '%s\n' "$t" | grep -qF '<details open=""' || bad "no folder is open: $t"
-    [ "$(printf '%s\n' "$t" | grep -o '<details open="">' | wc -l | tr -d ' ')" = 2 ] || bad "the folders of the file are not open: $t"
+    printf '%s\n' "$t" | grep -qF '<details open=""><summary>deep<span class="md-sep">›</span>x<span class="md-sep">›</span>y</summary>' || bad "no open chain summary deep > x > y: $t"
+    [ "$(printf '%s\n' "$t" | grep -o '<details open="">' | wc -l | tr -d ' ')" = 1 ] || bad "the chain of the file is not one open row: $t"
     printf '%s\n' "$t" | grep -qF '<details><summary>else</summary>' || bad "an unrelated folder is open: $t"
+    exit 0
+}
+
+# A file sibling stops the chain: forms has two children, so its box holds
+# the v.md link and the plain fields chain below it.
+case_dom_panel_chain_stop() {
+    fresh
+    mkdir -p forms/fields || bad "mkdir"
+    printf '# V\n' > forms/v.md || bad "write"
+    printf '# F\n' > forms/fields/f.md || bad "write"
+    printf '# O\n' > o.md || bad "write"
+    build o.md
+    dom > "$d/dom"
+    t=$(tree_of < "$d/dom")
+    printf '%s\n' "$t" | grep -qF '<summary>forms</summary>' || bad "no plain forms summary: $t"
+    if printf '%s\n' "$t" | grep -qF '<summary>forms<span class="md-sep">'; then bad "the forms chain did not stop at the file sibling: $t"; fi
+    printf '%s\n' "$t" | grep -qF '<summary>fields</summary>' || bad "no fields summary inside forms: $t"
+    printf '%s\n' "$t" | grep -qF 'href="'"$(file_url "$page")"'#/forms/fields/f.md">f.md</a>' || bad "no link of forms/fields/f.md: $t"
+    printf '%s\n' "$t" | grep -qF 'href="'"$(file_url "$page")"'#/forms/v.md">v.md</a>' || bad "no link of forms/v.md: $t"
+    exit 0
+}
+
+# Files after folders: in the root box, in a folder box with file and folder
+# children, and in the box of a folder whose children reach it across deeper
+# index entries, the file links come after the folder rows. The title holds
+# the child tags of the root box, of the forms box, and of the box of n,
+# whose folder row m is made after the link of s.md is registered.
+case_dom_panel_files_after_folders() {
+    fresh
+    mkdir -p sub forms/zz n/m/p || bad "mkdir"
+    printf '# B\n' > b.md || bad "write"
+    printf '# Z\n' > z.md || bad "write"
+    printf '# A\n' > sub/a.md || bad "write"
+    printf '# U\n' > forms/u.md || bad "write"
+    printf '# V\n' > forms/v.md || bad "write"
+    printf '# D\n' > forms/zz/d.md || bad "write"
+    printf '# S\n' > n/s.md || bad "write"
+    printf '# T\n' > n/m/t.md || bad "write"
+    printf '# Q\n' > n/m/p/q.md || bad "write"
+    build b.md
+    measured "<script>var p=document.getElementById('md-tree-panel'),root=null,ds,i;function tags(e){var a=[],j;for(j=0;j<e.children.length;j++)a.push(e.children[j].tagName);return a.join('+')};function box(n){for(var k=0;k<ds.length;k++){var s=ds[k].getElementsByTagName('summary')[0];if(s&&s.textContent===n)return ds[k].lastChild}return null};for(i=0;i<p.children.length;i++)if(p.children[i].tagName==='DIV'&&!p.children[i].className)root=p.children[i];ds=p.getElementsByTagName('details');document.title=tags(root)+' '+tags(box('forms'))+' '+tags(box('n'));</script>" > "$d/dom"
+    title_is 'DETAILS+DETAILS+DETAILS+A+A DETAILS+A+A DETAILS+A'
     exit 0
 }
 
@@ -753,9 +795,9 @@ case_dom_panel_width_rule() {
     w=$(printf '%s\n' "$g" | awk '{ print $NF }')
     cl=$(printf '%s\n' "$g" | awk '{ print $2 }')
     cw=$(printf '%s\n' "$g" | awk '{ print $3 }')
-    # The panel takes 260px and two gaps of 8px; the column keeps 70% of the rest.
-    same "$cw" "$(awk -v w="$w" 'BEGIN { printf "%.0f", (w - 292) * 0.7 }')" || bad "the column width is $cw, window $w"
-    same "$cl" "$(awk -v w="$w" -v cw="$cw" 'BEGIN { printf "%.0f", 276 + (w - 292 - cw) / 2 }')" || bad "the column left is $cl, window $w"
+    # The panel takes 300px and two gaps of 8px; the column keeps 70% of the rest.
+    same "$cw" "$(awk -v w="$w" 'BEGIN { printf "%.0f", (w - 332) * 0.7 }')" || bad "the column width is $cw, window $w"
+    same "$cl" "$(awk -v w="$w" -v cw="$cw" 'BEGIN { printf "%.0f", 316 + (w - 332 - cw) / 2 }')" || bad "the column left is $cl, window $w"
     measured "<script>document.getElementById('md-tree-toggle').click();$GEO</script>" > "$d/dom2"
     g=$(geo_of "$d/dom2")
     cl=$(printf '%s\n' "$g" | awk '{ print $2 }')
@@ -784,7 +826,7 @@ case_dom_panel_gear_fixed() {
     # The toggle is left of the gear and does not cover it.
     tl=$(printf '%s\n' "$go" | awk '{ print $9 }')
     tr=$(printf '%s\n' "$go" | awk '{ print $11 }')
-    same "$tl" 268 || bad "the open toggle left is $tl"
+    same "$tl" 308 || bad "the open toggle left is $tl"
     [ "$tr" -le "$gl" ] || bad "the toggle covers the gear: $tr > $gl"
     tl=$(printf '%s\n' "$gc" | awk '{ print $9 }')
     same "$tl" 8 || bad "the closed toggle left is $tl"
@@ -953,6 +995,77 @@ case_dom_palette_bad_saved() {
     exit 0
 }
 
+# seedw WANT ELSE: a script that saves WANT as the panel width once, reloads,
+# and on the second pass runs ELSE. The page script reads the saved width only
+# at the start, so the work must wait for the reload.
+seedw() {
+    printf "if(!sessionStorage.getItem('seedw')){sessionStorage.getItem('seedw');sessionStorage.setItem('seedw','1');localStorage.setItem('md-view-tree-w','%s');location.reload();}else{%s}" "$1" "$2"
+}
+
+# The arrow keys on the grip: 16 px, 64 px with Shift, and the save each time.
+case_dom_panel_resize_key() {
+    fresh
+    printf '# A-OPEN\n' > o.md || bad "write"
+    build o.md
+    WINDOW=1200,800; export WINDOW
+    act="var g=document.getElementById('md-tree-resize'),r=[];function w(){return document.documentElement.style.getPropertyValue('--md-panel-w')+' '+localStorage.getItem('md-view-tree-w');}g.dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowRight'}));r.push(w());g.dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowRight',shiftKey:true}));r.push(w());g.dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowLeft'}));r.push(w());document.title=r.join(' ');"
+    measured "<script>$(seedw 300 "$act")</script>" > "$d/dom"
+    title_is '316px 316 380px 380 364px 364'
+    WINDOW=; export WINDOW
+    exit 0
+}
+
+# A drag of the grip widens the panel and saves the released width; a
+# double-click restores the start width and saves it.
+case_dom_panel_resize_reset() {
+    fresh
+    printf '# A-OPEN\n' > o.md || bad "write"
+    build o.md
+    WINDOW=1200,800; export WINDOW
+    act="var g=document.getElementById('md-tree-resize');function pw(){return Math.round(document.getElementById('md-tree-panel').getBoundingClientRect().width)+' '+localStorage.getItem('md-view-tree-w');}g.dispatchEvent(new PointerEvent('pointerdown',{clientX:297}));g.dispatchEvent(new PointerEvent('pointermove',{clientX:357}));g.dispatchEvent(new PointerEvent('pointerup',{clientX:357}));var r=[pw()];g.dispatchEvent(new MouseEvent('dblclick'));r.push(pw());document.title=r.join(' ');"
+    measured "<script>$(seedw 300 "$act")</script>" > "$d/dom"
+    title_is '360 360 300 300'
+    WINDOW=; export WINDOW
+    exit 0
+}
+
+# Reset removes the saved width and puts the panel back at 300.
+case_dom_panel_reset() {
+    fresh
+    printf '# A-OPEN\n' > o.md || bad "write"
+    build o.md
+    WINDOW=1200,800; export WINDOW
+    measured "<script>var b=null,bs=document.querySelectorAll('#md-pop button'),i;for(i=0;i<bs.length;i++)if(bs[i].textContent==='Reset')b=bs[i];b.click();document.title=Math.round(document.getElementById('md-tree-panel').getBoundingClientRect().width)+' '+localStorage.getItem('md-view-tree-w');</script>" > "$d/dom"
+    title_is '300 null'
+    WINDOW=; export WINDOW
+    exit 0
+}
+
+# A saved width loads at that value: the plain digits are used, the ceiling,
+# the floor, the half-window cap, and a garbage value falls back to 300 and
+# stays unsaved.
+case_dom_panel_resize_seed() {
+    fresh
+    printf '# A-OPEN\n' > o.md || bad "write"
+    build o.md
+    WINDOW=1200,800; export WINDOW
+    pw="document.title=Math.round(document.getElementById('md-tree-panel').getBoundingClientRect().width);"
+    pws="document.title=Math.round(document.getElementById('md-tree-panel').getBoundingClientRect().width)+' '+localStorage.getItem('md-view-tree-w');"
+    measured "<script>$(seedw 400 "$pw")</script>" > "$d/dom"
+    title_is '400'
+    measured "<script>$(seedw 600 "$pw")</script>" > "$d/dom"
+    title_is '560'
+    measured "<script>$(seedw 100 "$pw")</script>" > "$d/dom"
+    title_is '200'
+    measured "<script>$(seedw 300px "$pws")</script>" > "$d/dom"
+    title_is '300 300px'
+    WINDOW=900,800; export WINDOW
+    measured "<script>$(seedw 480 "$pws")</script>" > "$d/dom"
+    title_is '450 480'
+    WINDOW=; export WINDOW
+    exit 0
+}
+
 for c in dom_start_file dom_route_file dom_route_unknown \
          dom_link_in_tree dom_link_not_in_tree dom_link_out_of_root \
          dom_link_out_of_root_query dom_link_out_of_root_backslash \
@@ -962,9 +1075,10 @@ for c in dom_start_file dom_route_file dom_route_unknown \
          dom_one_file_anchor dom_one_file_links dom_names_hostile dom_raw_html_text \
          dom_line_list_item dom_line_table_row dom_line_palette_tokyo dom_line_range dom_line_past_end \
          dom_line_zero dom_line_after_block dom_line_before_first dom_line_task_item \
-         dom_line_clear_on_miss dom_line_tree_link dom_script_scheme dom_panel_tree dom_panel_current dom_panel_folders_open \
+         dom_line_clear_on_miss dom_line_tree_link dom_script_scheme dom_panel_tree dom_panel_current dom_panel_folders_open dom_panel_chain_stop \
+         dom_panel_files_after_folders \
          dom_panel_root_name dom_panel_cap_note dom_panel_big_style \
-         dom_panel_toggle_markup dom_panel_off_notice dom_panel_width_rule \
+         dom_panel_toggle_markup dom_panel_off_notice dom_panel_width_rule dom_panel_resize_key dom_panel_resize_reset dom_panel_reset dom_panel_resize_seed \
          dom_panel_gear_fixed dom_panel_names_hostile dom_panel_link_click dom_panel_focus \
          dom_panel_narrow dom_palette_start dom_palette_mode dom_palette_key_s \
          dom_palette_popover dom_palette_saved dom_palette_bad_saved; do

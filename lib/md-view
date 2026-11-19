@@ -964,29 +964,39 @@ HTML
     # stays the one-file page.
     if [ "$tree_mode" = 1 ]; then
         cat <<'CSS'
-html[data-panel="open"] body { padding-left: calc(260px + 16px) }
-#md-tree-panel { position: fixed; top: 0; left: 0; bottom: 0; z-index: 10; box-sizing: border-box; width: 260px; padding: 8px; overflow: auto; border-right: 1px solid GrayText; background: Canvas; color: CanvasText; font: 13px/1.4 sans-serif }
+html[data-panel="open"] body { padding-left: calc(var(--md-panel-w, 300px) + 16px) }
+#md-tree-panel { position: fixed; top: 0; left: 0; bottom: 0; z-index: 10; box-sizing: border-box; width: var(--md-panel-w, 300px); padding: 8px; overflow: auto; border-right: 1px solid GrayText; background: Canvas; color: CanvasText; font: 13px/1.4 sans-serif }
 html[data-panel="closed"] #md-tree-panel { display: none }
-#md-tree-toggle { position: fixed; top: 8px; left: 268px; z-index: 20; box-sizing: border-box; width: 28px; height: 28px; margin: 0; padding: 0; border: 1px solid GrayText; border-radius: 6px; background: Canvas; color: CanvasText; font: 14px/1 sans-serif; cursor: pointer }
+#md-tree-toggle { position: fixed; top: 8px; left: calc(var(--md-panel-w, 300px) + 8px); z-index: 20; box-sizing: border-box; width: 28px; height: 28px; margin: 0; padding: 0; border: 1px solid GrayText; border-radius: 6px; background: Canvas; color: CanvasText; font: 14px/1 sans-serif; cursor: pointer }
 html[data-panel="closed"] #md-tree-toggle { left: 8px }
-#md-tree-panel .md-root { margin: 0 0 6px; font-weight: 600; overflow-wrap: anywhere }
+#md-tree-resize { position: fixed; top: 0; left: calc(var(--md-panel-w, 300px) - 3px); bottom: 0; z-index: 15; width: 6px; cursor: col-resize; touch-action: none }
+html[data-panel="closed"] #md-tree-resize { display: none }
+#md-tree-panel .md-root { position: sticky; top: 0; margin: 0 0 6px; padding: 2px 0; font-weight: 600; overflow-wrap: anywhere; background: inherit }
 #md-tree-panel details { margin: 0 }
-#md-tree-panel summary { cursor: pointer }
-#md-tree-panel a { display: block; padding-left: 12px; color: inherit; text-decoration: none; overflow-wrap: anywhere }
+#md-tree-panel details > div { margin-left: 12px; padding-left: 8px; border-left: 1px solid GrayText }
+#md-tree-panel summary { cursor: pointer; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; list-style: none }
+#md-tree-panel summary::-webkit-details-marker { display: none }
+#md-tree-panel summary::before { content: '›'; display: inline-block; width: 1em; transition: transform .1s linear }
+#md-tree-panel details[open] > summary::before { transform: rotate(90deg) }
+#md-tree-panel a { display: block; padding-left: 1em; color: color-mix(in srgb, CanvasText 70%, Canvas); text-decoration: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
 #md-tree-panel a:hover, #md-tree-panel a:focus { text-decoration: underline }
 #md-tree-panel a[aria-current="page"] { font-weight: 600; background: Highlight; color: HighlightText }
 #md-tree-panel a.md-off { opacity: .5 }
 #md-tree-panel .md-cap { margin-top: 6px; font-style: italic; opacity: .7 }
 html[data-palette] #md-tree-panel { background-color: var(--p-bg-dark); color: var(--p-fg-dark); border-color: var(--p-border) }
+html[data-palette] #md-tree-panel a { color: var(--p-fg) }
 html[data-palette] #md-tree-panel .md-root { color: var(--p-fg) }
+html[data-palette] #md-tree-panel details > div { border-color: var(--p-border) }
 html[data-palette] #md-tree-panel a:hover, html[data-palette] #md-tree-panel a:focus { color: var(--p-blue) }
 html[data-palette] #md-tree-panel a[aria-current="page"] { background-color: var(--p-bg-visual); color: var(--p-fg) }
 html[data-palette] #md-tree-toggle { background-color: var(--p-bg-dark); color: var(--p-fg-dark); border-color: var(--p-border) }
 @media (max-width: 699px) {
   html[data-panel] body { padding-left: 16px }
   #md-tree-panel, #md-tree-toggle { display: none }
+  #md-tree-resize { display: none }
 }
 @media print { #md-gear, #md-pop, #md-tree-panel, #md-tree-toggle, .md-dbar { display: none !important } }
+@media print { #md-tree-resize { display: none !important } }
 CSS
     else
         cat <<'CSS'
@@ -1003,6 +1013,7 @@ HTML
     if [ "$tree_mode" = 1 ]; then
         printf '<button id="md-tree-toggle" type="button" aria-label="Files" aria-controls="md-tree-panel" aria-expanded="true">&#9776;</button>\n'
         printf '<nav id="md-tree-panel" aria-label="Files"></nav>\n'
+        printf '<div id="md-tree-resize" role="separator" aria-orientation="vertical" aria-label="Resize the file tree" tabindex="0"></div>\n'
     fi
     printf '<main id="content" class="markdown-body"></main>\n'
     # The text cannot end its script element or open a comment there. Backslashes

@@ -867,7 +867,7 @@ case_page_storage_try_catch() {
     md --tree off --no-open --out "$page" "$sample"
     [ "$rc" = 0 ] || bad "exit $rc"
     iife > "$d/script" || bad "no script"
-    for k in md-view-width md-view-theme; do
+    for k in md-view-width md-view-theme md-view-tree-w; do
         grep -qF "'$k'" "$d/script" || bad "no saved key [$k]"
     done
     n=$(grep -c -F 'localStorage' "$d/script")
@@ -2683,6 +2683,12 @@ case_page_tree_print_hidden() {
     sed -n '/^<style id="page">$/,/^<\/style>$/p' "$page" > "$d/page-style" || bad "sed"
     grep -qxF '@media print { #md-gear, #md-pop, #md-tree-panel, #md-tree-toggle, .md-dbar { display: none !important } }' "$d/page-style" \
         || bad "no print rule that hides the panel and the toggle"
+    grep -qF '#md-tree-panel { position: fixed' "$d/page-style" \
+        || bad "no panel rule head #md-tree-panel { position: fixed"
+    grep -qxF '#md-tree-panel a { display: block; padding-left: 1em; color: color-mix(in srgb, CanvasText 70%, Canvas); text-decoration: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis }' "$d/page-style" \
+        || bad "no file link rule with 1em padding and the mixed file color"
+    grep -qxF '@media print { #md-tree-resize { display: none !important } }' "$d/page-style" \
+        || bad "no print rule that hides the resize grip"
     exit 0
 }
 
@@ -2696,6 +2702,19 @@ case_page_tree_narrow_rule() {
         || bad "the panel padding is not removed under 700 px"
     printf '%s\n' "$nb" | grep -qxF '  #md-tree-panel, #md-tree-toggle { display: none }' \
         || bad "the panel and the toggle are not hidden under 700 px"
+    printf '%s\n' "$nb" | grep -qxF '  #md-tree-resize { display: none }' \
+        || bad "the resize grip is not hidden under 700 px"
+    exit 0
+}
+
+case_page_tree_closed_grip_hidden() {
+    fresh
+    mkdir proj || bad "mkdir"
+    printf '# A\n' > proj/o.md || bad "write"
+    tpage proj/o.md
+    sed -n '/^<style id="page">$/,/^<\/style>$/p' "$page" > "$d/page-style" || bad "sed"
+    grep -qxF 'html[data-panel="closed"] #md-tree-resize { display: none }' "$d/page-style" \
+        || bad "no closed-state rule that hides the resize grip"
     exit 0
 }
 
@@ -2813,9 +2832,11 @@ case_palette_layer() {
     ! grep -q 'md-tree' "$d/layer1" || bad "the one-file page has a tree rule in the layer"
     layer_rows "$d/layer2" <<'ROWS'
 #md-tree-panel|background-color:bg-dark color:fg-dark border-color:border
+#md-tree-panel a|color:fg
 #md-tree-panel .md-root|color:fg
 #md-tree-panel a:hover, #md-tree-panel a:focus|color:blue
 #md-tree-panel a[aria-current="page"]|background-color:bg-visual color:fg
+#md-tree-panel details > div|border-color:border
 #md-tree-toggle|background-color:bg-dark color:fg-dark border-color:border
 ROWS
     exit 0
@@ -2841,7 +2862,7 @@ for c in flags_ok flag_width_bad flag_theme_bad flag_width_missing palette_setti
          tree_off_same_page tree_key_line cache_tree_reuse cache_tree_changed_file \
          cache_tree_added_file cache_tree_deleted_file cache_tree_head_only cache_tree_no_cache \
          cache_tree_renamed_file tree_page_long_lines \
-         page_tree_key_guard page_tree_storage_try page_tree_print_hidden page_tree_narrow_rule \
+         page_tree_key_guard page_tree_storage_try page_tree_print_hidden page_tree_narrow_rule page_tree_closed_grip_hidden \
          palette_layer; do
     run "$c"
 done
