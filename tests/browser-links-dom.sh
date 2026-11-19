@@ -972,6 +972,77 @@ case_dom_palette_bad_saved() {
     exit 0
 }
 
+# seedw WANT ELSE: a script that saves WANT as the panel width once, reloads,
+# and on the second pass runs ELSE. The page script reads the saved width only
+# at the start, so the work must wait for the reload.
+seedw() {
+    printf "if(!sessionStorage.getItem('seedw')){sessionStorage.getItem('seedw');sessionStorage.setItem('seedw','1');localStorage.setItem('md-view-tree-w','%s');location.reload();}else{%s}" "$1" "$2"
+}
+
+# The arrow keys on the grip: 16 px, 64 px with Shift, and the save each time.
+case_dom_panel_resize_key() {
+    fresh
+    printf '# A-OPEN\n' > o.md || bad "write"
+    build o.md
+    WINDOW=1200,800; export WINDOW
+    act="var g=document.getElementById('md-tree-resize'),r=[];function w(){return document.documentElement.style.getPropertyValue('--md-panel-w')+' '+localStorage.getItem('md-view-tree-w');}g.dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowRight'}));r.push(w());g.dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowRight',shiftKey:true}));r.push(w());g.dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowLeft'}));r.push(w());document.title=r.join(' ');"
+    measured "<script>$(seedw 300 "$act")</script>" > "$d/dom"
+    title_is '316px 316 380px 380 364px 364'
+    WINDOW=; export WINDOW
+    exit 0
+}
+
+# A drag of the grip widens the panel and saves the released width; a
+# double-click restores the start width and saves it.
+case_dom_panel_resize_reset() {
+    fresh
+    printf '# A-OPEN\n' > o.md || bad "write"
+    build o.md
+    WINDOW=1200,800; export WINDOW
+    act="var g=document.getElementById('md-tree-resize');function pw(){return Math.round(document.getElementById('md-tree-panel').getBoundingClientRect().width)+' '+localStorage.getItem('md-view-tree-w');}g.dispatchEvent(new PointerEvent('pointerdown',{clientX:297}));g.dispatchEvent(new PointerEvent('pointermove',{clientX:357}));g.dispatchEvent(new PointerEvent('pointerup',{clientX:357}));var r=[pw()];g.dispatchEvent(new MouseEvent('dblclick'));r.push(pw());document.title=r.join(' ');"
+    measured "<script>$(seedw 300 "$act")</script>" > "$d/dom"
+    title_is '360 360 300 300'
+    WINDOW=; export WINDOW
+    exit 0
+}
+
+# Reset removes the saved width and puts the panel back at 300.
+case_dom_panel_reset() {
+    fresh
+    printf '# A-OPEN\n' > o.md || bad "write"
+    build o.md
+    WINDOW=1200,800; export WINDOW
+    measured "<script>var b=null,bs=document.querySelectorAll('#md-pop button'),i;for(i=0;i<bs.length;i++)if(bs[i].textContent==='Reset')b=bs[i];b.click();document.title=Math.round(document.getElementById('md-tree-panel').getBoundingClientRect().width)+' '+localStorage.getItem('md-view-tree-w');</script>" > "$d/dom"
+    title_is '300 null'
+    WINDOW=; export WINDOW
+    exit 0
+}
+
+# A saved width loads at that value: the plain digits are used, the ceiling,
+# the floor, the half-window cap, and a garbage value falls back to 300 and
+# stays unsaved.
+case_dom_panel_resize_seed() {
+    fresh
+    printf '# A-OPEN\n' > o.md || bad "write"
+    build o.md
+    WINDOW=1200,800; export WINDOW
+    pw="document.title=Math.round(document.getElementById('md-tree-panel').getBoundingClientRect().width);"
+    pws="document.title=Math.round(document.getElementById('md-tree-panel').getBoundingClientRect().width)+' '+localStorage.getItem('md-view-tree-w');"
+    measured "<script>$(seedw 400 "$pw")</script>" > "$d/dom"
+    title_is '400'
+    measured "<script>$(seedw 600 "$pw")</script>" > "$d/dom"
+    title_is '560'
+    measured "<script>$(seedw 100 "$pw")</script>" > "$d/dom"
+    title_is '200'
+    measured "<script>$(seedw 300px "$pws")</script>" > "$d/dom"
+    title_is '300 300px'
+    WINDOW=900,800; export WINDOW
+    measured "<script>$(seedw 480 "$pws")</script>" > "$d/dom"
+    title_is '450 480'
+    WINDOW=; export WINDOW
+    exit 0
+}
+
 for c in dom_start_file dom_route_file dom_route_unknown \
          dom_link_in_tree dom_link_not_in_tree dom_link_out_of_root \
          dom_link_out_of_root_query dom_link_out_of_root_backslash \
@@ -983,7 +1054,7 @@ for c in dom_start_file dom_route_file dom_route_unknown \
          dom_line_zero dom_line_after_block dom_line_before_first dom_line_task_item \
          dom_line_clear_on_miss dom_line_tree_link dom_script_scheme dom_panel_tree dom_panel_current dom_panel_folders_open dom_panel_chain_stop \
          dom_panel_root_name dom_panel_cap_note dom_panel_big_style \
-         dom_panel_toggle_markup dom_panel_off_notice dom_panel_width_rule \
+         dom_panel_resize_key dom_panel_resize_reset dom_panel_reset dom_panel_resize_seed \
          dom_panel_gear_fixed dom_panel_names_hostile dom_panel_link_click dom_panel_focus \
          dom_panel_narrow dom_palette_start dom_palette_mode dom_palette_key_s \
          dom_palette_popover dom_palette_saved dom_palette_bad_saved; do
