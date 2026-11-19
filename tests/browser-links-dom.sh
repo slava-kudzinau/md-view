@@ -753,9 +753,9 @@ case_dom_panel_width_rule() {
     w=$(printf '%s\n' "$g" | awk '{ print $NF }')
     cl=$(printf '%s\n' "$g" | awk '{ print $2 }')
     cw=$(printf '%s\n' "$g" | awk '{ print $3 }')
-    # The panel takes 260px and two gaps of 8px; the column keeps 70% of the rest.
-    same "$cw" "$(awk -v w="$w" 'BEGIN { printf "%.0f", (w - 292) * 0.7 }')" || bad "the column width is $cw, window $w"
-    same "$cl" "$(awk -v w="$w" -v cw="$cw" 'BEGIN { printf "%.0f", 276 + (w - 292 - cw) / 2 }')" || bad "the column left is $cl, window $w"
+    # The panel takes 300px and two gaps of 8px; the column keeps 70% of the rest.
+    same "$cw" "$(awk -v w="$w" 'BEGIN { printf "%.0f", (w - 332) * 0.7 }')" || bad "the column width is $cw, window $w"
+    same "$cl" "$(awk -v w="$w" -v cw="$cw" 'BEGIN { printf "%.0f", 316 + (w - 332 - cw) / 2 }')" || bad "the column left is $cl, window $w"
     measured "<script>document.getElementById('md-tree-toggle').click();$GEO</script>" > "$d/dom2"
     g=$(geo_of "$d/dom2")
     cl=$(printf '%s\n' "$g" | awk '{ print $2 }')
@@ -784,7 +784,7 @@ case_dom_panel_gear_fixed() {
     # The toggle is left of the gear and does not cover it.
     tl=$(printf '%s\n' "$go" | awk '{ print $9 }')
     tr=$(printf '%s\n' "$go" | awk '{ print $11 }')
-    same "$tl" 268 || bad "the open toggle left is $tl"
+    same "$tl" 308 || bad "the open toggle left is $tl"
     [ "$tr" -le "$gl" ] || bad "the toggle covers the gear: $tr > $gl"
     tl=$(printf '%s\n' "$gc" | awk '{ print $9 }')
     same "$tl" 8 || bad "the closed toggle left is $tl"

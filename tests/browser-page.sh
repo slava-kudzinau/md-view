@@ -867,7 +867,7 @@ case_page_storage_try_catch() {
     md --tree off --no-open --out "$page" "$sample"
     [ "$rc" = 0 ] || bad "exit $rc"
     iife > "$d/script" || bad "no script"
-    for k in md-view-width md-view-theme; do
+    for k in md-view-width md-view-theme md-view-tree-w; do
         grep -qF "'$k'" "$d/script" || bad "no saved key [$k]"
     done
     n=$(grep -c -F 'localStorage' "$d/script")
@@ -2683,6 +2683,10 @@ case_page_tree_print_hidden() {
     sed -n '/^<style id="page">$/,/^<\/style>$/p' "$page" > "$d/page-style" || bad "sed"
     grep -qxF '@media print { #md-gear, #md-pop, #md-tree-panel, #md-tree-toggle, .md-dbar { display: none !important } }' "$d/page-style" \
         || bad "no print rule that hides the panel and the toggle"
+    grep -qF '#md-tree-panel { position: fixed' "$d/page-style" \
+        || bad "no panel rule head #md-tree-panel { position: fixed"
+    grep -qxF '@media print { #md-tree-resize { display: none !important } }' "$d/page-style" \
+        || bad "no print rule that hides the resize grip"
     exit 0
 }
 
@@ -2696,6 +2700,8 @@ case_page_tree_narrow_rule() {
         || bad "the panel padding is not removed under 700 px"
     printf '%s\n' "$nb" | grep -qxF '  #md-tree-panel, #md-tree-toggle { display: none }' \
         || bad "the panel and the toggle are not hidden under 700 px"
+    printf '%s\n' "$nb" | grep -qxF '  #md-tree-resize { display: none }' \
+        || bad "the resize grip is not hidden under 700 px"
     exit 0
 }
 
@@ -2816,6 +2822,7 @@ case_palette_layer() {
 #md-tree-panel .md-root|color:fg
 #md-tree-panel a:hover, #md-tree-panel a:focus|color:blue
 #md-tree-panel a[aria-current="page"]|background-color:bg-visual color:fg
+#md-tree-panel details > div|border-color:border
 #md-tree-toggle|background-color:bg-dark color:fg-dark border-color:border
 ROWS
     exit 0
