@@ -46,12 +46,19 @@ old_umask=$(umask)
 usage() {
     echo 'usage: md-view [--out <page.html>] [--no-open] [--width 60|70|80|90]' >&2
     echo '               [--theme light|dark|auto] [--palette github|tokyo]' >&2
-    echo '               [--browser B] [--no-cache]' >&2
+    echo '               [--browser B] [--no-cache] [--bake]' >&2
     echo '               [--tree on|off] [--list-tree] <file.md>' >&2
     echo '       md-view --init-config' >&2
     echo '       md-view --print-association' >&2
     echo '       md-view --version' >&2
     exit 2
+}
+
+# file_url PATH: prints the file:// URL for one path. It escapes the same set as
+# the base_url recipe.
+file_url() {
+    printf 'file://%s' "$(printf '%s' "$1" | sed -e 's/%/%25/g' -e 's/ /%20/g' -e 's/#/%23/g' \
+        -e 's/?/%3F/g' -e 's/"/%22/g' -e "s/'/%27/g" -e 's/</%3C/g' -e 's/>/%3E/g' -e 's/&/%26/g')"
 }
 
 # trim TEXT: sets trimmed to TEXT without the spaces and tabs at both ends.
@@ -591,6 +598,7 @@ flag_browser_set=0
 flag_tree=
 flag_palette=
 list_tree=0
+flag_bake=0
 while [ $# -gt 0 ]; do
     case $1 in
         --version)
@@ -612,6 +620,8 @@ while [ $# -gt 0 ]; do
             shift ;;
         --no-open)
             do_open=0 ;;
+        --bake)
+            flag_bake=1 ;;
         --no-cache)
             no_cache=1 ;;
         --width)
@@ -1084,6 +1094,41 @@ if [ -n "$tmpf" ]; then
     set +C
     mv -f "$tmpf" "$page" || { echo "md-view: cannot write $page" >&2; exit 1; }
     trap - EXIT
+fi
+
+# bake renders the page once with headless Chrome, so text, code, and diagrams are
+# in the file with no script run.
+if [ "$flag_bake" = 1 ]; then
+    bake_chrome=
+    if [ -n "${MD_VIEW_CHROME:-}" ] && [ -x "${MD_VIEW_CHROME}" ]; then
+        bake_chrome=$MD_VIEW_CHROME
+    else
+        for p in '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome' google-chrome chromium; do
+            case $p in
+                /*) [ -x "$p" ] && { bake_chrome=$p; break; } ;;
+                *) c=$(command -v "$p" 2>/dev/null)
+                   [ -n "$c" ] && { bake_chrome=$c; break; } ;;
+            esac
+        done
+    fi
+    bake_ms=${MD_VIEW_BAKE_MS:-8000}
+    if [ -z "$bake_chrome" ]; then
+        echo 'md-view: bake: no Chrome, wrote the unbaked page' >&2
+    else
+        bake_prof=$(mktemp -d)
+        bake_btmp="$page.bake.$$"
+        "$bake_chrome" --headless=new --disable-gpu --no-first-run \
+            --use-mock-keychain --password-store=basic \
+            --user-data-dir="$bake_prof" --virtual-time-budget="$bake_ms" --dump-dom \
+            "$(file_url "$page")" 2>/dev/null > "$bake_btmp"
+        if [ -s "$bake_btmp" ]; then
+            mv -f "$bake_btmp" "$page" || echo 'md-view: bake: cannot write the page' >&2
+        else
+            echo 'md-view: bake: Chrome produced no DOM, wrote the unbaked page' >&2
+            rm -f "$bake_btmp"
+        fi
+        rm -rf "$bake_prof"
+    fi
 fi
 umask "$old_umask"
 

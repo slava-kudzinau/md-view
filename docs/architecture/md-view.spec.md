@@ -36,7 +36,7 @@ The script can also run alone from any folder.
 
 ```
 md-view [--out <page.html>] [--no-open] [--width 60|70|80|90]
-        [--theme light|dark|auto] [--palette github|tokyo] [--browser B] [--no-cache]
+        [--theme light|dark|auto] [--palette github|tokyo] [--browser B] [--no-cache] [--bake]
         [--tree on|off] [--list-tree] <file.md>
 md-view --init-config
 md-view --print-association
@@ -54,6 +54,7 @@ md-view --version
 | `--tree on\|off` | Tree mode for one run. `on` is the default. `off` gives the page of one file, with no scan. The same as the `tree=` key. |
 | `--list-tree <file.md>` | Prints the encoded root on line 1, then one line `<state> <ENC>` per tree file in tree order. `state` is `page`, `big` or `cut`. A last line `cap N` shows when the cap stopped the scan. Writes no page and opens nothing. Exit 0. In one-file mode it prints line 1 and `off`. |
 | `--no-cache` | Builds the page again, also if a current page exists. |
+| `--bake` | Render the page once with headless Chrome, and write the result. Text, code, and diagrams are in the file, so a preview with no scripts shows them. Needs Chrome. With no Chrome, write the unbaked page and one line on stderr. |
 | `--print-association` | Prints the far2l File associations entry (see "What starts it"). Exit 0. |
 | `--init-config` | Writes a commented sample `config.ini` if there is no file, and prints its path. An existing file, link or other entry is not changed. Exit 0. |
 | `--version` | Prints `md-view <version>` and exits 0. It reads no config and writes no page. |
@@ -148,6 +149,7 @@ Tree mode is on by default. It shows the opened file and the other Markdown file
 | Diagram viewer | `dialog.md-viewer` on `body`, made at the first open. Buttons `−`, `+`, `Fit`, `1:1`, `●`, `×`. `●` toggles the laser pointer, a red dot that follows the pointer. The laser state survives close and reopen in the page session. The `×` has the focus at open, so Enter or Space closes at once. The backdrop is `rgba(0,0,0,0.5)`. The color layer colors the dialog and its buttons. It works below 700 px too. |
 | Print | The gear, the popover, the tree panel and its toggle, and the diagram bars are hidden. |
 | Offline | Text, style and highlight show with no network. A mermaid block shows its source. |
+| SharePoint preview | The SharePoint one-up preview puts the file in a `<iframe sandbox="allow-scripts">` and parses the inline script elements inert, so none runs at load. The page shows the shell only: text, highlight and diagrams need a script, so they stay empty there. With --bake, md-view renders the page once with headless Chrome and writes the result, so text, code, and diagrams show in the preview. The baked diagram needs Chrome to reach `cdn.jsdelivr.net`; with no network the baked page shows the diagram source. The interactions still need the kept scripts. |
 
 ### How diagrams render
 

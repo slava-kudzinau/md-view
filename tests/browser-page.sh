@@ -993,6 +993,32 @@ case_page_version_footer() {
     exit 0
 }
 
+# --bake: headless Chrome renders once and the DOM is written to the file.
+# #content and the mermaid svg are baked into the source, so a script-free
+# preview shows them. The default (no --bake) keeps the empty pane.
+case_page_baked_content() {
+    fresh
+    CHROME=$(chrome_prog)
+    [ -n "$CHROME" ] || skip "no Chrome"
+    md --tree off --no-open --bake --out "$page" "$sample"
+    [ "$rc" = 0 ] || bad "exit $rc"
+    # baked: #content has a child node, and a mermaid pre is drawn to an svg,
+    # read straight from the file (no script runs).
+    grep -qE '<main id="content"[^>]*>[^[:space:]]' "$page" || bad "baked #content is empty"
+    # The baked svg needs mermaid from the CDN. A CDN that cannot be reached
+    # skips the svg assert (same probe as tests/hostile-dom.sh).
+    curl -sfI --max-time 10 https://cdn.jsdelivr.net/npm/mermaid@12.3.0/dist/mermaid.min.js > /dev/null 2>&1 \
+        || skip "no network for the mermaid CDN"
+    grep -qE '<pre class="mermaid"[^>]*data-processed[^>]*>[[:space:]]*<svg' "$page" \
+        || bad "baked mermaid has no svg"
+    # default (no --bake) keeps the empty pane.
+    md --tree off --no-open --out "$page" "$sample"
+    [ "$rc" = 0 ] || bad "exit $rc"
+    grep -qF '<main id="content" class="markdown-body"></main>' "$page" \
+        || bad "unbaked #content is not empty"
+    exit 0
+}
+
 # --- vendored files ---------------------------------------------------------
 
 vendored='github-markdown-light.css github-markdown-dark.css highlight.min.js hljs-github.min.css hljs-github-dark.min.css marked.min.js'
@@ -2999,7 +3025,7 @@ for c in flags_ok flag_width_bad flag_theme_bad flag_width_missing palette_setti
          page_has_github_css page_width_rules page_start_values page_policy_unchanged \
          page_narrow_rule page_hljs_after_marked page_mermaid_theme_hook \
          page_gear_markup page_print_hidden page_storage_try_catch page_keys_guard page_paste_line \
-         page_version_footer \
+         page_version_footer page_baked_content \
          vendor_no_close_tag vendor_sha384 \
          cache_path_stable cache_two_files cache_reuse cache_rebuild_on_edit cache_rebuild_on_flag \
          cache_rebuild_on_ini palette_cache cache_no_cache_flag cache_dir_mode cache_dir_fallback cache_name_safe \
