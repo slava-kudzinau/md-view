@@ -54,7 +54,7 @@ md-view --version
 | `--tree on\|off` | Tree mode for one run. `on` is the default. `off` gives the page of one file, with no scan. The same as the `tree=` key. |
 | `--list-tree <file.md>` | Prints the encoded root on line 1, then one line `<state> <ENC>` per tree file in tree order. `state` is `page`, `big` or `cut`. A last line `cap N` shows when the cap stopped the scan. Writes no page and opens nothing. Exit 0. In one-file mode it prints line 1 and `off`. |
 | `--no-cache` | Builds the page again, also if a current page exists. |
-| `--bake <dir>` | Writes the site folder `<dir>`: the page `<dir>/index.html` and the assets its Markdown names (see "Baked site"). `<dir>` must exist, else exit 2. The page is built on every run. Opens nothing. |
+| `--bake <dir>` | Writes the site folder `<dir>`: the page `<dir>/index.html` and the assets its Markdown names (see "Baked site"). `<dir>` is made when it is not there. The page is built on every run. Opens nothing. |
 | `--print-association` | Prints the far2l File associations entry (see "What starts it"). Exit 0. |
 | `--init-config` | Writes a commented sample `config.ini` if there is no file, and prints its path. An existing file, link or other entry is not changed. Exit 0. |
 | `--version` | Prints `md-view <version>` and exits 0. It reads no config and writes no page. |
@@ -71,7 +71,7 @@ md-view --version
 |---|---|
 | 0 | The page is written, and it is opened or its path is printed. With `--no-open`, nothing is printed. |
 | 1 | The page cannot be written, or the opener fails. |
-| 2 | No file, an unreadable file, an unknown option, a missing `--width`, `--theme` or `--palette` value, or a value that is not accepted. Also a page folder that does not exist. For `--bake`: no folder value, a folder that does not exist, `--out` at the same time, or an asset that cannot be copied. No page is written. |
+| 2 | No file, an unreadable file, an unknown option, a missing `--width`, `--theme` or `--palette` value, or a value that is not accepted. Also a page folder that does not exist. For `--bake`: no folder value, a folder that cannot be made, `--out` at the same time, or an asset that cannot be copied. No page is written. |
 | 3 | `marked.min.js`, a vendored style file, `highlight.min.js`, `page.js` or `page.css` is not found or not readable. Stderr is `md-view: cannot find <name>`. No page is written. |
 
 A `--browser` value or a `browser=` key that is not accepted is not an error. It gives one line on stderr and the script uses `auto`.
@@ -138,7 +138,7 @@ Tree mode is on by default. It shows the opened file and the other Markdown file
 
 | Part | Rule |
 |---|---|
-| Page path | `<dir>/index.html`, written direct, so the page is built on every run. `<dir>` must exist, else exit 2. `--bake <dir>` with `--out <page.html>` exits 2. Bake uses tree mode; `--tree off` wins over it, a `tree=off` key does not. |
+| Page path | `<dir>/index.html`, written direct, so the page is built on every run. The script makes `<dir>` (with its parents) when it is not there; a folder that cannot be made exits 2. `--bake <dir>` with `--out <page.html>` exits 2. Bake uses tree mode; `--tree off` wins over it, a `tree=off` key does not. |
 | Head | `<base href="./">` replaces the `file://` base line. The policy keeps every origin and sets `img-src data: 'self'` for a baked page only. |
 | Publish set | Two target sets, read from the Markdown text of every file that joins the page. They hold the image targets of `![alt](target)` and of `![alt][ref]` with `[ref]: target`. They also hold the link targets of `[text](target)` that are not Markdown files, in any letter case. Drop a target with a scheme, a dotted part, a `node_modules` part, a byte below `0x20`, or a depth over `tree_depth`. Strip a leading `/` and copy the target root-relative. An image target must end in `png`, `jpg`, `jpeg`, `gif`, `svg` or `webp`, in any letter case. A `#frag` and a `"title"` go, and `%XX` is decoded once. The script resolves a target against the folder of its own file, under the root, the way the page resolves a link. A fence line starts with three or more backticks (any info string) or three or more tildes, and toggles the fence state. A fenced code block holds prose examples: its lines add no targets. |
 | Copy | The copies run after the page is written and before the render, so the render output and the assets share one finished folder. The script makes the parent folders, then copies the file. A path with a symlink in its chain (the file, and each folder below the root) is not copied. A path is copied once. A target that names no regular file prints `md-view: no file for <target>` on stderr and copies nothing. A copy that fails prints `md-view: cannot copy <target>` on stderr and exits 2. |

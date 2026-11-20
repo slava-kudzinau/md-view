@@ -921,9 +921,13 @@ read_ini
 if [ "$flag_bake" = 1 ]; then
     [ -z "$out" ] || { echo 'md-view: --bake does not take --out' >&2; exit 2; }
     [ -n "$flag_tree" ] || flag_tree=on
-    # The bake folder becomes absolute: the page path and the file_url need it.
-    # The cd is also the folder check: a folder that is not there exits 2.
-    bake_abs=$(cd "$bake_dir" && pwd) || { echo "md-view: --bake $bake_dir is not a folder" >&2; exit 2; }
+    # The bake folder is made when it is not there, and becomes absolute:
+    # the page path and the file_url need it. A folder that cannot be made
+    # exits 2.
+    mkdir -p -- "$bake_dir" \
+        || { echo "md-view: cannot make the bake folder $bake_dir" >&2; exit 2; }
+    bake_abs=$(cd "$bake_dir" && pwd) \
+        || { echo "md-view: --bake $bake_dir is not a folder" >&2; exit 2; }
     bake_dir=$bake_abs
 fi
 forced=0

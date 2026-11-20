@@ -1054,12 +1054,12 @@ case_page_bake_head() {
     exit 0
 }
 
-# A <dir> that does not exist: exit 2, and nothing is written.
+# A <dir> that does not exist: the tool makes it (with its parents), exit 0.
 case_page_bake_missing_dir() {
     fresh
     md --tree off --no-open --bake "$d/work/ghost" "$sample"
-    [ "$rc" = 2 ] || bad "bake:page missing dir exit $rc, want 2"
-    [ ! -e "$d/work/ghost/index.html" ] || bad "bake:page wrote a page in a missing folder"
+    [ "$rc" = 0 ] || bad "bake:page missing dir exit $rc, want 0"
+    [ -f "$d/work/ghost/index.html" ] || bad "bake:page made no page in the new folder"
     exit 0
 }
 
