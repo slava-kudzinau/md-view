@@ -137,6 +137,10 @@ saw broken images.
   A fetch probe now gates it.
 - Docs: the copy order in the plan, the leading-slash rule in the spec, the two
   bake environment knobs, and the stale pages-mode rows in the story.
+- Fenced code blocks published fake targets, for example a `target` file from
+  the spec's prose. The extractor now skips fence lines and the block they open.
+- A link to a name with no file aborted the bake with exit 2. A missing target
+  now prints `md-view: no file for <target>` and the bake exits 0.
 
 ### Run it
 
