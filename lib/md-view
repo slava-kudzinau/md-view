@@ -412,7 +412,9 @@ enc_path() {
 # cannot change a pattern. It skips .git, node_modules and hidden folders,
 # hidden files, a name with a byte below 0x20 and a path deeper than
 # tree_depth. find does not follow a symlink, and -type f skips a symlink.
-# The extra primaries (for example -size) go before -print.
+# The PRIMARY arguments go before the -print that scan_find adds at the end, so a
+# caller can add a branch with its own -print (tree_newer does). The status is
+# find's: 1 when find cannot read a folder, or when an -exec command fails.
 scan_find() {
     deep='./*'
     i=0
@@ -425,59 +427,59 @@ scan_find() {
         cd "$tree_root" || exit 1
         # scan-rule
         find . \( -name "$ctl" -o -type d \( -name '.?*' -o -name node_modules \) \) -prune -o -path "$deep" -prune -o -type f ! -name '.*' \( -name '*.[mM][dD]' -o -name '*.[mM][aA][rR][kK][dD][oO][wW][nN]' \) "$@" -print 2>/dev/null
-        exit 0
     )
 }
 
-# scan_tree: scans the root. Sets tree_list to the "<state> <tree path>" lines
-# in tree order, up to the cap (state is page, big or cut), tree_count to their
-# number, tree_capped to 1 when more files exist, and opened_in_list to 1 when
-# the opened file is one of the lines. The opened file is always "page"; when it
-# is not in tree_list, list_tree_text adds it after the list. Its bytes count
-# first toward the page limit.
+# scan_tree: scans the root in one walk. The walk gives each tree file as a
+# ./<tree path> line and wc -c gives its size. Sets tree_list to the
+# "<state> <tree path>" lines in tree order, up to the cap (state is page, big or
+# cut), tree_count to their number, tree_capped to 1 when more files exist, and
+# opened_in_list to 1 when the opened file is one of the lines. The opened file
+# is always "page"; when it is not in tree_list, list_tree_text adds it after the
+# list. Its bytes count first toward the page limit. A file that wc cannot read
+# counts 0 bytes. The walk status is not checked: find gives 1 when wc cannot read
+# a file, and when it cannot read a folder. The walk is used in both cases.
 scan_tree() {
     [ -d "$tree_root" ] || return 1
-    files=$(scan_find) || return 1
-    big=$(scan_find -size +1048576c) || return 1
+    walk=$(scan_find -exec wc -c {} +)
     # The opened file joins the scan unless its tree path has a byte below 0x20.
     ctlb=$(printf '\001-\037')
     case $tree_opened in
         *[$ctlb]*) extra= ;;
         *) extra=./$tree_opened ;;
     esac
+    # The path lines of the walk and the opened file, sorted into tree order.
     sorted=$(
-        { [ -n "$files" ] && printf '%s\n' "$files"; [ -n "$extra" ] && printf '%s\n' "$extra"; } |
-        awk '!seen[$0]++ { p = substr($0, 3); n = split(p, a, "/"); print n " " p }' |
+        { printf '%s\n' "$walk"; [ -n "$extra" ] && printf '%s\n' "$extra"; } |
+        awk '/^\.\// && !seen[$0]++ { p = substr($0, 3); n = split(p, a, "/"); print n " " p }' |
         LC_ALL=C sort -k1,1n -k2
-    )
+    ) || return 1
     res=$(
         cd "$tree_root" || exit 1
-        { [ -n "$big" ] && printf '%s\n' "$big"; echo; [ -n "$sorted" ] && printf '%s\n' "$sorted"; } |
-        MD_OPENED=$tree_opened MD_MAX=$tree_max awk '
-        # size(f, room): bytes of f as lines with a newline each, read with
-        # getline; the read stops once the count passes room.
-        function size(f, room,    n, line) {
-            n = 0
-            while ((getline line < f) > 0) {
-                n += length(line) + 1
-                if (n > room) break
-            }
-            close(f)
-            return n
-        }
+        opened_size=$(wc -c 2>/dev/null < "./$tree_opened")
+        # The walk, a blank line, then the sorted paths.
+        { printf '%s\n' "$walk"; echo; [ -n "$sorted" ] && printf '%s\n' "$sorted"; } |
+        MD_OPENED=$tree_opened MD_OPENED_SIZE=$opened_size MD_MAX=$tree_max awk '
         BEGIN {
             limit = 8388608
+            big_limit = 1048576
             opened = ENVIRON["MD_OPENED"]
+            total = ENVIRON["MD_OPENED_SIZE"] + 0
             max = ENVIRON["MD_MAX"] + 0
-            total = size("./" opened, limit + 1)
             phase = 0
             count = 0
             capped = 0
             inlist = 0
         }
+        # Phase 0 reads the walk. A wc line is "<bytes> ./<path>", with blanks
+        # in front. Path lines start with "./". A "total" line is skipped.
         phase == 0 {
             if ($0 == "") phase = 1
-            else isbig[$0] = 1
+            else if ($0 ~ /^[ 0-9]/) {
+                sub(/^ +/, "")
+                i = index($0, " ")
+                if (substr($0, i + 1, 2) == "./") bytes[substr($0, i + 1)] = substr($0, 1, i - 1) + 0
+            }
             next
         }
         $0 == "" { next }
@@ -488,11 +490,10 @@ scan_tree() {
             if (p == opened) {
                 state = "page"
                 inlist = 1
-            } else if (("./" p) in isbig) {
-                state = "big"
             } else {
-                n = size("./" p, limit - total)
-                if (total + n > limit) state = "cut"
+                n = (("./" p) in bytes) ? bytes["./" p] : 0
+                if (n > big_limit) state = "big"
+                else if (total + n > limit) state = "cut"
                 else { total += n; state = "page" }
             }
             print state " " p
@@ -749,11 +750,11 @@ tree_list=
 tree_count=0
 tree_capped=0
 opened_in_list=0
-if [ "$tree_mode" = 1 ]; then
-    scan_tree || { echo 'md-view: cannot read the file tree' >&2; exit 2; }
-fi
-
+# --list-tree scans and prints, then stops. A page run scans after its fast check.
 if [ "$list_tree" = 1 ]; then
+    if [ "$tree_mode" = 1 ]; then
+        scan_tree || { echo 'md-view: cannot read the file tree' >&2; exit 2; }
+    fi
     list_tree_text
     exit 0
 fi
@@ -836,27 +837,40 @@ if [ -f "$ini" ]; then
 fi
 ini_line="<!-- md-view-ini: $ini_state -->"
 
-# In tree mode the head has the tree state: the cksum of the --list-tree output
-# and the number of tree files up to the cap. The html element gets the tree
-# attributes; each value is an encoded path, a number or an accepted word.
-tree_line=
+# The folder of the Markdown file as a file:// URL for <base href>. In tree mode it
+# is the root. base_line is the head line with it; page_fresh compares the line.
 if [ "$tree_mode" = 1 ]; then
-    tree_sum=$(list_tree_text | cksum | sed 's/ .*//')
-    case $tree_sum$tree_count in
-        ''|*[!0-9]*) echo 'md-view: cannot read the file tree' >&2; exit 2 ;;
-    esac
-    [ "$tree_capped" = 1 ] || tree_capped=0
-    tree_line="<!-- md-view-tree: $tree_sum $tree_count -->"
-    root_enc=$(enc_path "${tree_root##*/}")
-    html_attrs="$html_attrs data-tree=\"on\" data-root=\"$root_enc\" data-files=\"$tree_count\" data-cap=\"$tree_capped\""
+    dir=$tree_root
 else
-    html_attrs="$html_attrs data-tree=\"off\" data-tree-why=\"$tree_why\""
+    dir=$(cd "$(dirname -- "$file")" && pwd) || exit 2
 fi
+case $dir in
+    */) ;;
+    *) dir=$dir/ ;;
+esac
+# A newline in the path becomes %0A, so the base stays on one line.
+base_url=file://$(printf '%s' "$dir" | sed -e 's/%/%25/g' -e 's/ /%20/g' -e 's/#/%23/g' \
+    -e 's/?/%3F/g' -e 's/"/%22/g' -e "s/'/%27/g" -e 's/</%3C/g' -e 's/>/%3E/g' -e 's/&/%26/g' \
+    | awk 'NR > 1 { printf "%%0A" } { printf "%s", $0 }')
+base_line=$(printf '<base href="%s">' "$base_url")
 
-# page_fresh: true if the cache page can be used as it is. No input is newer than
-# the page, and the head of the page has the key and the ini state of this run.
-# In tree mode the head also has the tree state of this scan, and no tree file
-# is newer than the page.
+# The page of this run as an absolute path, for the -newer walk.
+case $page in
+    /*) abs_page=$page ;;
+    *) abs_page=$(pwd)/$page ;;
+esac
+
+# head_has LINE: true if LINE is one of the lines of the head of the page, which
+# ends at the first </head> line.
+head_has() {
+    sed -n '1,/^<\/head>$/p' "$page" | grep -qxF -- "$1"
+}
+
+# page_fresh: true if the cache page can be reused with no scan. The page is a
+# plain file, and no input is newer than it. The head has the key and the ini
+# state of this run. In tree mode the head also has the base line of this root,
+# so a root that moved (a .git removed with root=repo) builds the page again.
+# The tree files are checked by tree_newer, not here.
 page_fresh() {
     [ -f "$page" ] && [ ! -L "$page" ] || return 1
     abs_marked=$marked_js
@@ -872,25 +886,72 @@ page_fresh() {
     [ -f "$ini" ] && set -- "$@" "$ini"
     newer=$(find -H "$@" -prune -newer "$page" -print 2>/dev/null) || return 1
     [ -z "$newer" ] || return 1
-    sed -n '1,/^<\/head>$/p' "$page" | grep -qxF -- "$key_line" || return 1
-    sed -n '1,/^<\/head>$/p' "$page" | grep -qxF -- "$ini_line" || return 1
+    head_has "$key_line" || return 1
+    head_has "$ini_line" || return 1
     if [ "$tree_mode" = 1 ]; then
-        sed -n '1,/^<\/head>$/p' "$page" | grep -qxF -- "$tree_line" || return 1
-        case $page in
-            /*) abs_page=$page ;;
-            *) abs_page=$(pwd)/$page ;;
-        esac
-        newer=$(scan_find -newer "$abs_page") || return 1
-        [ -z "$newer" ] || return 1
+        head_has "$base_line" || return 1
     fi
 }
 
-if [ "$cached" = 1 ] && [ "$no_cache" = 0 ] && page_fresh; then
+# tree_newer: prints the tree folders and the tree files that are newer than the
+# page, one ./<path> line each, the root as ".". It is one find walk, with the
+# skip rules of scan_find. A folder line is not a tree file; the caller tests it
+# with [ -f ]. The status is find's, so a failed walk fails and the page is built.
+tree_newer() {
+    scan_find -newer "$abs_page" -print -o -type d -newer "$abs_page"
+}
+
+# reuse_page: the page is good. It restores the umask of the caller, opens the
+# page when do_open is 1, and exits 0.
+reuse_page() {
     umask "$old_umask"
     if [ "$do_open" = 1 ]; then
         open_page "$page"
     fi
     exit 0
+}
+
+# The fast check. In one-file mode page_fresh is the whole check. In tree mode
+# tree_newer lists what changed since the page. Nothing listed: reuse. Only
+# folders listed: head_ok is 1, and the scan below decides. A tree file listed, or
+# a failed walk: head_ok stays 0, and the page is built.
+head_ok=0
+if [ "$cached" = 1 ] && [ "$no_cache" = 0 ] && page_fresh; then
+    if [ "$tree_mode" != 1 ]; then
+        reuse_page
+    fi
+    if newer=$(tree_newer); then
+        [ -n "$newer" ] || reuse_page
+        # The lines go through a pipe into read, so a name with blanks or shell
+        # characters stays one line.
+        newer_file=$(printf '%s\n' "$newer" | while IFS= read -r line; do
+            if [ -f "$tree_root/${line#./}" ]; then printf '%s\n' "$line"; break; fi
+        done)
+        if [ -z "$newer_file" ]; then
+            head_ok=1
+        fi
+    fi
+fi
+
+if [ "$tree_mode" = 1 ]; then
+    # In tree mode the head has the tree state: the cksum of the --list-tree output
+    # and the number of tree files up to the cap. The html element gets the tree
+    # attributes; each value is an encoded path, a number or an accepted word.
+    scan_tree || { echo 'md-view: cannot read the file tree' >&2; exit 2; }
+    tree_sum=$(list_tree_text | cksum | sed 's/ .*//')
+    case $tree_sum$tree_count in
+        ''|*[!0-9]*) echo 'md-view: cannot read the file tree' >&2; exit 2 ;;
+    esac
+    [ "$tree_capped" = 1 ] || tree_capped=0
+    tree_line="<!-- md-view-tree: $tree_sum $tree_count -->"
+    root_enc=$(enc_path "${tree_root##*/}")
+    html_attrs="$html_attrs data-tree=\"on\" data-root=\"$root_enc\" data-files=\"$tree_count\" data-cap=\"$tree_capped\""
+    if [ "$head_ok" = 1 ] && head_has "$tree_line"; then
+        reuse_page
+    fi
+else
+    tree_line=
+    html_attrs="$html_attrs data-tree=\"off\" data-tree-why=\"$tree_why\""
 fi
 
 # The cache page and the temporary page are written to a temporary file in their
@@ -908,22 +969,6 @@ if [ -z "$out" ]; then
     dest=$tmpf
 fi
 
-# Folder of the Markdown file as a file:// URL for <base href>. In tree mode it
-# is the root.
-if [ "$tree_mode" = 1 ]; then
-    dir=$tree_root
-else
-    dir=$(cd "$(dirname -- "$file")" && pwd) || exit 2
-fi
-case $dir in
-    */) ;;
-    *) dir=$dir/ ;;
-esac
-# A newline in the path becomes %0A, so the base stays on one line.
-base_url=file://$(printf '%s' "$dir" | sed -e 's/%/%25/g' -e 's/ /%20/g' -e 's/#/%23/g' \
-    -e 's/?/%3F/g' -e 's/"/%22/g' -e "s/'/%27/g" -e 's/</%3C/g' -e 's/>/%3E/g' -e 's/&/%26/g' \
-    | awk 'NR > 1 { printf "%%0A" } { printf "%s", $0 }')
-
 title=$(basename -- "$file" | sed -e 's/&/\&amp;/g' -e 's/</\&lt;/g' -e 's/>/\&gt;/g' -e 's/"/\&quot;/g')
 bom=$(printf '\357\273\277')
 
@@ -937,7 +982,7 @@ bom=$(printf '\357\273\277')
 HTML
     printf '%s\n%s\n%s\n' "$key_line" "$ini_line" "<meta name=\"md-view-version\" content=\"$version\">"
     [ -n "$tree_line" ] && printf '%s\n' "$tree_line"
-    printf '<base href="%s">\n' "$base_url"
+    printf '%s\n' "$base_line"
     printf '<title>%s</title>\n' "$title"
     # The vendored files go in as they are. Each pair is switched by its media
     # attribute; the page script sets it, and the values here are the start.
