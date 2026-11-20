@@ -1,6 +1,6 @@
 ---
 description: Bake every tree file to its own linked HTML page so a script-free preview shows content and working navigation.
-status: planned
+status: done
 size: M
 depends-on: prerender-content
 risk: contract

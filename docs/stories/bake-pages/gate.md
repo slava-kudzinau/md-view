@@ -110,16 +110,39 @@ _From the fresh read of 2026-11-20. The page defines the terms it uses under
 
 ### What was built
 
-{{against "What it builds": same, more, or less, and why}}
+Same as "What it builds", plus one thing. The baked page carries the rendered
+text, the code colors, and the diagrams from one headless-Chrome pass. Its image
+addresses point into the folder (`./…`), not at the author's disk.
 
 ### Decisions changed during the build
 
-{{rows changed or added in the table above, with the reason; or "none"}}
+One row changed. "Chrome render kept as-is" now also rewrites each
+`file://<bake folder>/` prefix in the dump to `./`. The live page script writes
+absolute image addresses into the DOM; the old bake kept them, so a remote reader
+saw broken images.
 
 ### What the reviews caught
 
-{{the findings that changed code, one line each; or "nothing that changed code"}}
+- Important: the baked page kept absolute `file://` image addresses. The dump
+  rewrite (above) fixed it.
+- A target with `%25` decoded twice. The decoder now advances one escape at a
+  time.
+- A target with parentheses, for example `Screenshot (1).png`, was not
+  published. The inline pattern takes one nesting level now.
+- A Markdown file with CRLF lines lost its last named asset on each line. The
+  extractor strips a trailing `\r` first.
+- Tree-mode bake had no test row, and two fixture files went unused. One row
+  covers both.
+- The mermaid check needed the network and only skipped when Chrome was absent.
+  A fetch probe now gates it.
+- Docs: the copy order in the plan, the leading-slash rule in the spec, the two
+  bake environment knobs, and the stale pages-mode rows in the story.
 
 ### Run it
 
-{{the command or demo, and what you should see}}
+`md-view --bake site docs/index.md` prints the absolute path of `site` and opens
+nothing. `site/index.html` shows the whole tree; `site/guide/img/logo.png` sits
+under the same address. Serve it with `python3 -m http.server -d site` and open
+`http://localhost:8000/`; add `#/docs/guide/intro.md` to read one file. The page
+needs no network for text, code, diagrams, and pictures.
+
