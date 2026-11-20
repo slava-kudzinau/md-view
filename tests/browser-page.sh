@@ -121,7 +121,7 @@ skip() {
 
 run() {
     case_name=$1
-    ( "case_$1" )
+    ( "case_${2:-$1}" )
     st=$?
     case $st in
         0) echo "ok $1" ;;
@@ -1000,18 +1000,70 @@ case_page_baked_content() {
     fresh
     CHROME=$(chrome_prog)
     [ -n "$CHROME" ] || skip "no Chrome"
-    md --tree off --no-open --bake --out "$page" "$sample"
+    mkdir -p site || bad "mkdir site"
+    md --tree off --no-open --bake site "$sample"
     [ "$rc" = 0 ] || bad "exit $rc"
     # baked: #content has a child node, and a mermaid pre is drawn to an svg,
     # read straight from the file (no script runs).
-    grep -qE '<main id="content"[^>]*>[^[:space:]]' "$page" || bad "baked #content is empty"
-    grep -qE '<pre class="mermaid"[^>]*data-processed[^>]*>[[:space:]]*<svg' "$page" \
+    grep -qE '<main id="content"[^>]*>[^[:space:]]' "$d/work/site/index.html" \
+        || bad "baked #content is empty"
+    grep -qE '<pre class="mermaid"[^>]*data-processed[^>]*>[[:space:]]*<svg' "$d/work/site/index.html" \
         || bad "baked mermaid has no svg"
     # default (no --bake) keeps the empty pane.
     md --tree off --no-open --out "$page" "$sample"
     [ "$rc" = 0 ] || bad "exit $rc"
     grep -qF '<main id="content" class="markdown-body"></main>' "$page" \
         || bad "unbaked #content is not empty"
+    exit 0
+}
+
+# --bake <dir>: writes the folder page <dir>/index.html, prints the absolute
+# folder path on stdout, and opens nothing. A Chrome note on stderr is fine.
+case_page_bake_dir() {
+    fresh
+    mkdir -p site || bad "bake:page mkdir site"
+    md --tree off --no-open --bake site "$sample"
+    [ "$rc" = 0 ] || bad "bake:page exit $rc, stderr: $(cat "$d/err")"
+    [ -f "$d/work/site/index.html" ] || bad "bake:page no index.html in the bake folder"
+    want=$(cd site && pwd) || bad "bake:page cd site"
+    [ "$(tail -n 1 "$d/out")" = "$want" ] \
+        || bad "bake:page stdout last line [$(tail -n 1 "$d/out")], want [$want]"
+    [ "$(wc -l < "$d/out")" -eq 1 ] || bad "bake:page stdout is not one line: $(cat "$d/out")"
+    exit 0
+}
+
+# The baked page head: <base href="./">, and the CSP with img-src data: 'self'.
+case_page_bake_head() {
+    fresh
+    mkdir -p "$d/site" || bad "bake:page mkdir"
+    md --tree off --no-open --bake "$d/site" "$sample"
+    [ "$rc" = 0 ] || bad "bake:page exit $rc, stderr: $(cat "$d/err")"
+    grep -qF '<base href="./">' "$d/site/index.html" \
+        || bad "bake:page base line is not ./ in the baked page"
+    grep -qF "<meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'none'; script-src 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'unsafe-inline'; img-src data: 'self'\">" "$d/site/index.html" \
+        || bad "bake:page the baked page policy is not img-src data: 'self'"
+    [ "$(grep -c -F 'Content-Security-Policy' "$d/site/index.html")" = 1 ] \
+        || bad "bake:page want one policy"
+    exit 0
+}
+
+# A <dir> that does not exist: exit 2, and nothing is written.
+case_page_bake_missing_dir() {
+    fresh
+    md --tree off --no-open --bake "$d/work/ghost" "$sample"
+    [ "$rc" = 2 ] || bad "bake:page missing dir exit $rc, want 2"
+    [ ! -e "$d/work/ghost/index.html" ] || bad "bake:page wrote a page in a missing folder"
+    exit 0
+}
+
+# The flag shape: --bake with no value exits 2. --bake with --out exits 2.
+case_page_bake_flag_shape() {
+    fresh
+    md --tree off --no-open --bake "$sample"
+    [ "$rc" = 2 ] || bad "bake:page --bake with no value exit $rc, want 2"
+    mkdir -p "$d/site" || bad "bake:page mkdir"
+    md --tree off --no-open --bake "$d/site" --out "$page" "$sample"
+    [ "$rc" = 2 ] || bad "bake:page --bake with --out exit $rc, want 2"
     exit 0
 }
 
@@ -3040,6 +3092,13 @@ for c in flags_ok flag_width_bad flag_theme_bad flag_width_missing palette_setti
          palette_layer; do
     run "$c"
 done
+
+# bake rows: the printed name bake:page_* names the check; the function is
+# page_bake_*.
+run bake:page_dir page_bake_dir
+run bake:page_head page_bake_head
+run bake:page_missing_dir page_bake_missing_dir
+run bake:page_flag_shape page_bake_flag_shape
 
 # root_slash_off runs only when / has a readable plain file. Else it is not run,
 # and a note goes to stderr (not a skip line, so the run stays skip-free).

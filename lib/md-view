@@ -46,7 +46,7 @@ old_umask=$(umask)
 usage() {
     echo 'usage: md-view [--out <page.html>] [--no-open] [--width 60|70|80|90]' >&2
     echo '               [--theme light|dark|auto] [--palette github|tokyo]' >&2
-    echo '               [--browser B] [--no-cache] [--bake]' >&2
+    echo '               [--browser B] [--no-cache] [--bake <dir>]' >&2
     echo '               [--tree on|off] [--list-tree] <file.md>' >&2
     echo '       md-view --init-config' >&2
     echo '       md-view --print-association' >&2
@@ -621,7 +621,10 @@ while [ $# -gt 0 ]; do
         --no-open)
             do_open=0 ;;
         --bake)
-            flag_bake=1 ;;
+            [ $# -ge 2 ] || usage
+            bake_dir=$2
+            flag_bake=1
+            shift ;;
         --no-cache)
             no_cache=1 ;;
         --width)
@@ -675,6 +678,17 @@ done
 
 # Resolve the start values once: a flag, else the file, else the built-in default.
 read_ini
+
+# Bake takes the place of --out. Bake forces tree mode the way a flag does;
+# --tree off wins over it.
+if [ "$flag_bake" = 1 ]; then
+    [ -z "$out" ] || { echo 'md-view: --bake does not take --out' >&2; exit 2; }
+    [ -n "$flag_tree" ] || flag_tree=on
+    # The bake folder becomes absolute: the page path and the file_url need it.
+    # The cd is also the folder check: a folder that is not there exits 2.
+    bake_abs=$(cd "$bake_dir" && pwd) || { echo "md-view: --bake $bake_dir is not a folder" >&2; exit 2; }
+    bake_dir=$bake_abs
+fi
 forced=0
 width=${flag_width:-${cfg_width:-70}}
 theme=${flag_theme:-${cfg_theme:-auto}}
@@ -775,7 +789,10 @@ fi
 # A cache folder that cannot be made or used, or a page path that is a link or
 # not a plain file, gives one stderr line and the old temporary page.
 cached=0
-if [ -n "$out" ]; then
+if [ "$flag_bake" = 1 ]; then
+    page=$bake_dir/index.html
+    out=$page
+elif [ -n "$out" ]; then
     page=$out
 else
     page=
@@ -838,6 +855,11 @@ done
 # the size and the modification time that ls shows, or "none".
 if [ "$tree_mode" = 1 ]; then tree_word=on; else tree_word=off; fi
 key_line="<meta name=\"md-view-key\" content=\"w=$width;t=$theme;p=$palette;f=$forced;tr=$tree_word;r=$root_mode;d=$tree_depth;n=$tree_max;v=$version\">"
+# The CSP line. A baked page sits in its own folder and reads its images from
+# there, so img-src takes 'self' for file:.
+csp_img="data: file:"
+[ "$flag_bake" = 1 ] && csp_img="data: 'self'"
+csp_line="<meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'none'; script-src 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'unsafe-inline'; img-src $csp_img\">"
 ini_state=none
 if [ -f "$ini" ]; then
     ini_state=$(ls -lnLd -- "$ini" 2>/dev/null \
@@ -863,6 +885,9 @@ base_url=file://$(printf '%s' "$dir" | sed -e 's/%/%25/g' -e 's/ /%20/g' -e 's/#
     -e 's/?/%3F/g' -e 's/"/%22/g' -e "s/'/%27/g" -e 's/</%3C/g' -e 's/>/%3E/g' -e 's/&/%26/g' \
     | awk 'NR > 1 { printf "%%0A" } { printf "%s", $0 }')
 base_line=$(printf '<base href="%s">' "$base_url")
+
+# A baked page sits in its own folder, so its base is the folder.
+[ "$flag_bake" = 1 ] && base_line='<base href="./">'
 
 # The page of this run as an absolute path, for the -newer walk.
 case $page in
@@ -987,7 +1012,9 @@ bom=$(printf '\357\273\277')
     cat <<'HTML'
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'unsafe-inline'; img-src data: file:">
+HTML
+    printf '%s\n' "$csp_line"
+    cat <<'HTML'
 <meta name="viewport" content="width=device-width, initial-scale=1">
 HTML
     printf '%s\n%s\n%s\n' "$key_line" "$ini_line" "<meta name=\"md-view-version\" content=\"$version\">"
@@ -1132,6 +1159,11 @@ if [ "$flag_bake" = 1 ]; then
 fi
 umask "$old_umask"
 
+if [ "$flag_bake" = 1 ]; then
+    # The bake folder is the run's one stdout line; the opener stays shut.
+    ( cd "$bake_dir" && pwd )
+    exit 0
+fi
 if [ "$do_open" = 1 ]; then
     open_page "$page"
 fi
