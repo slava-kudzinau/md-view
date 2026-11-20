@@ -1063,6 +1063,17 @@ case_page_bake_missing_dir() {
     exit 0
 }
 
+# A <dir> whose parent is a regular file: mkdir fails, exit 2, no page.
+case_page_bake_unmakeable_dir() {
+    fresh
+    : > "$d/blocker" || bad "bake:page make blocker file"
+    md --tree off --no-open --bake "$d/blocker/site" "$sample"
+    [ "$rc" = 2 ] || bad "bake:page unmakeable dir exit $rc, want 2"
+    [ ! -e "$d/blocker/site/index.html" ] || bad "bake:page wrote a page under a file parent"
+    exit 0
+}
+
+
 # The flag shape: --bake with no value exits 2. --bake with --out exits 2.
 case_page_bake_flag_shape() {
     fresh
@@ -3236,6 +3247,7 @@ run bake:page_dir page_bake_dir
 run bake:page_head page_bake_head
 run bake:page_missing_dir page_bake_missing_dir
 run bake:page_flag_shape page_bake_flag_shape
+run bake:page_unmakeable_dir page_bake_unmakeable_dir
 run bake:asset_image bake_asset_image
 run bake:asset_link bake_asset_link
 run bake:asset_skips bake_asset_skips
