@@ -27,8 +27,10 @@ case $md_open in
 esac
 vendor=${VENDOR_DIR:-$(dirname -- "$md_open")}
 sample=$here/browser-page/sample.md
+bake_fix=$here/fixtures/bake
 [ -f "$md_open" ] || { echo "FAIL setup: no script $md_open"; exit 1; }
 [ -f "$sample" ] || { echo "FAIL setup: no fixture $sample"; exit 1; }
+[ -f "$bake_fix/index.md" ] || { echo "FAIL setup: no fixture $bake_fix/index.md"; exit 1; }
 
 tmp=$(mktemp -d "${TMPDIR:-/tmp}/browser-page.XXXXXX") || exit 1
 trap 'rm -rf "$tmp"' EXIT
@@ -1064,6 +1066,74 @@ case_page_bake_flag_shape() {
     mkdir -p "$d/site" || bad "bake:page mkdir"
     md --tree off --no-open --bake "$d/site" --out "$page" "$sample"
     [ "$rc" = 2 ] || bad "bake:page --bake with --out exit $rc, want 2"
+    exit 0
+}
+
+# The publish set: an image target in the Markdown copies its file, with its
+# folder, into the bake folder. The shared fixture is tests/fixtures/bake/.
+case_bake_asset_image() {
+    fresh
+    mkdir -p site || bad "bake:asset mkdir site"
+    md --tree off --no-open --bake site "$bake_fix/index.md"
+    [ "$rc" = 0 ] || bad "bake:asset exit $rc, stderr: $(cat "$d/err")"
+    [ -f site/guide/img/logo.png ] || bad "bake:asset img/logo.png not copied"
+    exit 0
+}
+
+# A link target that is not a Markdown file copies its file.
+case_bake_asset_link() {
+    fresh
+    mkdir -p site || bad "bake:asset mkdir site"
+    md --tree off --no-open --bake site "$bake_fix/index.md"
+    [ "$rc" = 0 ] || bad "bake:asset exit $rc, stderr: $(cat "$d/err")"
+    [ -f site/data/report.csv ] || bad "bake:asset data/report.csv not copied"
+    exit 0
+}
+
+# The tree-scan skip rules: a dotted part and a node_modules part are not
+# copied. A name that starts with - is copied with its name.
+case_bake_asset_skips() {
+    fresh
+    mkdir -p site || bad "bake:asset mkdir site"
+    md --tree off --no-open --bake site "$bake_fix/index.md"
+    [ "$rc" = 0 ] || bad "bake:asset exit $rc, stderr: $(cat "$d/err")"
+    [ ! -e site/.env ] || bad "bake:asset .env copied"
+    [ ! -e site/.git/config ] || bad "bake:asset .git/config copied"
+    [ ! -e site/node_modules/pkg/readme.md ] || bad "bake:asset node_modules target copied"
+    [ -f 'site/img/-a.png' ] || bad "bake:asset a name with a leading - not copied"
+    exit 0
+}
+
+# A symlink target and a target under a symlinked folder are not copied.
+case_bake_asset_symlink() {
+    fresh
+    mkdir -p site || bad "bake:asset mkdir site"
+    md --tree off --no-open --bake site "$bake_fix/index.md"
+    [ "$rc" = 0 ] || bad "bake:asset exit $rc, stderr: $(cat "$d/err")"
+    [ ! -e site/link.png ] || bad "bake:asset the symlink target copied"
+    [ ! -e site/thumbs/logo.png ] || bad "bake:asset a target under a symlinked folder copied"
+    exit 0
+}
+
+# An image target needs an image extension, in any letter case.
+case_bake_asset_ext() {
+    fresh
+    mkdir -p site || bad "bake:asset mkdir site"
+    md --tree off --no-open --bake site "$bake_fix/index.md"
+    [ "$rc" = 0 ] || bad "bake:asset exit $rc, stderr: $(cat "$d/err")"
+    [ ! -e site/data/chart.csv ] || bad "bake:asset a .csv image target copied"
+    [ -f site/guide/img/logo.svg ] || bad "bake:asset logo.svg not copied"
+    [ -f site/guide/img/photo.JPG ] || bad "bake:asset photo.JPG not copied"
+    exit 0
+}
+
+# One %XX decode: a target with %20 copies the file with a blank in its name.
+case_bake_asset_percent() {
+    fresh
+    mkdir -p site || bad "bake:asset mkdir site"
+    md --tree off --no-open --bake site "$bake_fix/index.md"
+    [ "$rc" = 0 ] || bad "bake:asset exit $rc, stderr: $(cat "$d/err")"
+    [ -f 'site/guide/img/shot 1.png' ] || bad "bake:asset img/shot%201.png not copied as shot 1.png"
     exit 0
 }
 
@@ -3099,6 +3169,12 @@ run bake:page_dir page_bake_dir
 run bake:page_head page_bake_head
 run bake:page_missing_dir page_bake_missing_dir
 run bake:page_flag_shape page_bake_flag_shape
+run bake:asset_image bake_asset_image
+run bake:asset_link bake_asset_link
+run bake:asset_skips bake_asset_skips
+run bake:asset_symlink bake_asset_symlink
+run bake:asset_ext bake_asset_ext
+run bake:asset_percent bake_asset_percent
 
 # root_slash_off runs only when / has a readable plain file. Else it is not run,
 # and a note goes to stderr (not a skip line, so the run stays skip-free).

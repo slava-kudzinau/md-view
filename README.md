@@ -46,7 +46,7 @@ md-view [options] <file.md>
 | `--tree on\|off` | Show the file tree of the root folder, or one file only. |
 | `--list-tree` | Print the root and the tree files. Write no page. |
 | `--no-cache` | Build the page again. |
-| `--bake` | Render the page once with headless Chrome, so it shows in a preview with no scripts. Needs Chrome; falls back to the unbaked page. |
+| `--bake <dir>` | Name the output folder. Write `<dir>/index.html` and the assets the Markdown names, and render the page once with headless Chrome, so it shows in a preview with no scripts. Needs Chrome; falls back to the unbaked page. |
 | `--init-config` | Write a commented sample `config.ini`, and print its path. |
 | `--print-association` | Print the far2l File associations entry. |
 | `--version` | Print the version, and exit. |
