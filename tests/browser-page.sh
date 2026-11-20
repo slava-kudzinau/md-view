@@ -1163,6 +1163,33 @@ case_bake_asset_paren() {
     exit 0
 }
 
+# A fenced code block holds prose examples: a target inside a fence (backticks
+# with an info string, and tildes) publishes nothing. A real asset outside the
+# fence still copies, so the row proves the bake ran.
+case_bake_asset_fence() {
+    fresh
+    mkdir -p site || bad "bake:asset mkdir site"
+    md --tree off --no-open --bake site "$bake_fix/index.md"
+    [ "$rc" = 0 ] || bad "bake:asset exit $rc, stderr: $(cat "$d/err")"
+    [ ! -e site/target.png ] || bad "bake:asset a fenced-block target copied"
+    [ ! -e site/tilde.png ] || bad "bake:asset a tilde-fence target copied"
+    [ -f site/guide/img/logo.png ] || bad "bake:asset the real asset not copied"
+    exit 0
+}
+
+# A target whose file is not in the tree: one stderr note, nothing copied for
+# it, and the bake exits 0.
+case_bake_asset_dead() {
+    fresh
+    mkdir -p site || bad "bake:asset mkdir site"
+    md --tree off --no-open --bake site "$bake_fix/index.md"
+    [ "$rc" = 0 ] || bad "bake:asset exit $rc, stderr: $(cat "$d/err")"
+    [ ! -e site/missing.png ] || bad "bake:asset the missing target copied"
+    grep -qxF 'md-view: no file for missing.png' "$d/err" \
+        || bad "bake:asset no note for the missing target: $(cat "$d/err")"
+    exit 0
+}
+
 # Tree-mode bake: bake notes.md with the default tree, so the root is the
 # fixture folder. The tree-root asset copies, a deep Markdown link does not,
 # and the notes.md input guide/img/logo.png copies once.
@@ -3217,6 +3244,8 @@ run bake:asset_ext bake_asset_ext
 run bake:asset_percent bake_asset_percent
 run bake:asset_double bake_asset_double
 run bake:asset_paren bake_asset_paren
+run bake:asset_fence bake_asset_fence
+run bake:asset_dead bake_asset_dead
 run bake:asset_tree bake_asset_tree
 
 # root_slash_off runs only when / has a readable plain file. Else it is not run,

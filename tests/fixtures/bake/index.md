@@ -33,3 +33,13 @@
 ![d](img/shot%25201.png)
 
 ![p](img/shot (2).png)
+
+```md
+![e](target.png)
+```
+
+[missing](missing.png)
+
+~~~
+![f](tilde.png)
+~~~

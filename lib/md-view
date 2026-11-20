@@ -651,6 +651,11 @@ function add(p, k) {
 {
     # A CRLF line ends with \r: drop it, so a target at the line end stays.
     sub(/\r$/, "")
+    # A fence line: the first non-space content is three or more backticks
+    # (any info string) or three or more tildes. It toggles the fence state.
+    # A fenced block holds prose examples: its lines add no targets.
+    if ($0 ~ /^[ \t]*(`{3,}|~{3,})/) { fence = !fence; next }
+    if (fence) next
     # A reference definition: the token after "[ref]:". A <...> wrapper goes
     # first, then a "title" at the end.
     if (match($0, /^[ \t]*\[[^][]*\]:[ \t]*/)) {
@@ -762,10 +767,15 @@ bake_link_chain() {
 }
 
 # bake_copy REL: copies the tree file REL into the bake folder, with its
-# parent folders. A copy that fails prints one line and exits 2.
+# parent folders. A target that names no regular file prints one note and
+# copies nothing. A copy that fails prints one line and exits 2.
 bake_copy() {
     bake_ok "$1" || return 0
     bake_link_chain "$1" || return 0
+    # Only a regular file joins the bake folder: a missing target prints
+    # one note on stderr and copies nothing.
+    [ -f "$tree_root/$1" ] \
+        || { echo "md-view: no file for $1" >&2; return 0; }
     case $1 in
         */*) mkdir -p -- "$bake_dir/${1%/*}" \
                 || { echo "md-view: cannot copy $1" >&2; exit 2; } ;;
