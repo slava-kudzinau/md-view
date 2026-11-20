@@ -17,6 +17,7 @@ description: The list of md-view stories in build order, with the status of each
 | 7 | [line-anchor-nav](line-anchor-nav/story.md) | M | done | diagram-laser-pointer |
 | 8 | [tree-panel-compact-resize](tree-panel-compact-resize/story.md) | M | planned | - |
 | 9 | [tree-scan-speed](tree-scan-speed/story.md) | S | in-review | line-anchor-nav |
+| 10 | [bake-pages](bake-pages/story.md) | S | planned | - |
 
 ## Build order
 
@@ -29,3 +30,4 @@ description: The list of md-view stories in build order, with the status of each
 7. **line-anchor-nav** adds line anchors (`#L85`, `#L85-90`) to the page: stamps in `show()`, grammar in `scrollToFrag`, new `tests/browser-links-dom.sh` rows. It runs after diagram-laser-pointer merges: both edit `lib/page.js` and the spec Tests table, in regions that do not overlap. It runs in parallel with `mermaid-accent-toolbar`, which edits the viewer regions of the same files.
 8. **tree-panel-compact-resize** makes the tree panel readable in a narrow width: rails, chevrons, chain rows, ellipsis, and a resizable saved width. It edits the tree regions of `lib/md-view` and `lib/page.js` and the tree cases of both browser tests. It runs in parallel with `mermaid-accent-toolbar`: the files are shared, the regions do not overlap.
 9. **tree-scan-speed** makes a tree page open fast on a large folder. It edits the scan and the cache check in `lib/md-view` and adds rows to `tests/browser-page.sh`. The story line-anchor-nav edits the same two files. So this story starts after line-anchor-nav merges.
+10. **bake-pages** bakes a folder for upload: one `index.html` plus the Markdown-named assets, mirrored under the root. It edits the flag, head and write path of `lib/md-view` and adds rows to `tests/browser-page.sh`. It runs in parallel with `tree-panel-compact-resize`: the files are shared, the regions do not overlap.
