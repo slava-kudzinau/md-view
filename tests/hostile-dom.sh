@@ -139,9 +139,11 @@ mermaid_has() {
 mermaid_has_svg() { mermaid_has "$1" '<svg'; }
 
 # with_script <page> <out> <script>: writes <out> as <page> with <script> added
-# before </body>, so it runs after the page script. <script> holds no backslash.
+# at the true end, after </html>, so it runs after the page script. The first
+# </body> in the page is inside a vendored minified script. <script> holds no
+# backslash.
 with_script() {
-    awk -v s="$3" '{ i = index($0, "</body>"); if (i) print substr($0, 1, i - 1) s substr($0, i); else print }' "$1" > "$2"
+    awk -v s="$3" '{ print } /^<\/html>$/ { print s }' "$1" > "$2"
 }
 
 # render <page> <name> [<window>] [<ms>]: headless Chrome dumps the page to
@@ -228,7 +230,7 @@ check "plain: one CDN script for mermaid, pinned with integrity and CORS" one_cd
 csp_policy() {
     grep -F -q 'http-equiv="Content-Security-Policy"' "$1" &&
         grep -F -q "default-src 'none'" "$1" &&
-        grep -F -q "script-src 'unsafe-inline' https://cdn.jsdelivr.net" "$1" &&
+        grep -F -q "script-src 'unsafe-inline'" "$1" &&
         grep -F -q "img-src data: file:" "$1"
 }
 check "plain: content security policy allows only the script origin and local images" csp_policy "$tmp/plain.html"
@@ -260,8 +262,8 @@ check "diagram: Chrome renders the page" diagram_page
 net_check "diagram: svg inside the mermaid block (under the policy)" mermaid_has_svg "$tmp/diagram.dom"
 check "diagram: heading text" grep -F -q 'Mermaid fixture' "$tmp/diagram.dom"
 
-# Row: the CDN stalls. The text shows anyway, and the diagram source with it.
-# The listener is local, so this row needs no network.
+# Row: the CDN stalls. The page inlines mermaid, so the proxy never blocks it:
+# the text shows, and the diagram draws from the inline mermaid.
 stall_page() {
     sh "$md_open" "$fix/diagram.md" --out "$tmp/stall.html" --no-open > /dev/null 2>&1 || return 1
     port=$((18000 + $$ % 2000))
@@ -276,20 +278,20 @@ stall_page() {
 }
 check "stalled CDN: Chrome renders the page" stall_page
 check "stalled CDN: the heading shows" grep -F -q 'Mermaid fixture' "$tmp/stall.dom"
-check "stalled CDN: the diagram source shows" grep -F -q 'Pitch and POC' "$tmp/stall.dom"
+check "stalled CDN: the diagram draws from inline mermaid" mermaid_has_svg "$tmp/stall.dom"
 
-# Row: the CDN is refused. Each diagram shows as a code block.
+# Row: the CDN is refused. The page inlines mermaid, so the diagram draws.
 refused_page() {
     sh "$md_open" "$fix/diagram.md" --out "$tmp/refused.html" --no-open > /dev/null 2>&1 &&
         render_proxy "$tmp/refused.html" refused 9
 }
-check "refused CDN: each diagram shows as a code block" refused_page
-check "refused CDN: the code block holds the source" grep -E -q '<pre [^>]*class="mermaid"[^>]*>flowchart LR' "$tmp/refused.dom"
+check "refused CDN: Chrome renders the page" refused_page
+check "refused CDN: the diagram draws from inline mermaid" mermaid_has_svg "$tmp/refused.dom"
 
-# The accents are inline styles on the shapes of a drawn svg. With the CDN
-# refused the block keeps its source and has no svg, so no accent shows. The
-# page style holds no stroke property, so any stroke in the dump is an accent.
-check "refused CDN: the code block shows no accent paint" absent grep -F -q 'stroke' "$tmp/refused.dom"
+# The accents are inline styles on the shapes of a drawn svg. The page inlines
+# mermaid, so a refused CDN does not stop the draw: the shapes carry an accent.
+# The page style holds no stroke property, so any stroke in the dump is an accent.
+check "refused CDN: the drawn shapes carry an accent paint" grep -F -q 'stroke' "$tmp/refused.dom"
 
 # Row: </script> in the file does not end the script; the rest renders and
 # nothing from the file runs or becomes an element.
