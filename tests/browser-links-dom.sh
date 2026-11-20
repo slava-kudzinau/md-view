@@ -117,12 +117,10 @@ tree_of() {
     sed -n 's|.*\(<nav id="md-tree-panel".*</nav>\).*|\1|p'
 }
 
-# with_script FILE SCRIPT: FILE with SCRIPT added at the true end, after
-# </html>. The page script is the last real script, so SCRIPT runs after the
-# page script wired its handlers. The first </body> in the page is inside a
-# vendored minified script, so </html> is the safe anchor.
+# with_script FILE SCRIPT: FILE with SCRIPT added before </body>.
+# The injected script runs after the page script wired its handlers.
 with_script() {
-    awk -v s="$2" '{ print } /^<\/html>$/ { print s }' "$1" \
+    awk -v s="$2" '{ i = index($0, "</body>"); if (i) print substr($0, 1, i - 1) s substr($0, i); else print }' "$1" \
         > "$d/injected.html" || bad "awk"
 }
 

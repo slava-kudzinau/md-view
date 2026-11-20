@@ -10,10 +10,9 @@ BINDIR = $(PREFIX)/bin
 SHAREDIR = $(PREFIX)/share/md-view
 
 # The vendored files of lib/. install copies them to SHAREDIR with mode 644.
-VENDORED = marked.min.js highlight.min.js mermaid.min.js github-markdown-light.css \
+VENDORED = marked.min.js highlight.min.js github-markdown-light.css \
 	github-markdown-dark.css hljs-github.min.css hljs-github-dark.min.css \
-	marked.LICENSE.md highlight.LICENSE.md github-markdown.LICENSE.md \
-	mermaid.LICENSE.md
+	marked.LICENSE.md highlight.LICENSE.md github-markdown.LICENSE.md
 
 # The page files of lib/. install copies them to SHAREDIR with mode 644.
 PAGE = page.js page.css

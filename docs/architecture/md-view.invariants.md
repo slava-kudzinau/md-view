@@ -23,7 +23,7 @@ Rules that always hold for md-view. Format: `- **[area]**: rule (Learned from: s
 ## Install and paths
 
 - **[paths]**: md-view reads only `${XDG_CONFIG_HOME:-$HOME/.config}/md-view/config.ini`. It reads no file in the old far2l path, and it has no fallback. (Learned from: story md-view-repo, owner ruling, 2026-11-12)
-- **[paths]**: `lib/md-view` reads its page code (`page.js`, `page.css`) and its vendored files from its own folder (`self_dir`). The install keeps the script, the two page files and the eleven vendored files together in `$PREFIX/share/md-view/`. (Learned from: story md-view-repo, spec, 2026-11-12)
+- **[paths]**: `lib/md-view` reads its page code (`page.js`, `page.css`) and its vendored files from its own folder (`self_dir`). The install keeps the script, the two page files and the nine vendored files together in `$PREFIX/share/md-view/`. (Learned from: story md-view-repo, spec, 2026-11-12)
 - **[install]**: `PREFIX` is absolute and holds no single quote, because the installed launcher quotes the path with single quotes. `make install` replaces a symlink at `$PREFIX/bin/md-view` and does not write through it. (Learned from: story md-view-repo, T4, 2026-11-12)
 
 ## Tests
