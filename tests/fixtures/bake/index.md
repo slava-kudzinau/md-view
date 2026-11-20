@@ -29,3 +29,7 @@
 ![same][logo-ref]
 
 [logo-ref]: guide/img/logo.png
+
+![d](img/shot%25201.png)
+
+![p](img/shot (2).png)

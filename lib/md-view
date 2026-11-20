@@ -60,7 +60,8 @@ usage() {
 # the base_url recipe.
 file_url() {
     printf 'file://%s' "$(printf '%s' "$1" | sed -e 's/%/%25/g' -e 's/ /%20/g' -e 's/#/%23/g' \
-        -e 's/?/%3F/g' -e 's/"/%22/g' -e "s/'/%27/g" -e 's/</%3C/g' -e 's/>/%3E/g' -e 's/&/%26/g')"
+        -e 's/?/%3F/g' -e 's/"/%22/g' -e "s/'/%27/g" -e 's/</%3C/g' -e 's/>/%3E/g' -e 's/&/%26/g' \
+        | awk 'NR > 1 { printf "%%0A" } { printf "%s", $0 }')"
 }
 
 # trim TEXT: sets trimmed to TEXT without the spaces and tabs at both ends.
@@ -611,12 +612,18 @@ function bare(t) {
     return t
 }
 # norm T: the root-relative path of target T, "" when it names no tree file.
-function norm(t,   n, a, i, k, out) {
+function norm(t,   n, a, i, k, out, s, p) {
     t = bare(t)
     if (t == "") return ""
-    while (match(t, /%[0-9A-Fa-f][0-9A-Fa-f]/))
-        t = substr(t, 1, RSTART - 1) hex[tolower(substr(t, RSTART + 1, 2))] \
-            substr(t, RSTART + 3)
+    # Decode each %XX escape once: advance past the decoded bytes.
+    s = ""
+    p = 1
+    while (match(substr(t, p), /%[0-9A-Fa-f][0-9A-Fa-f]/)) {
+        s = s substr(t, p, RSTART - 1) \
+            hex[tolower(substr(t, p + RSTART, 2))]
+        p = p + RSTART + 2
+    }
+    t = s substr(t, p)
     if (t ~ /^[A-Za-z][A-Za-z0-9+.-]*:/) return ""
     sub(/^\//, "", t)
     n = split(dir "/" t, a, "/")
@@ -642,6 +649,8 @@ function add(p, k) {
     print k " " p
 }
 {
+    # A CRLF line ends with \r: drop it, so a target at the line end stays.
+    sub(/\r$/, "")
     # A reference definition: the token after "[ref]:". A <...> wrapper goes
     # first, then a "title" at the end.
     if (match($0, /^[ \t]*\[[^][]*\]:[ \t]*/)) {
@@ -660,7 +669,7 @@ function add(p, k) {
     }
     # An image with an inline target: ![alt](target ...)
     s = $0
-    while (match(s, /!\[[^][]*\]\([^()]*\)/)) {
+    while (match(s, /!\[[^][]*\]\([^()]*(\([^()]*\)[^()]*)*\)/)) {
         seg = substr(s, RSTART, RLENGTH)
         s = substr(s, RSTART + RLENGTH)
         t = seg
@@ -670,7 +679,7 @@ function add(p, k) {
     }
     # A link with an inline target that is not a Markdown file: [text](target)
     s = $0
-    while (match(s, /(^|[^!])\[[^][]*\]\([^()]*\)/)) {
+    while (match(s, /(^|[^!])\[[^][]*\]\([^()]*(\([^()]*\)[^()]*)*\)/)) {
         seg = substr(s, RSTART, RLENGTH)
         s = substr(s, RSTART + RLENGTH)
         t = seg
@@ -1373,7 +1382,18 @@ if [ "$flag_bake" = 1 ]; then
             --user-data-dir="$bake_prof" --virtual-time-budget="$bake_ms" --dump-dom \
             "$(file_url "$page")" 2>/dev/null > "$bake_btmp"
         if [ -s "$bake_btmp" ]; then
-            mv -f "$bake_btmp" "$page" || echo 'md-view: bake: cannot write the page' >&2
+            # Chrome wrote the live-DOM file:// URLs of the images. A remote
+            # reader needs folder-relative targets: rewrite the folder prefix
+            # to ./ before the move. index() and substr() keep a "|" in the
+            # folder path safe.
+            awk -v p="file://$bake_dir/" '{
+                while ((i = index($0, p)) > 0)
+                    $0 = substr($0, 1, i - 1) "./" substr($0, i + length(p))
+                print
+            }' "$bake_btmp" > "$bake_btmp.2" \
+                && mv -f "$bake_btmp.2" "$page" \
+                || echo 'md-view: bake: cannot write the page' >&2
+            rm -f "$bake_btmp"
         else
             echo 'md-view: bake: Chrome produced no DOM, wrote the unbaked page' >&2
             rm -f "$bake_btmp"

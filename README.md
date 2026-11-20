@@ -80,6 +80,8 @@ The file is `${XDG_CONFIG_HOME:-$HOME/.config}/md-view/config.ini`. Run `md-view
 | `tree_depth` | 1 to 12 | `6` |
 | `tree_max_files` | 1 to 2000 | `500` |
 
+Two environment variables set the bake render. `MD_VIEW_CHROME` names the Chrome program for `--bake`. The value is a path to an executable file, and the bake uses it in place of the default search. `MD_VIEW_BAKE_MS` gives the time of the render in milliseconds. The default is 8000.
+
 ## Use from far2l
 
 Run `md-view --print-association` from the installed copy. It prints the entry with the absolute path of the launcher. The steps are:

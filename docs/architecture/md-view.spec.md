@@ -64,6 +64,8 @@ md-view --version
 | `XDG_CONFIG_HOME` | The base of the folder of `config.ini`. Else `$HOME/.config`. |
 | `BROWSER` | Used by `auto` only, and only if it is one command name. A value that starts with `-` or has other characters is ignored with one line on stderr. |
 | `MARKED_JS` | Another path for `marked.min.js`. |
+| `MD_VIEW_CHROME` | The Chrome program for a bake. A path to an executable file. The bake uses it in place of the default search. |
+| `MD_VIEW_BAKE_MS` | The time of the bake render, in milliseconds. Default is 8000. |
 
 | Exit | When |
 |---|---|
@@ -138,9 +140,9 @@ Tree mode is on by default. It shows the opened file and the other Markdown file
 |---|---|
 | Page path | `<dir>/index.html`, written direct, so the page is built on every run. `<dir>` must exist, else exit 2. `--bake <dir>` with `--out <page.html>` exits 2. Bake uses tree mode; `--tree off` wins over it, a `tree=off` key does not. |
 | Head | `<base href="./">` replaces the `file://` base line. The policy keeps every origin and sets `img-src data: 'self'` for a baked page only. |
-| Publish set | Two target sets, read from the Markdown text of every file that joins the page. They hold the image targets of `![alt](target)` and of `![alt][ref]` with `[ref]: target`. They also hold the link targets of `[text](target)` that are not Markdown files, in any letter case. Drop a target with a scheme, a leading `/`, a dotted part, a `node_modules` part, a byte below `0x20`, or a depth over `tree_depth`. An image target must end in `png`, `jpg`, `jpeg`, `gif`, `svg` or `webp`, in any letter case. A `#frag` and a `"title"` go, and `%XX` is decoded once. The script resolves a target against the folder of its own file, under the root, the way the page resolves a link. |
+| Publish set | Two target sets, read from the Markdown text of every file that joins the page. They hold the image targets of `![alt](target)` and of `![alt][ref]` with `[ref]: target`. They also hold the link targets of `[text](target)` that are not Markdown files, in any letter case. Drop a target with a scheme, a dotted part, a `node_modules` part, a byte below `0x20`, or a depth over `tree_depth`. Strip a leading `/` and copy the target root-relative. An image target must end in `png`, `jpg`, `jpeg`, `gif`, `svg` or `webp`, in any letter case. A `#frag` and a `"title"` go, and `%XX` is decoded once. The script resolves a target against the folder of its own file, under the root, the way the page resolves a link. |
 | Copy | The copies run after the page is written and before the render, so the render output and the assets share one finished folder. The script makes the parent folders, then copies the file. A path with a symlink in its chain (the file, and each folder below the root) is not copied. A path is copied once. A copy that fails prints `md-view: cannot copy <target>` on stderr and exits 2. |
-| Chrome | Unchanged: the page is rendered once with headless Chrome, and the DOM is written to `index.html`. With no Chrome, the unbaked page is written with one line on stderr. |
+| Chrome | Unchanged: the page is rendered once with headless Chrome, and the DOM is written to `index.html`. The DOM names the images with `file://` URLs under the bake folder; the script rewrites that prefix to `./` before the write. With no Chrome, the unbaked page is written with one line on stderr. |
 | Print | The absolute path of `<dir>` on stdout, one line, last, exit 0. No browser. |
 
 ### The page: look, gear and keys
@@ -262,7 +264,7 @@ The policy is `default-src 'none'; script-src 'unsafe-inline' https://cdn.jsdeli
 | Test | Holds |
 |---|---|
 | `tests/browser-page.sh` | Needs only `sh`. It drives `lib/md-view` with `--no-open`. It checks the flags, the exit codes and `config.ini`. It checks that an old far2l config file has no effect. It also checks the page name, the reuse rule, the temporary file, the key and the page text. The gear, the popover, the keys and the saved choice are checked as page text only. A person checks them in Firefox and Chrome. |
-| `tests/browser-page.sh` bake rows | The `bake:page` rows: the folder page, its head, a missing folder, the flag shape. The `bake:asset` rows check the publish set of the shared fixture `tests/fixtures/bake/`. They cover images, a link, the skip rules, the symlink chain, the extensions, and one `%XX` decode. |
+| `tests/browser-page.sh` bake rows | The `bake:page` rows: the folder page, its head, a missing folder, the flag shape. The `bake:asset` rows check the publish set of the shared fixture `tests/fixtures/bake/`. They cover images, a link, the skip rules, the symlink chain, the extensions, and one `%XX` decode per escape. They also cover a target with parentheses, and the tree-mode bake. |
 | `tests/browser-links-dom.sh` | Headless Chrome. The hash route, the link rules, images, heading ids, anchors and line anchors. |
 | `tests/browser-links-dom.sh` tree panel | The panel markup and geometry: toggle left 308, gutter 332. The chain rows: `deep › a`, and a file sibling stops the chain. The open chain of the shown file is one row. The resize rows: `ArrowRight` sets `--md-panel-w` and `md-view-tree-w`. Shift adds 64, and the clamp stays at 560. A double-click restores 300, and a seeded width loads. Reset restores 300 and removes the key. The panel is hidden below 700 px and in print. |
 | `tests/hostile-dom.sh` | Headless Chrome. The untrusted content rows, the CSP, the page written with `--out`, and the `--print-association` text with a hostile file name. |

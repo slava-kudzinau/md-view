@@ -23,6 +23,7 @@ A folder of Markdown files, baked with `--bake pages`, becomes one HTML page per
 ## Scope
 
 **In:**
+- Superseded by the plan's Spec (`plan.md`): `--bake <dir>` writes one `index.html`, mirrors the assets, and keeps the hash routes. The rows below name the pages mode the story first planned.
 - `--bake pages` as a value of the `--bake` flag (the value-taking shape of `--width` at `lib/md-view:626`). Bare `--bake` keeps today's single-page output.
 - A pages nav mode. The emitter writes `<html data-nav="pages">`. `buildTree` emits `href="<target>.html"` in pages mode and the `#/route` form otherwise (`lib/page.js:356`).
 - The bake pass bakes every file in the tree, one Chrome run per file, on the opened file's tree. It runs in tree mode; in one-file mode it writes one page.
@@ -31,6 +32,7 @@ A folder of Markdown files, baked with `--bake pages`, becomes one HTML page per
 - Docs: a `--bake pages` row in the spec Flags table and the README Flags table; one sentence on the SharePoint preview row naming pages mode.
 
 **Out:**
+- Superseded by the plan's Spec (`plan.md`): the bake writes one `index.html` with mirrored assets, not per-file pages.
 - A `--lean` bake (strip the inline scripts, 79 KB, for a script-free preview). A later story.
 - Per-file bake for a single file outside a tree. The opened file's tree is the unit.
 - The tree-panel compact/resize work (story `tree-panel-compact-resize`). It edits the same `buildTree` region; the two run in series on that region.

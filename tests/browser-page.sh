@@ -1009,6 +1009,11 @@ case_page_baked_content() {
     # read straight from the file (no script runs).
     grep -qE '<main id="content"[^>]*>[^[:space:]]' "$d/work/site/index.html" \
         || bad "baked #content is empty"
+    # The mermaid svg needs the CDN at bake time: probe it. A probe that
+    # fails skips the rest of the row.
+    net=1
+    curl -sfI --max-time 10 https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js > /dev/null 2>&1 || net=0
+    [ "$net" = 1 ] || skip "no CDN for mermaid"
     grep -qE '<pre class="mermaid"[^>]*data-processed[^>]*>[[:space:]]*<svg' "$d/work/site/index.html" \
         || bad "baked mermaid has no svg"
     # default (no --bake) keeps the empty pane.
@@ -1134,6 +1139,41 @@ case_bake_asset_percent() {
     md --tree off --no-open --bake site "$bake_fix/index.md"
     [ "$rc" = 0 ] || bad "bake:asset exit $rc, stderr: $(cat "$d/err")"
     [ -f 'site/guide/img/shot 1.png' ] || bad "bake:asset img/shot%201.png not copied as shot 1.png"
+    exit 0
+}
+
+# One %XX decode per escape: the target shot%25201.png decodes once and
+# copies the file img/shot%201.png, with the %20 kept.
+case_bake_asset_double() {
+    fresh
+    mkdir -p site || bad "bake:asset mkdir site"
+    md --tree off --no-open --bake site "$bake_fix/index.md"
+    [ "$rc" = 0 ] || bad "bake:asset exit $rc, stderr: $(cat "$d/err")"
+    [ -f 'site/img/shot%201.png' ] || bad "bake:asset img/shot%25201.png not copied as shot%201.png"
+    exit 0
+}
+
+# An inline target with parentheses is published: img/shot (2).png.
+case_bake_asset_paren() {
+    fresh
+    mkdir -p site || bad "bake:asset mkdir site"
+    md --tree off --no-open --bake site "$bake_fix/index.md"
+    [ "$rc" = 0 ] || bad "bake:asset exit $rc, stderr: $(cat "$d/err")"
+    [ -f 'site/img/shot (2).png' ] || bad "bake:asset img/shot (2).png not copied"
+    exit 0
+}
+
+# Tree-mode bake: bake notes.md with the default tree, so the root is the
+# fixture folder. The tree-root asset copies, a deep Markdown link does not,
+# and the notes.md input guide/img/logo.png copies once.
+case_bake_asset_tree() {
+    fresh
+    mkdir -p site || bad "bake:asset mkdir site"
+    md --no-open --bake site "$bake_fix/notes.md"
+    [ "$rc" = 0 ] || bad "bake:asset exit $rc, stderr: $(cat "$d/err")"
+    [ -f site/img/logo.png ] || bad "bake:asset the tree-root img/logo.png not copied"
+    [ ! -e site/a/b/c/d/e/f/deep.md ] || bad "bake:asset the deep.md link copied"
+    [ -f site/guide/img/logo.png ] || bad "bake:asset the notes.md guide/img/logo.png not copied"
     exit 0
 }
 
@@ -3175,6 +3215,9 @@ run bake:asset_skips bake_asset_skips
 run bake:asset_symlink bake_asset_symlink
 run bake:asset_ext bake_asset_ext
 run bake:asset_percent bake_asset_percent
+run bake:asset_double bake_asset_double
+run bake:asset_paren bake_asset_paren
+run bake:asset_tree bake_asset_tree
 
 # root_slash_off runs only when / has a readable plain file. Else it is not run,
 # and a note goes to stderr (not a skip line, so the run stays skip-free).
