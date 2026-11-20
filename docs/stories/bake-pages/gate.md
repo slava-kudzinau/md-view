@@ -34,7 +34,7 @@ flowchart LR
 | Flag | `--bake` now takes a folder: `--bake <dir>`. No value → exit 2. With `--out` → exit 2. The folder must exist. |
 | Output | `<dir>/index.html` plus assets at their root-relative paths, for example `site/guide/img/logo.png`. |
 | Page head | Baked pages use `<base href="./">` and `img-src data: 'self'`. Other pages keep `img-src data: file:`. |
-| Published assets | Only the targets that the Markdown names. Pictures need one of these endings: `png`, `jpg`, `jpeg`, `gif`, `svg`, `webp`. Linked files take any ending. A target passes when no path part starts with a dot, no part is `node_modules`, no byte is below `0x20`, and the depth stays within `tree_depth`. |
+| Published assets | Only the targets that the Markdown names. Pictures need one of these endings: `png`, `jpg`, `jpeg`, `gif`, `svg`, `webp`. Linked files take any ending. A target passes when no path part starts with a dot and no part is `node_modules`. No byte is below `0x20`, and the depth stays within `tree_depth`. |
 | stdout | The absolute folder path, one line, exit 0. No browser starts. |
 | Runtime | No new tool. Headless Chrome stays a build-time tool for the bake path. Mermaid comes from `cdn.jsdelivr.net`, at bake time now, so a hosted page needs no network for its diagrams. |
 
