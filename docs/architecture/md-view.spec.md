@@ -148,7 +148,6 @@ Tree mode is on by default. It shows the opened file and the other Markdown file
 | Diagram viewer | `dialog.md-viewer` on `body`, made at the first open. Buttons `−`, `+`, `Fit`, `1:1`, `●`, `×`. `●` toggles the laser pointer, a red dot that follows the pointer. The laser state survives close and reopen in the page session. The `×` has the focus at open, so Enter or Space closes at once. The backdrop is `rgba(0,0,0,0.5)`. The color layer colors the dialog and its buttons. It works below 700 px too. |
 | Print | The gear, the popover, the tree panel and its toggle, and the diagram bars are hidden. |
 | Offline | Text, style and highlight show with no network. A mermaid block shows its source. |
-| SharePoint preview | The SharePoint one-up preview puts the file in a `<iframe sandbox="allow-scripts">` and parses the inline script elements inert, so none runs at load. The page shows the shell only: text, highlight and diagrams need a script, so they stay empty there. With --bake, md-view renders the page once with headless Chrome and writes the result, so text, code, and diagrams show in the preview. The baked diagram needs Chrome to reach `cdn.jsdelivr.net`; with no network the baked page shows the diagram source. The interactions still need the kept scripts. |
 
 ### How diagrams render
 
