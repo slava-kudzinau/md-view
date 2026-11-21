@@ -16,3 +16,5 @@ description: One row for each retired story, with its size, its cost against the
 | md-view-version | M | - | 6 | 9bd64b2 | `36b0814` | - | - | - | - | - | - | C0 I1 M9 | 2026-11-17 | no cost record |
 | diagram-laser-pointer | S | none | 8 | 4e2b238 | `a07442d` | - | - | - | - | - | - | C0 I1 M3 | 2026-11-18 | no cost record |
 | tree-scan-speed | S | none | 15 | d9357ed | `1aba21a` | $8.00 | $10.00 | $4.28 | $3.01 | $7.29 | ok | C0 I1 M10 | 2026-11-21 | verdict on the subtree only |
+| line-anchor-nav | M | contract, security | 10 | 4d766ba | `f98a7ae` | $10.37 | $15.37 | $5.91 | $5.93 | $11.83 | ok | C0 I5 M7 | 2026-11-21 | verdict on the subtree only |
+| tree-panel-compact-resize | M | contract | 13 | 761bf0c | `90c619a` | - | - | - | - | - | - | C1 I0 M1 | 2026-11-21 | no cost record |

@@ -25,11 +25,14 @@ Open items that do not block a shipped story. Each names the story that left it.
 - Add a `find`-call shim row that counts `find` calls on the scan path (`scan_tree`), and a row for an unreadable file over 1 MiB (or a spec "except" line). (story tree-scan-speed)
 - No test covers a scan failure (`cannot read the file tree`, exit 2). Older than the story. (story tree-scan-speed)
 - `cache_tree_grown_big` passes the mutant "every line of `tree_newer` is a folder" (F-2, accepted). Strengthen the row or accept it explicitly. (story tree-scan-speed)
+- Add rows for the reversed range `L9-L7`, the `%XX` decode (`%4C8`), and `def`/blockquote descent. The final reviewer checked two of them in Chrome by hand only. (story line-anchor-nav)
+- The heading landing path has no row of its own; it shares the clear with the miss path. (story line-anchor-nav)
 
 ## Manual checks
 
 - A folder at `$PREFIX/bin/md-view` gives install exit 0 and leaves a temporary file. (story md-view-repo)
 - The README Midnight Commander rule (`Regex=\.md$`) was checked against mc 4.8.33 headers only, never run in live mc. (story md-view-repo)
+- `dom_line_table_row` fails in dark appearance; the fixture pins `--theme light`. Pin it deliberately or fix the dark-appearance failure. (story line-anchor-nav)
 
 ## Tooling
 
