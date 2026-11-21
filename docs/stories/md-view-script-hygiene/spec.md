@@ -18,6 +18,7 @@ After this story, the script exposes these functions to a shell that sources it 
 | `browser_ok <existing executable file>` | return 0 |
 | `browser_ok <existing dir without .app suffix>` | return 1 |
 | `browser_ok <existing `.app` dir>` (Darwin only) | return 0 |
+| `browser_ok <existing regular file without the execute bit>` | return 1 |
 | `browser_ok notaword` | return 1 |
 | `bake_ok 'a/b/c.md'` with `tree_depth=6` | return 0 |
 | `bake_ok '.git/config'` | return 1 (a part starts with `.`) |
@@ -33,20 +34,23 @@ After this story, the script exposes these functions to a shell that sources it 
 | `url_escape "$(printf 'a\nb')"` | `a%0Ab` |
 | `url_escape '<>&"?#'` | `%3C%3E%26%22%3F%23` |
 | `enc_path 'a b'` | `a%20b` |
-| `enc_path "$(printf 'x\n')"` | ends in `x%0A` (trailing newline kept) |
+| `enc_path '%'` | `%25` |
+| `enc_path` with argument `a<U+00E9>` (UTF-8 bytes C3 A9) | `a%C3%A9` |
+| `enc_path` with argument `x` followed by a trailing newline | output ends in `x%0A` |
 | `head_has_all L1 [L2 ...]` | return 0 iff every argument is a whole line of the head of `$page` (the lines up to and including the first `^</head>$` line). One read of the file, one awk pass, no per-line subprocess |
 
 ## Validation
 
 | Call | Result |
 |---|---|
+| `tests/unit-helpers.sh` with a failing case | prints `FAIL <case>` for it, exits 1; otherwise prints `ok <case>` per case |
 | `MD_VIEW_SOURCE_ONLY=1 sh lib/md-view </dev/null` | exit 0, no output, no file written, no browser opened |
 | `head_has_all` with no arguments | return 0 |
 | `num_val` given a value with 6+ digits | clamps to the ceiling, no overflow |
 
 ## Done
 
-`make check` exits 0, with the rows above covered by `tests/unit-helpers.sh` (new fifth test, run by `make check`) and by the existing integration suites. In addition: take a fixture whose parent path holds spaces, `%`, `#` and a trailing newline. The page written at `origin/main` and the page written after the story are byte-identical (`cmp` clean). So is the `<base href>` line.
+`make check` exits 0, and `sh tests/bench.sh` shows no regression: new page ≤ 0.55 s, cached page ≤ 0.15 s. The rows above are covered by `tests/unit-helpers.sh` (new fifth test, run by `make check`) and by the existing integration suites. In addition: take a fixture whose parent path holds spaces, `%`, `#` and a trailing newline. The page written at `origin/main` and the page written after the story are byte-identical (`cmp` clean). So is the `<base href>` line.
 
 ## Out of scope
 

@@ -81,6 +81,8 @@ Orient, 2026-11-21T23:15Z:
 - Owner-checked paths: none named in AGENTS.md. Story scope applies: page bytes and the vendored files never change; spec, README and invariants stay.
 - Hooks: none (AGENTS.md names no Delivery hooks). Check = `make check`.
 - G2-design stops before the build (full tier). Recorded risk flag kept per the deliver-story rule: never remove the story's flags.
+- G2-design waived by owner, 2026-11-22: "go it autonomous mode". The flow line is rerun with `--g2 waived`: verifier=plan-verifier-critical.
+- Owner rulings, 2026-11-22: spec.md:262 may be updated to "five tests" (one line, the `make check` section). Build roles run on bundled default models for this build (the configured local MLX delivery endpoint is dispatch-refused by the harness; standardcompute/z-ai/glm-5.3 is out of budget until 2026-12-08).
 
 Branch `refactor/md-view-script-hygiene`, base `origin/main` @ 57a88d4. Budget for M; hard stop at the size cap, then split the seam from the dedups.
 

@@ -35,10 +35,12 @@ None new. The head lines (`<base href>`, the key meta, the ini state line, the t
 | `tests/unit-helpers.sh` is the fifth `make check` target, after `launcher.sh` | A separate `make unit` target | AGENTS.md names one check command; a unit suite outside it would not run in the gate |
 | Risk flag `contract` from the brief stands; the story is built at the full tier | Downgrade to `none` at Orient | The deliver-story rule forbids removing a story's risk flags. The flag forces the stop you are reading |
 | Four tasks, sequential T1 to T4, one commit each | Parallel implementers in one file | T1 and T2 edit `lib/md-view`; T3 wraps the flow; T4 depends on all three. Parallel runs in one file conflict |
+| Unit tests cover the new `url_escape` and `head_has_all` helpers beyond the story's fixed list | Drop them to match the letter of the brief | They test code this story adds; the verifier asked for visibility, not removal |
+| `docs/architecture/md-view.spec.md` becomes "five tests" (owner-approved one line, 2026-11-22) | Leave the durable spec stale | AGENTS.md requires the spec and the tests in step; the owner broke the tie |
 
 ### How you'll see it working
 
-`make check` in `.worktrees/md-view-script-hygiene` (five tests pass, the last is `tests/unit-helpers.sh`). Then: `MD_VIEW_SOURCE_ONLY=1 sh lib/md-view </dev/null; echo $?` prints `0` and writes nothing. Byte-identical proof: write a page for a fixture whose parent path has spaces, `%`, `#` and a trailing newline, at `origin/main` and on the branch; `cmp` must be clean.
+`make check` in `.worktrees/md-view-script-hygiene` (five tests pass, the last is `tests/unit-helpers.sh`). Then: `MD_VIEW_SOURCE_ONLY=1 sh lib/md-view </dev/null; echo $?` prints `0` and writes nothing. Byte-identical proof: write a page for a fixture whose parent path has spaces, `%`, `#` and a trailing newline. Do this at `origin/main` and on the branch; `cmp` must be clean.
 
 ### A fresh reader's paraphrase
 
