@@ -259,7 +259,7 @@ The policy is `default-src 'none'; script-src 'unsafe-inline' https://cdn.jsdeli
 
 ## Tests
 
-`make check` runs four tests in order and stops at the first failure.
+`make check` runs five tests in order and stops at the first failure.
 
 | Test | Holds |
 |---|---|
