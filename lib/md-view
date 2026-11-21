@@ -63,7 +63,7 @@ url_escape() {
 }
 
 # file_url PATH: prints the file:// URL for one path. It escapes the same set as
-# the base_url recipe.
+# url_escape.
 file_url() {
     printf 'file://%s' "$(url_escape "$1")"
 }
