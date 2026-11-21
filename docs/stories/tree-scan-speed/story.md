@@ -1,6 +1,6 @@
 ---
 description: Make a tree page open fast on a large folder, with one walk of the tree and no read of file content to check the cache.
-status: in-review
+status: done
 size: S
 depends-on: line-anchor-nav
 risk: none
