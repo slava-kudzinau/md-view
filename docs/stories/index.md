@@ -18,6 +18,7 @@ description: The list of md-view stories in build order, with the status of each
 | 8 | tree-panel-compact-resize | M | retired | - |
 | 9 | tree-scan-speed | S | retired | line-anchor-nav |
 | 10 | [bake-pages](bake-pages/story.md) | M | done | - |
+| 11 | [md-view-script-hygiene](md-view-script-hygiene/story.md) | M | planned | bake-pages |
 
 ## Build order
 
@@ -31,3 +32,4 @@ description: The list of md-view stories in build order, with the status of each
 8. **tree-panel-compact-resize** makes the tree panel readable in a narrow width: rails, chevrons, chain rows, ellipsis, and a resizable saved width. It edits the tree regions of `lib/md-view` and `lib/page.js` and the tree cases of both browser tests. It runs in parallel with `mermaid-accent-toolbar`: the files are shared, the regions do not overlap.
 9. **tree-scan-speed** makes a tree page open fast on a large folder. It edits the scan and the cache check in `lib/md-view` and adds rows to `tests/browser-page.sh`. The story line-anchor-nav edits the same two files. So this story starts after line-anchor-nav merges.
 10. **bake-pages** bakes a folder for upload: one `index.html` plus the Markdown-named assets, mirrored under the root. It edits the flag, head and write path of `lib/md-view` and adds rows to `tests/browser-page.sh`. It runs in parallel with `tree-panel-compact-resize`: the files are shared, the regions do not overlap.
+11. **md-view-script-hygiene** dedups the escape recipe, merges the head check into one pass and adds a source-only unit-test seam in `lib/md-view`. It edits the same file as the bake-pages write path but not its regions, so it can run after bake-pages merges. It goes last: it hardens the code the other stories just landed.
