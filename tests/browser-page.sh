@@ -27,8 +27,10 @@ case $md_open in
 esac
 vendor=${VENDOR_DIR:-$(dirname -- "$md_open")}
 sample=$here/browser-page/sample.md
+bake_fix=$here/fixtures/bake
 [ -f "$md_open" ] || { echo "FAIL setup: no script $md_open"; exit 1; }
 [ -f "$sample" ] || { echo "FAIL setup: no fixture $sample"; exit 1; }
+[ -f "$bake_fix/index.md" ] || { echo "FAIL setup: no fixture $bake_fix/index.md"; exit 1; }
 
 tmp=$(mktemp -d "${TMPDIR:-/tmp}/browser-page.XXXXXX") || exit 1
 trap 'rm -rf "$tmp"' EXIT
@@ -121,7 +123,7 @@ skip() {
 
 run() {
     case_name=$1
-    ( "case_$1" )
+    ( "case_${2:-$1}" )
     st=$?
     case $st in
         0) echo "ok $1" ;;
@@ -990,6 +992,226 @@ case_page_version_footer() {
     sed '/^<meta name="md-view-version"/d' "$page" > "$page.nov" || bad "strip the meta"
     got=$(footer_title "$page.nov")
     [ "$got" = 'md-view' ] || bad "the footer with no meta reads [$got], want [md-view]"
+    exit 0
+}
+
+# --bake: headless Chrome renders once and the DOM is written to the file.
+# #content and the mermaid svg are baked into the source, so a script-free
+# preview shows them. The default (no --bake) keeps the empty pane.
+case_page_baked_content() {
+    fresh
+    CHROME=$(chrome_prog)
+    [ -n "$CHROME" ] || skip "no Chrome"
+    mkdir -p site || bad "mkdir site"
+    md --tree off --no-open --bake site "$sample"
+    [ "$rc" = 0 ] || bad "exit $rc"
+    # baked: #content has a child node, and a mermaid pre is drawn to an svg,
+    # read straight from the file (no script runs).
+    grep -qE '<main id="content"[^>]*>[^[:space:]]' "$d/work/site/index.html" \
+        || bad "baked #content is empty"
+    # The mermaid svg needs the CDN at bake time: probe it. A probe that
+    # fails skips the rest of the row.
+    net=1
+    curl -sfI --max-time 10 https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js > /dev/null 2>&1 || net=0
+    [ "$net" = 1 ] || skip "no CDN for mermaid"
+    grep -qE '<pre class="mermaid"[^>]*data-processed[^>]*>[[:space:]]*<svg' "$d/work/site/index.html" \
+        || bad "baked mermaid has no svg"
+    # default (no --bake) keeps the empty pane.
+    md --tree off --no-open --out "$page" "$sample"
+    [ "$rc" = 0 ] || bad "exit $rc"
+    grep -qF '<main id="content" class="markdown-body"></main>' "$page" \
+        || bad "unbaked #content is not empty"
+    exit 0
+}
+
+# --bake <dir>: writes the folder page <dir>/index.html, prints the absolute
+# folder path on stdout, and opens nothing. A Chrome note on stderr is fine.
+case_page_bake_dir() {
+    fresh
+    mkdir -p site || bad "bake:page mkdir site"
+    md --tree off --no-open --bake site "$sample"
+    [ "$rc" = 0 ] || bad "bake:page exit $rc, stderr: $(cat "$d/err")"
+    [ -f "$d/work/site/index.html" ] || bad "bake:page no index.html in the bake folder"
+    want=$(cd site && pwd) || bad "bake:page cd site"
+    [ "$(tail -n 1 "$d/out")" = "$want" ] \
+        || bad "bake:page stdout last line [$(tail -n 1 "$d/out")], want [$want]"
+    [ "$(wc -l < "$d/out")" -eq 1 ] || bad "bake:page stdout is not one line: $(cat "$d/out")"
+    exit 0
+}
+
+# The baked page head: <base href="./">, and the CSP with img-src data: 'self'.
+case_page_bake_head() {
+    fresh
+    mkdir -p "$d/site" || bad "bake:page mkdir"
+    md --tree off --no-open --bake "$d/site" "$sample"
+    [ "$rc" = 0 ] || bad "bake:page exit $rc, stderr: $(cat "$d/err")"
+    grep -qF '<base href="./">' "$d/site/index.html" \
+        || bad "bake:page base line is not ./ in the baked page"
+    grep -qF "<meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'none'; script-src 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'unsafe-inline'; img-src data: 'self'\">" "$d/site/index.html" \
+        || bad "bake:page the baked page policy is not img-src data: 'self'"
+    [ "$(grep -c -F 'Content-Security-Policy' "$d/site/index.html")" = 1 ] \
+        || bad "bake:page want one policy"
+    exit 0
+}
+
+# A <dir> that does not exist: the tool makes it (with its parents), exit 0.
+case_page_bake_missing_dir() {
+    fresh
+    md --tree off --no-open --bake "$d/work/ghost" "$sample"
+    [ "$rc" = 0 ] || bad "bake:page missing dir exit $rc, want 0"
+    [ -f "$d/work/ghost/index.html" ] || bad "bake:page made no page in the new folder"
+    exit 0
+}
+
+# A <dir> whose parent is a regular file: mkdir fails, exit 2, no page.
+case_page_bake_unmakeable_dir() {
+    fresh
+    : > "$d/blocker" || bad "bake:page make blocker file"
+    md --tree off --no-open --bake "$d/blocker/site" "$sample"
+    [ "$rc" = 2 ] || bad "bake:page unmakeable dir exit $rc, want 2"
+    [ ! -e "$d/blocker/site/index.html" ] || bad "bake:page wrote a page under a file parent"
+    exit 0
+}
+
+
+# The flag shape: --bake with no value exits 2. --bake with --out exits 2.
+case_page_bake_flag_shape() {
+    fresh
+    md --tree off --no-open --bake "$sample"
+    [ "$rc" = 2 ] || bad "bake:page --bake with no value exit $rc, want 2"
+    mkdir -p "$d/site" || bad "bake:page mkdir"
+    md --tree off --no-open --bake "$d/site" --out "$page" "$sample"
+    [ "$rc" = 2 ] || bad "bake:page --bake with --out exit $rc, want 2"
+    exit 0
+}
+
+# The publish set: an image target in the Markdown copies its file, with its
+# folder, into the bake folder. The shared fixture is tests/fixtures/bake/.
+case_bake_asset_image() {
+    fresh
+    mkdir -p site || bad "bake:asset mkdir site"
+    md --tree off --no-open --bake site "$bake_fix/index.md"
+    [ "$rc" = 0 ] || bad "bake:asset exit $rc, stderr: $(cat "$d/err")"
+    [ -f site/guide/img/logo.png ] || bad "bake:asset img/logo.png not copied"
+    exit 0
+}
+
+# A link target that is not a Markdown file copies its file.
+case_bake_asset_link() {
+    fresh
+    mkdir -p site || bad "bake:asset mkdir site"
+    md --tree off --no-open --bake site "$bake_fix/index.md"
+    [ "$rc" = 0 ] || bad "bake:asset exit $rc, stderr: $(cat "$d/err")"
+    [ -f site/data/report.csv ] || bad "bake:asset data/report.csv not copied"
+    exit 0
+}
+
+# The tree-scan skip rules: a dotted part and a node_modules part are not
+# copied. A name that starts with - is copied with its name.
+case_bake_asset_skips() {
+    fresh
+    mkdir -p site || bad "bake:asset mkdir site"
+    md --tree off --no-open --bake site "$bake_fix/index.md"
+    [ "$rc" = 0 ] || bad "bake:asset exit $rc, stderr: $(cat "$d/err")"
+    [ ! -e site/.env ] || bad "bake:asset .env copied"
+    [ ! -e site/.git/config ] || bad "bake:asset .git/config copied"
+    [ ! -e site/node_modules/pkg/readme.md ] || bad "bake:asset node_modules target copied"
+    [ -f 'site/img/-a.png' ] || bad "bake:asset a name with a leading - not copied"
+    exit 0
+}
+
+# A symlink target and a target under a symlinked folder are not copied.
+case_bake_asset_symlink() {
+    fresh
+    mkdir -p site || bad "bake:asset mkdir site"
+    md --tree off --no-open --bake site "$bake_fix/index.md"
+    [ "$rc" = 0 ] || bad "bake:asset exit $rc, stderr: $(cat "$d/err")"
+    [ ! -e site/link.png ] || bad "bake:asset the symlink target copied"
+    [ ! -e site/thumbs/logo.png ] || bad "bake:asset a target under a symlinked folder copied"
+    exit 0
+}
+
+# An image target needs an image extension, in any letter case.
+case_bake_asset_ext() {
+    fresh
+    mkdir -p site || bad "bake:asset mkdir site"
+    md --tree off --no-open --bake site "$bake_fix/index.md"
+    [ "$rc" = 0 ] || bad "bake:asset exit $rc, stderr: $(cat "$d/err")"
+    [ ! -e site/data/chart.csv ] || bad "bake:asset a .csv image target copied"
+    [ -f site/guide/img/logo.svg ] || bad "bake:asset logo.svg not copied"
+    [ -f site/guide/img/photo.JPG ] || bad "bake:asset photo.JPG not copied"
+    exit 0
+}
+
+# One %XX decode: a target with %20 copies the file with a blank in its name.
+case_bake_asset_percent() {
+    fresh
+    mkdir -p site || bad "bake:asset mkdir site"
+    md --tree off --no-open --bake site "$bake_fix/index.md"
+    [ "$rc" = 0 ] || bad "bake:asset exit $rc, stderr: $(cat "$d/err")"
+    [ -f 'site/guide/img/shot 1.png' ] || bad "bake:asset img/shot%201.png not copied as shot 1.png"
+    exit 0
+}
+
+# One %XX decode per escape: the target shot%25201.png decodes once and
+# copies the file img/shot%201.png, with the %20 kept.
+case_bake_asset_double() {
+    fresh
+    mkdir -p site || bad "bake:asset mkdir site"
+    md --tree off --no-open --bake site "$bake_fix/index.md"
+    [ "$rc" = 0 ] || bad "bake:asset exit $rc, stderr: $(cat "$d/err")"
+    [ -f 'site/img/shot%201.png' ] || bad "bake:asset img/shot%25201.png not copied as shot%201.png"
+    exit 0
+}
+
+# An inline target with parentheses is published: img/shot (2).png.
+case_bake_asset_paren() {
+    fresh
+    mkdir -p site || bad "bake:asset mkdir site"
+    md --tree off --no-open --bake site "$bake_fix/index.md"
+    [ "$rc" = 0 ] || bad "bake:asset exit $rc, stderr: $(cat "$d/err")"
+    [ -f 'site/img/shot (2).png' ] || bad "bake:asset img/shot (2).png not copied"
+    exit 0
+}
+
+# A fenced code block holds prose examples: a target inside a fence (backticks
+# with an info string, and tildes) publishes nothing. A real asset outside the
+# fence still copies, so the row proves the bake ran.
+case_bake_asset_fence() {
+    fresh
+    mkdir -p site || bad "bake:asset mkdir site"
+    md --tree off --no-open --bake site "$bake_fix/index.md"
+    [ "$rc" = 0 ] || bad "bake:asset exit $rc, stderr: $(cat "$d/err")"
+    [ ! -e site/target.png ] || bad "bake:asset a fenced-block target copied"
+    [ ! -e site/tilde.png ] || bad "bake:asset a tilde-fence target copied"
+    [ -f site/guide/img/logo.png ] || bad "bake:asset the real asset not copied"
+    exit 0
+}
+
+# A target whose file is not in the tree: one stderr note, nothing copied for
+# it, and the bake exits 0.
+case_bake_asset_dead() {
+    fresh
+    mkdir -p site || bad "bake:asset mkdir site"
+    md --tree off --no-open --bake site "$bake_fix/index.md"
+    [ "$rc" = 0 ] || bad "bake:asset exit $rc, stderr: $(cat "$d/err")"
+    [ ! -e site/missing.png ] || bad "bake:asset the missing target copied"
+    grep -qxF 'md-view: no file for missing.png' "$d/err" \
+        || bad "bake:asset no note for the missing target: $(cat "$d/err")"
+    exit 0
+}
+
+# Tree-mode bake: bake notes.md with the default tree, so the root is the
+# fixture folder. The tree-root asset copies, a deep Markdown link does not,
+# and the notes.md input guide/img/logo.png copies once.
+case_bake_asset_tree() {
+    fresh
+    mkdir -p site || bad "bake:asset mkdir site"
+    md --no-open --bake site "$bake_fix/notes.md"
+    [ "$rc" = 0 ] || bad "bake:asset exit $rc, stderr: $(cat "$d/err")"
+    [ -f site/img/logo.png ] || bad "bake:asset the tree-root img/logo.png not copied"
+    [ ! -e site/a/b/c/d/e/f/deep.md ] || bad "bake:asset the deep.md link copied"
+    [ -f site/guide/img/logo.png ] || bad "bake:asset the notes.md guide/img/logo.png not copied"
     exit 0
 }
 
@@ -2999,7 +3221,7 @@ for c in flags_ok flag_width_bad flag_theme_bad flag_width_missing palette_setti
          page_has_github_css page_width_rules page_start_values page_policy_unchanged \
          page_narrow_rule page_hljs_after_marked page_mermaid_theme_hook \
          page_gear_markup page_print_hidden page_storage_try_catch page_keys_guard page_paste_line \
-         page_version_footer \
+         page_version_footer page_baked_content \
          vendor_no_close_tag vendor_sha384 \
          cache_path_stable cache_two_files cache_reuse cache_rebuild_on_edit cache_rebuild_on_flag \
          cache_rebuild_on_ini palette_cache cache_no_cache_flag cache_dir_mode cache_dir_fallback cache_name_safe \
@@ -3018,6 +3240,25 @@ for c in flags_ok flag_width_bad flag_theme_bad flag_width_missing palette_setti
          palette_layer; do
     run "$c"
 done
+
+# bake rows: the printed name bake:page_* names the check; the function is
+# page_bake_*.
+run bake:page_dir page_bake_dir
+run bake:page_head page_bake_head
+run bake:page_missing_dir page_bake_missing_dir
+run bake:page_flag_shape page_bake_flag_shape
+run bake:page_unmakeable_dir page_bake_unmakeable_dir
+run bake:asset_image bake_asset_image
+run bake:asset_link bake_asset_link
+run bake:asset_skips bake_asset_skips
+run bake:asset_symlink bake_asset_symlink
+run bake:asset_ext bake_asset_ext
+run bake:asset_percent bake_asset_percent
+run bake:asset_double bake_asset_double
+run bake:asset_paren bake_asset_paren
+run bake:asset_fence bake_asset_fence
+run bake:asset_dead bake_asset_dead
+run bake:asset_tree bake_asset_tree
 
 # root_slash_off runs only when / has a readable plain file. Else it is not run,
 # and a note goes to stderr (not a skip line, so the run stays skip-free).

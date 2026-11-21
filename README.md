@@ -46,6 +46,7 @@ md-view [options] <file.md>
 | `--tree on\|off` | Show the file tree of the root folder, or one file only. |
 | `--list-tree` | Print the root and the tree files. Write no page. |
 | `--no-cache` | Build the page again. |
+| `--bake <dir>` | Name the output folder. The tool makes `<dir>` when it is not there. Write `<dir>/index.html` and the assets the Markdown names, and render the page once with headless Chrome, so it shows in a preview with no scripts. Needs Chrome; falls back to the unbaked page. |
 | `--init-config` | Write a commented sample `config.ini`, and print its path. |
 | `--print-association` | Print the far2l File associations entry. |
 | `--version` | Print the version, and exit. |
@@ -78,6 +79,8 @@ The file is `${XDG_CONFIG_HOME:-$HOME/.config}/md-view/config.ini`. Run `md-view
 | `root` | `dir` is the folder of the file. `repo` is the nearest folder upward with `.git`. | `dir` |
 | `tree_depth` | 1 to 12 | `6` |
 | `tree_max_files` | 1 to 2000 | `500` |
+
+Two environment variables set the bake render. `MD_VIEW_CHROME` names the Chrome program for `--bake`. The value is a path to an executable file, and the bake uses it in place of the default search. `MD_VIEW_BAKE_MS` gives the time of the render in milliseconds. The default is 8000.
 
 ## Use from far2l
 

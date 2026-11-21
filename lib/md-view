@@ -40,18 +40,28 @@ ini=${XDG_CONFIG_HOME:-$HOME/.config}/md-view/config.ini
 cr=$(printf '\r')
 nl='
 '
+# The byte class of the tree scan: a name part with one of these is skipped.
+ctlb=$(printf '\001-\037')
 # The umask of the caller. The cache page is made under 077; the browser gets this one.
 old_umask=$(umask)
 
 usage() {
     echo 'usage: md-view [--out <page.html>] [--no-open] [--width 60|70|80|90]' >&2
     echo '               [--theme light|dark|auto] [--palette github|tokyo]' >&2
-    echo '               [--browser B] [--no-cache]' >&2
+    echo '               [--browser B] [--no-cache] [--bake <dir>]' >&2
     echo '               [--tree on|off] [--list-tree] <file.md>' >&2
     echo '       md-view --init-config' >&2
     echo '       md-view --print-association' >&2
     echo '       md-view --version' >&2
     exit 2
+}
+
+# file_url PATH: prints the file:// URL for one path. It escapes the same set as
+# the base_url recipe.
+file_url() {
+    printf 'file://%s' "$(printf '%s' "$1" | sed -e 's/%/%25/g' -e 's/ /%20/g' -e 's/#/%23/g' \
+        -e 's/?/%3F/g' -e 's/"/%22/g' -e "s/'/%27/g" -e 's/</%3C/g' -e 's/>/%3E/g' -e 's/&/%26/g' \
+        | awk 'NR > 1 { printf "%%0A" } { printf "%s", $0 }')"
 }
 
 # trim TEXT: sets trimmed to TEXT without the spaces and tabs at both ends.
@@ -443,7 +453,6 @@ scan_tree() {
     [ -d "$tree_root" ] || return 1
     walk=$(scan_find -exec wc -c {} +)
     # The opened file joins the scan unless its tree path has a byte below 0x20.
-    ctlb=$(printf '\001-\037')
     case $tree_opened in
         *[$ctlb]*) extra= ;;
         *) extra=./$tree_opened ;;
@@ -579,6 +588,241 @@ page_files() {
     printf '</script>\n'
 }
 
+# The bake publish set. bake_fn reads the Markdown text of one page file on
+# stdin and prints one "img <path>" or "lnk <path>" line per target the page
+# shows: the image targets of ![alt](target) and ![alt][ref] with
+# [ref]: target, and the link targets of [text](target) that are not Markdown
+# files. A target keeps its root-relative path: a fragment and a "title" go,
+# %XX is decoded once, a scheme and a leading / go, a target that leaves the
+# root with .. is dropped, and the rest is resolved against the folder of its
+# own file (MD_DIR, the root-relative folder, `.` for a file at the root).
+bake_fn='
+BEGIN {
+    dir = ENVIRON["MD_DIR"]
+    for (i = 0; i < 256; i++) hex[sprintf("%02x", i)] = sprintf("%c", i)
+    nref = 0
+}
+# bare T: the target text with the fragment and the title cut.
+function bare(t) {
+    sub(/#.*/, "", t)
+    sub(/[ \t]+"[^"]*"$/, "", t)
+    gsub(/^[ \t]+|[ \t]+$/, "", t)
+    if (substr(t, 1, 1) == "<" && substr(t, length(t)) == ">")
+        t = substr(t, 2, length(t) - 2)
+    return t
+}
+# norm T: the root-relative path of target T, "" when it names no tree file.
+function norm(t,   n, a, i, k, out, s, p) {
+    t = bare(t)
+    if (t == "") return ""
+    # Decode each %XX escape once: advance past the decoded bytes.
+    s = ""
+    p = 1
+    while (match(substr(t, p), /%[0-9A-Fa-f][0-9A-Fa-f]/)) {
+        s = s substr(t, p, RSTART - 1) \
+            hex[tolower(substr(t, p + RSTART, 2))]
+        p = p + RSTART + 2
+    }
+    t = s substr(t, p)
+    if (t ~ /^[A-Za-z][A-Za-z0-9+.-]*:/) return ""
+    sub(/^\//, "", t)
+    n = split(dir "/" t, a, "/")
+    k = 0
+    for (i = 1; i <= n; i++) {
+        if (a[i] == "" || a[i] == ".") continue
+        if (a[i] == "..") {
+            if (k == 0) return ""
+            k--
+            continue
+        }
+        k++
+        a[k] = a[i]
+    }
+    if (k == 0) return ""
+    out = a[1]
+    for (i = 2; i <= k; i++) out = out "/" a[i]
+    return out
+}
+# add P K: print one target line, once per file.
+function add(p, k) {
+    if (p == "" || seen[k SUBSEP p]++) return
+    print k " " p
+}
+{
+    # A CRLF line ends with \r: drop it, so a target at the line end stays.
+    sub(/\r$/, "")
+    # A fence line: the first non-space content is three or more backticks
+    # (any info string) or three or more tildes. It toggles the fence state.
+    # A fenced block holds prose examples: its lines add no targets.
+    if ($0 ~ /^[ \t]*(`{3,}|~{3,})/) { fence = !fence; next }
+    if (fence) next
+    # A reference definition: the token after "[ref]:". A <...> wrapper goes
+    # first, then a "title" at the end.
+    if (match($0, /^[ \t]*\[[^][]*\]:[ \t]*/)) {
+        key = substr($0, RSTART, RLENGTH)
+        sub(/^[ \t]*\[/, "", key)
+        sub(/\]:[ \t]*$/, "", key)
+        t = substr($0, RSTART + RLENGTH)
+        if (substr(t, 1, 1) == "<") {
+            if (match(t, />/)) t = substr(t, 2, RSTART - 2)
+        } else {
+            sub(/[ \t].*/, "", t)
+        }
+        sub(/[ \t]*"[^"]*"$/, "", t)
+        def[tolower(key)] = t
+        next
+    }
+    # An image with an inline target: ![alt](target ...)
+    s = $0
+    while (match(s, /!\[[^][]*\]\([^()]*(\([^()]*\)[^()]*)*\)/)) {
+        seg = substr(s, RSTART, RLENGTH)
+        s = substr(s, RSTART + RLENGTH)
+        t = seg
+        sub(/^[^(]*\(/, "", t)
+        sub(/\)$/, "", t)
+        add(norm(t), "img")
+    }
+    # A link with an inline target that is not a Markdown file: [text](target)
+    s = $0
+    while (match(s, /(^|[^!])\[[^][]*\]\([^()]*(\([^()]*\)[^()]*)*\)/)) {
+        seg = substr(s, RSTART, RLENGTH)
+        s = substr(s, RSTART + RLENGTH)
+        t = seg
+        sub(/^[^(]*\(/, "", t)
+        sub(/\)$/, "", t)
+        b = tolower(bare(t))
+        if (b !~ /\.md$/ && b !~ /\.markdown$/) add(norm(t), "lnk")
+    }
+    # An image with a reference target: ![alt][ref]. The reference is kept for
+    # END, so a definition below the use also works.
+    s = $0
+    while (match(s, /!\[[^][]*\]\[[^][]*\]/)) {
+        seg = substr(s, RSTART, RLENGTH)
+        s = substr(s, RSTART + RLENGTH)
+        ref = seg
+        sub(/^[^]]*\]\[/, "", ref)
+        sub(/\]$/, "", ref)
+        if (ref == "") {
+            ref = seg
+            sub(/^!\[/, "", ref)
+            sub(/\].*/, "", ref)
+        }
+        nref++
+        rq[nref] = tolower(ref)
+    }
+}
+END {
+    for (i = 1; i <= nref; i++)
+        if (rq[i] in def) add(norm(def[rq[i]]), "img")
+}
+'
+
+# bake_ok PATH: true when every part of the root-relative PATH is a tree part:
+# no part starts with ".", no part is node_modules, no part holds a byte below
+# 0x20, and the part count is at most tree_depth.
+bake_ok() {
+    rest=$1
+    n=0
+    while :; do
+        case $rest in
+            */*) part=${rest%%/*}; rest=${rest#*/} ;;
+            *) part=$rest; rest= ;;
+        esac
+        [ -n "$part" ] || return 1
+        case $part in
+            .*|node_modules) return 1 ;;
+            *[$ctlb]*) return 1 ;;
+        esac
+        n=$((n + 1))
+        [ -n "$rest" ] || break
+    done
+    [ "$n" -le "$tree_depth" ]
+}
+
+# bake_ext_ok PATH: true when the last part of PATH ends in an image
+# extension, in any letter case.
+bake_ext_ok() {
+    case ${1##*/} in
+        *.[pP][nN][gG]|*.[jJ][pP][gG]|*.[jJ][pP][eE][gG]|*.[gG][iI][fF]|*.[sS][vV][gG]|*.[wW][eE][bB][pP])
+            return 0 ;;
+    esac
+    return 1
+}
+
+# bake_link_chain PATH: true when no part of the root-relative PATH, from the
+# leaf to the root, names a symlink.
+bake_link_chain() {
+    p=$tree_root
+    rest=$1
+    while :; do
+        case $rest in
+            */*) part=${rest%%/*}; rest=${rest#*/} ;;
+            *) part=$rest; rest= ;;
+        esac
+        p=$p/$part
+        [ -L "$p" ] && return 1
+        [ -n "$rest" ] || break
+    done
+    return 0
+}
+
+# bake_copy REL: copies the tree file REL into the bake folder, with its
+# parent folders. A target that names no regular file prints one note and
+# copies nothing. A copy that fails prints one line and exits 2.
+bake_copy() {
+    bake_ok "$1" || return 0
+    bake_link_chain "$1" || return 0
+    # Only a regular file joins the bake folder: a missing target prints
+    # one note on stderr and copies nothing.
+    [ -f "$tree_root/$1" ] \
+        || { echo "md-view: no file for $1" >&2; return 0; }
+    case $1 in
+        */*) mkdir -p -- "$bake_dir/${1%/*}" \
+                || { echo "md-view: cannot copy $1" >&2; exit 2; } ;;
+    esac
+    cp -- "$tree_root/$1" "$bake_dir/$1" \
+        || { echo "md-view: cannot copy $1" >&2; exit 2; }
+}
+
+# bake_assets: copies the publish set of the page files into the bake folder.
+# In tree mode the page files are the "page" lines of tree_list, plus the
+# opened file when the list does not hold it. In one-file mode it is the
+# opened file alone. Each file gives one awk pass. A path is copied once.
+bake_assets() {
+    bake_files=
+    if [ "$tree_mode" = 1 ]; then
+        bake_files=$(printf '%s\n' "$tree_list" | sed -n 's/^page //p')
+        if [ "$opened_in_list" != 1 ]; then
+            bake_files=${bake_files:+$bake_files$nl}$tree_opened
+        fi
+    else
+        bake_files=$tree_opened
+    fi
+    [ -n "$bake_files" ] || return 0
+    bake_set=$(
+        cd "$tree_root" || exit 1
+        printf '%s\n' "$bake_files" | while IFS= read -r f; do
+            [ -n "$f" ] || continue
+            d=$(dirname -- "./$f") || exit 1
+            MD_DIR=$d awk "$bake_fn" < "./$f" || exit 1
+        done
+    ) || return 1
+    bake_copied=
+    while IFS= read -r line; do
+        [ -n "$line" ] || continue
+        kind=${line%% *}
+        rel=${line#* }
+        [ "$kind" = lnk ] || bake_ext_ok "$rel" || continue
+        case $nl$bake_copied$nl in
+            *"$nl$rel$nl"*) continue ;;
+        esac
+        bake_copied=$bake_copied$nl$rel
+        bake_copy "$rel"
+    done <<SET
+$bake_set
+SET
+}
+
 file=
 out=
 do_open=1
@@ -591,6 +835,7 @@ flag_browser_set=0
 flag_tree=
 flag_palette=
 list_tree=0
+flag_bake=0
 while [ $# -gt 0 ]; do
     case $1 in
         --version)
@@ -612,6 +857,11 @@ while [ $# -gt 0 ]; do
             shift ;;
         --no-open)
             do_open=0 ;;
+        --bake)
+            [ $# -ge 2 ] || usage
+            bake_dir=$2
+            flag_bake=1
+            shift ;;
         --no-cache)
             no_cache=1 ;;
         --width)
@@ -665,6 +915,21 @@ done
 
 # Resolve the start values once: a flag, else the file, else the built-in default.
 read_ini
+
+# Bake takes the place of --out. Bake forces tree mode the way a flag does;
+# --tree off wins over it.
+if [ "$flag_bake" = 1 ]; then
+    [ -z "$out" ] || { echo 'md-view: --bake does not take --out' >&2; exit 2; }
+    [ -n "$flag_tree" ] || flag_tree=on
+    # The bake folder is made when it is not there, and becomes absolute:
+    # the page path and the file_url need it. A folder that cannot be made
+    # exits 2.
+    mkdir -p -- "$bake_dir" \
+        || { echo "md-view: cannot make the bake folder $bake_dir" >&2; exit 2; }
+    bake_abs=$(cd "$bake_dir" && pwd) \
+        || { echo "md-view: --bake $bake_dir is not a folder" >&2; exit 2; }
+    bake_dir=$bake_abs
+fi
 forced=0
 width=${flag_width:-${cfg_width:-70}}
 theme=${flag_theme:-${cfg_theme:-auto}}
@@ -765,7 +1030,10 @@ fi
 # A cache folder that cannot be made or used, or a page path that is a link or
 # not a plain file, gives one stderr line and the old temporary page.
 cached=0
-if [ -n "$out" ]; then
+if [ "$flag_bake" = 1 ]; then
+    page=$bake_dir/index.html
+    out=$page
+elif [ -n "$out" ]; then
     page=$out
 else
     page=
@@ -828,6 +1096,11 @@ done
 # the size and the modification time that ls shows, or "none".
 if [ "$tree_mode" = 1 ]; then tree_word=on; else tree_word=off; fi
 key_line="<meta name=\"md-view-key\" content=\"w=$width;t=$theme;p=$palette;f=$forced;tr=$tree_word;r=$root_mode;d=$tree_depth;n=$tree_max;v=$version\">"
+# The CSP line. A baked page sits in its own folder and reads its images from
+# there, so img-src takes 'self' for file:.
+csp_img="data: file:"
+[ "$flag_bake" = 1 ] && csp_img="data: 'self'"
+csp_line="<meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'none'; script-src 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'unsafe-inline'; img-src $csp_img\">"
 ini_state=none
 if [ -f "$ini" ]; then
     ini_state=$(ls -lnLd -- "$ini" 2>/dev/null \
@@ -853,6 +1126,9 @@ base_url=file://$(printf '%s' "$dir" | sed -e 's/%/%25/g' -e 's/ /%20/g' -e 's/#
     -e 's/?/%3F/g' -e 's/"/%22/g' -e "s/'/%27/g" -e 's/</%3C/g' -e 's/>/%3E/g' -e 's/&/%26/g' \
     | awk 'NR > 1 { printf "%%0A" } { printf "%s", $0 }')
 base_line=$(printf '<base href="%s">' "$base_url")
+
+# A baked page sits in its own folder, so its base is the folder.
+[ "$flag_bake" = 1 ] && base_line='<base href="./">'
 
 # The page of this run as an absolute path, for the -newer walk.
 case $page in
@@ -977,7 +1253,9 @@ bom=$(printf '\357\273\277')
     cat <<'HTML'
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'unsafe-inline'; img-src data: file:">
+HTML
+    printf '%s\n' "$csp_line"
+    cat <<'HTML'
 <meta name="viewport" content="width=device-width, initial-scale=1">
 HTML
     printf '%s\n%s\n%s\n' "$key_line" "$ini_line" "<meta name=\"md-view-version\" content=\"$version\">"
@@ -1085,8 +1363,65 @@ if [ -n "$tmpf" ]; then
     mv -f "$tmpf" "$page" || { echo "md-view: cannot write $page" >&2; exit 1; }
     trap - EXIT
 fi
+
+# The publish set joins the folder before the render, so the render output and
+# the assets share one finished folder.
+if [ "$flag_bake" = 1 ]; then
+    bake_assets || { echo 'md-view: cannot copy the assets' >&2; exit 2; }
+fi
+
+# bake renders the page once with headless Chrome, so text, code, and diagrams are
+# in the file with no script run.
+if [ "$flag_bake" = 1 ]; then
+    bake_chrome=
+    if [ -n "${MD_VIEW_CHROME:-}" ] && [ -x "${MD_VIEW_CHROME}" ]; then
+        bake_chrome=$MD_VIEW_CHROME
+    else
+        for p in '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome' google-chrome chromium; do
+            case $p in
+                /*) [ -x "$p" ] && { bake_chrome=$p; break; } ;;
+                *) c=$(command -v "$p" 2>/dev/null)
+                   [ -n "$c" ] && { bake_chrome=$c; break; } ;;
+            esac
+        done
+    fi
+    bake_ms=${MD_VIEW_BAKE_MS:-8000}
+    if [ -z "$bake_chrome" ]; then
+        echo 'md-view: bake: no Chrome, wrote the unbaked page' >&2
+    else
+        bake_prof=$(mktemp -d)
+        bake_btmp="$page.bake.$$"
+        "$bake_chrome" --headless=new --disable-gpu --no-first-run \
+            --use-mock-keychain --password-store=basic \
+            --user-data-dir="$bake_prof" --virtual-time-budget="$bake_ms" --dump-dom \
+            "$(file_url "$page")" 2>/dev/null > "$bake_btmp"
+        if [ -s "$bake_btmp" ]; then
+            # Chrome wrote the live-DOM file:// URLs of the images. A remote
+            # reader needs folder-relative targets: rewrite the folder prefix
+            # to ./ before the move. index() and substr() keep a "|" in the
+            # folder path safe.
+            awk -v p="file://$bake_dir/" '{
+                while ((i = index($0, p)) > 0)
+                    $0 = substr($0, 1, i - 1) "./" substr($0, i + length(p))
+                print
+            }' "$bake_btmp" > "$bake_btmp.2" \
+                && mv -f "$bake_btmp.2" "$page" \
+                || echo 'md-view: bake: cannot write the page' >&2
+            rm -f "$bake_btmp"
+        else
+            echo 'md-view: bake: Chrome produced no DOM, wrote the unbaked page' >&2
+            rm -f "$bake_btmp"
+        fi
+        rm -rf "$bake_prof"
+    fi
+fi
 umask "$old_umask"
 
+if [ "$flag_bake" = 1 ]; then
+    # The bake folder is the run's one stdout line; the opener stays shut.
+    ( cd "$bake_dir" && pwd )
+    exit 0
+fi
 if [ "$do_open" = 1 ]; then
     open_page "$page"
 fi

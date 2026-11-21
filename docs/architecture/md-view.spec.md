@@ -36,7 +36,7 @@ The script can also run alone from any folder.
 
 ```
 md-view [--out <page.html>] [--no-open] [--width 60|70|80|90]
-        [--theme light|dark|auto] [--palette github|tokyo] [--browser B] [--no-cache]
+        [--theme light|dark|auto] [--palette github|tokyo] [--browser B] [--no-cache] [--bake <dir>]
         [--tree on|off] [--list-tree] <file.md>
 md-view --init-config
 md-view --print-association
@@ -54,6 +54,7 @@ md-view --version
 | `--tree on\|off` | Tree mode for one run. `on` is the default. `off` gives the page of one file, with no scan. The same as the `tree=` key. |
 | `--list-tree <file.md>` | Prints the encoded root on line 1, then one line `<state> <ENC>` per tree file in tree order. `state` is `page`, `big` or `cut`. A last line `cap N` shows when the cap stopped the scan. Writes no page and opens nothing. Exit 0. In one-file mode it prints line 1 and `off`. |
 | `--no-cache` | Builds the page again, also if a current page exists. |
+| `--bake <dir>` | Writes the site folder `<dir>`: the page `<dir>/index.html` and the assets its Markdown names (see "Baked site"). `<dir>` is made when it is not there. The page is built on every run. Opens nothing. |
 | `--print-association` | Prints the far2l File associations entry (see "What starts it"). Exit 0. |
 | `--init-config` | Writes a commented sample `config.ini` if there is no file, and prints its path. An existing file, link or other entry is not changed. Exit 0. |
 | `--version` | Prints `md-view <version>` and exits 0. It reads no config and writes no page. |
@@ -63,12 +64,14 @@ md-view --version
 | `XDG_CONFIG_HOME` | The base of the folder of `config.ini`. Else `$HOME/.config`. |
 | `BROWSER` | Used by `auto` only, and only if it is one command name. A value that starts with `-` or has other characters is ignored with one line on stderr. |
 | `MARKED_JS` | Another path for `marked.min.js`. |
+| `MD_VIEW_CHROME` | The Chrome program for a bake. A path to an executable file. The bake uses it in place of the default search. |
+| `MD_VIEW_BAKE_MS` | The time of the bake render, in milliseconds. Default is 8000. |
 
 | Exit | When |
 |---|---|
 | 0 | The page is written, and it is opened or its path is printed. With `--no-open`, nothing is printed. |
 | 1 | The page cannot be written, or the opener fails. |
-| 2 | No file, an unreadable file, an unknown option, a missing `--width`, `--theme` or `--palette` value, or a value that is not accepted. Also a page folder that does not exist. No page is written. |
+| 2 | No file, an unreadable file, an unknown option, a missing `--width`, `--theme` or `--palette` value, or a value that is not accepted. Also a page folder that does not exist. For `--bake`: no folder value, a folder that cannot be made, `--out` at the same time, or an asset that cannot be copied. No page is written. |
 | 3 | `marked.min.js`, a vendored style file, `highlight.min.js`, `page.js` or `page.css` is not found or not readable. Stderr is `md-view: cannot find <name>`. No page is written. |
 
 A `--browser` value or a `browser=` key that is not accepted is not an error. It gives one line on stderr and the script uses `auto`.
@@ -129,6 +132,19 @@ Tree mode is on by default. It shows the opened file and the other Markdown file
 | Print | The panel, its toggle and its resize grip are hidden. |
 | One-file mode | `tree=off` or `--tree off`, or a root of `$HOME` or `/`, gives the page of one file: no scan, no panel markup and no panel CSS. `html` has `data-tree="off"` and `data-tree-why="ini\|flag\|home\|slash"`. The popover shows why. |
 
+### Baked site
+
+`--bake <dir>` writes a site folder for upload. The folder holds `index.html` and the assets its Markdown names.
+
+| Part | Rule |
+|---|---|
+| Page path | `<dir>/index.html`, written direct, so the page is built on every run. The script makes `<dir>` (with its parents) when it is not there; a folder that cannot be made exits 2. `--bake <dir>` with `--out <page.html>` exits 2. Bake uses tree mode; `--tree off` wins over it, a `tree=off` key does not. |
+| Head | `<base href="./">` replaces the `file://` base line. The policy keeps every origin and sets `img-src data: 'self'` for a baked page only. |
+| Publish set | Two target sets, read from the Markdown text of every file that joins the page. They hold the image targets of `![alt](target)` and of `![alt][ref]` with `[ref]: target`. They also hold the link targets of `[text](target)` that are not Markdown files, in any letter case. Drop a target with a scheme, a dotted part, a `node_modules` part, a byte below `0x20`, or a depth over `tree_depth`. Strip a leading `/` and copy the target root-relative. An image target must end in `png`, `jpg`, `jpeg`, `gif`, `svg` or `webp`, in any letter case. A `#frag` and a `"title"` go, and `%XX` is decoded once. The script resolves a target against the folder of its own file, under the root, the way the page resolves a link. A fence line starts with three or more backticks (any info string) or three or more tildes, and toggles the fence state. A fenced code block holds prose examples: its lines add no targets. |
+| Copy | The copies run after the page is written and before the render, so the render output and the assets share one finished folder. The script makes the parent folders, then copies the file. A path with a symlink in its chain (the file, and each folder below the root) is not copied. A path is copied once. A target that names no regular file prints `md-view: no file for <target>` on stderr and copies nothing. A copy that fails prints `md-view: cannot copy <target>` on stderr and exits 2. |
+| Chrome | Unchanged: the page is rendered once with headless Chrome, and the DOM is written to `index.html`. The DOM names the images with `file://` URLs under the bake folder; the script rewrites that prefix to `./` before the write. With no Chrome, the unbaked page is written with one line on stderr. |
+| Print | The absolute path of `<dir>` on stdout, one line, last, exit 0. No browser. |
+
 ### The page: look, gear and keys
 
 | Part | Rule |
@@ -148,6 +164,7 @@ Tree mode is on by default. It shows the opened file and the other Markdown file
 | Diagram viewer | `dialog.md-viewer` on `body`, made at the first open. Buttons `−`, `+`, `Fit`, `1:1`, `●`, `×`. `●` toggles the laser pointer, a red dot that follows the pointer. The laser state survives close and reopen in the page session. The `×` has the focus at open, so Enter or Space closes at once. The backdrop is `rgba(0,0,0,0.5)`. The color layer colors the dialog and its buttons. It works below 700 px too. |
 | Print | The gear, the popover, the tree panel and its toggle, and the diagram bars are hidden. |
 | Offline | Text, style and highlight show with no network. A mermaid block shows its source. |
+| SharePoint preview | The SharePoint one-up preview puts the file in a `<iframe sandbox="allow-scripts">` and parses the inline script elements inert, so none runs at load. The page shows the shell only: text, highlight and diagrams need a script, so they stay empty there. With `--bake`, md-view renders the page once with headless Chrome and writes the result, so text, code, and diagrams show in the preview. The interactions still need the kept scripts, and a diagram needs `cdn.jsdelivr.net` at bake time. |
 
 ### How diagrams render
 
@@ -247,6 +264,7 @@ The policy is `default-src 'none'; script-src 'unsafe-inline' https://cdn.jsdeli
 | Test | Holds |
 |---|---|
 | `tests/browser-page.sh` | Needs only `sh`. It drives `lib/md-view` with `--no-open`. It checks the flags, the exit codes and `config.ini`. It checks that an old far2l config file has no effect. It also checks the page name, the reuse rule, the temporary file, the key and the page text. The gear, the popover, the keys and the saved choice are checked as page text only. A person checks them in Firefox and Chrome. |
+| `tests/browser-page.sh` bake rows | The `bake:page` rows: the folder page, its head, a missing folder, the flag shape. The `bake:asset` rows check the publish set of the shared fixture `tests/fixtures/bake/`. They cover images, a link, the skip rules, the symlink chain, the extensions, and one `%XX` decode per escape. They also cover a target with parentheses, and the tree-mode bake. |
 | `tests/browser-links-dom.sh` | Headless Chrome. The hash route, the link rules, images, heading ids, anchors and line anchors. |
 | `tests/browser-links-dom.sh` tree panel | The panel markup and geometry: toggle left 308, gutter 332. The chain rows: `deep › a`, and a file sibling stops the chain. The open chain of the shown file is one row. The resize rows: `ArrowRight` sets `--md-panel-w` and `md-view-tree-w`. Shift adds 64, and the clamp stays at 560. A double-click restores 300, and a seeded width loads. Reset restores 300 and removes the key. The panel is hidden below 700 px and in print. |
 | `tests/hostile-dom.sh` | Headless Chrome. The untrusted content rows, the CSP, the page written with `--out`, and the `--print-association` text with a hostile file name. |
