@@ -14,8 +14,8 @@ description: The list of md-view stories in build order, with the status of each
 | 4 | [mermaid-accent-toolbar](mermaid-accent-toolbar/story.md) | M | planned | mermaid-accent-coloring |
 | 5 | [md-view-version](md-view-version/story.md) | M | retired | mermaid-viewer |
 | 6 | diagram-laser-pointer | S | retired | - |
-| 7 | [line-anchor-nav](line-anchor-nav/story.md) | M | done | diagram-laser-pointer |
-| 8 | [tree-panel-compact-resize](tree-panel-compact-resize/story.md) | M | planned | - |
+| 7 | line-anchor-nav | M | retired | diagram-laser-pointer |
+| 8 | tree-panel-compact-resize | M | retired | - |
 | 9 | tree-scan-speed | S | retired | line-anchor-nav |
 | 10 | [bake-pages](bake-pages/story.md) | M | done | - |
 

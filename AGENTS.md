@@ -57,6 +57,7 @@ Before you open files, get a list of all docs: `grep -r '^description:' docs REA
 - The reviewer brief must demand `### N. <Severity>:` headings under `## Issues`. `review-yield.mjs` counts only that shape.
 - A plan must name every existing test that pins a line it changes. `tests/browser-page.sh` pins the two print lines, the page script, and the keydown listener count.
 - Write a done-check row count as "at least N". A fix round in review can add rows.
+- A rewrite of a case-registration line silently drops tests; register additions after the existing names.
 
 **Docs**
 - Every doc has frontmatter with `description`. A value does not contain `: ` or ` #`, does not end in `:`, and does not start with a backtick or a quote.
