@@ -56,12 +56,16 @@ usage() {
     exit 2
 }
 
+# url_escape TEXT: prints TEXT with the file:// URL escapes applied.
+# A newline in the path becomes %0A, so the base stays on one line.
+url_escape() {
+    printf '%s' "$1" | sed -e 's/%/%25/g' -e 's/ /%20/g' -e 's/#/%23/g' -e 's/?/%3F/g' -e 's/"/%22/g' -e "s/'/%27/g" -e 's/</%3C/g' -e 's/>/%3E/g' -e 's/&/%26/g' | awk 'NR > 1 { printf "%%0A" } { printf "%s", $0 }'
+}
+
 # file_url PATH: prints the file:// URL for one path. It escapes the same set as
 # the base_url recipe.
 file_url() {
-    printf 'file://%s' "$(printf '%s' "$1" | sed -e 's/%/%25/g' -e 's/ /%20/g' -e 's/#/%23/g' \
-        -e 's/?/%3F/g' -e 's/"/%22/g' -e "s/'/%27/g" -e 's/</%3C/g' -e 's/>/%3E/g' -e 's/&/%26/g' \
-        | awk 'NR > 1 { printf "%%0A" } { printf "%s", $0 }')"
+    printf 'file://%s' "$(url_escape "$1")"
 }
 
 # trim TEXT: sets trimmed to TEXT without the spaces and tabs at both ends.
@@ -1121,10 +1125,7 @@ case $dir in
     */) ;;
     *) dir=$dir/ ;;
 esac
-# A newline in the path becomes %0A, so the base stays on one line.
-base_url=file://$(printf '%s' "$dir" | sed -e 's/%/%25/g' -e 's/ /%20/g' -e 's/#/%23/g' \
-    -e 's/?/%3F/g' -e 's/"/%22/g' -e "s/'/%27/g" -e 's/</%3C/g' -e 's/>/%3E/g' -e 's/&/%26/g' \
-    | awk 'NR > 1 { printf "%%0A" } { printf "%s", $0 }')
+base_url=file://$(url_escape "$dir")
 base_line=$(printf '<base href="%s">' "$base_url")
 
 # A baked page sits in its own folder, so its base is the folder.
