@@ -1,6 +1,6 @@
 ---
 description: Dedup the file:// escape recipe, make the head check one pass, and add a source-only seam with unit tests for the pure helpers in the script.
-status: planned
+status: in-progress
 size: M
 risk: contract
 refs: ADR-001
@@ -73,7 +73,15 @@ Builder's calls:
 - No spec, ADR or invariants change: the meaning of no rule, flag or format changes.
 - Bench gate: new ≤ 0.55 s, cached ≤ 0.15 s. The reuse path must not gain process spawns.
 - `bake_assets` and `wc -c` stay as they are.
+Orient, 2026-11-21T23:15Z:
 
-Branch `refactor/md-view-script-hygiene`, base `main`. Budget for M; hard stop at the size cap, then split the seam from the dedups.
+- BASE: `origin/main` @ 57a88d4 (`fetch`ed 2026-11-21). Worktree `.worktrees/md-view-script-hygiene`, branch `refactor/md-view-script-hygiene`.
+- Budget M: $15 build / $20 hard stop (G3-spend).
+- Flow: `flow tier=full docs=spec,plan design=no orchestrator=yes final=final-reviewer gate=stop scan=yes verifier=none` (size M, risk `contract` from this brief; `contract` forced the full tier).
+- Owner-checked paths: none named in AGENTS.md. Story scope applies: page bytes and the vendored files never change; spec, README and invariants stay.
+- Hooks: none (AGENTS.md names no Delivery hooks). Check = `make check`.
+- G2-design stops before the build (full tier). Recorded risk flag kept per the deliver-story rule: never remove the story's flags.
+
+Branch `refactor/md-view-script-hygiene`, base `origin/main` @ 57a88d4. Budget for M; hard stop at the size cap, then split the seam from the dedups.
 
 Check command: `make check` from the repo root, then `sh tests/bench.sh`.
