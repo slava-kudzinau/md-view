@@ -827,6 +827,61 @@ $bake_set
 SET
 }
 
+# head_has_all LINE...: true if every argument is a whole line of the head of the
+# page, which ends at the first </head> line. No arguments: true. An unreadable
+# page gives an empty head, so it is false.
+head_has_all() {
+    [ $# -eq 0 ] && return 0
+    want=$(printf '%s\n' "$@")
+    sed -n '1,/^<\/head>$/p' "$page" | MD_WANT="$want" awk 'BEGIN { n = split(ENVIRON["MD_WANT"], a, "\n"); for (i = 1; i <= n; i++) if (a[i] != "") want[a[i]] = 1 } ($0 in want) { delete want[$0] } END { exit length(want) ? 1 : 0 }'
+}
+
+# page_fresh: true if the cache page can be reused with no scan. The page is a
+# plain file, and no input is newer than it. The head has the key and the ini
+# state of this run. In tree mode the head also has the base line of this root,
+# so a root that moved (a .git removed with root=repo) builds the page again.
+# The tree files are checked by tree_newer, not here.
+page_fresh() {
+    [ -f "$page" ] && [ ! -L "$page" ] || return 1
+    abs_marked=$marked_js
+    case $abs_marked in
+        /*) ;;
+        *) abs_marked=$(pwd)/$abs_marked ;;
+    esac
+    set -- "$real" "$self_dir/$(basename -- "$0")" "$abs_marked"
+    for f in github-markdown-light.css github-markdown-dark.css hljs-github.min.css \
+             hljs-github-dark.min.css highlight.min.js page.js page.css; do
+        set -- "$@" "$self_dir/$f"
+    done
+    [ -f "$ini" ] && set -- "$@" "$ini"
+    newer=$(find -H "$@" -prune -newer "$page" -print 2>/dev/null) || return 1
+    [ -z "$newer" ] || return 1
+    if [ "$tree_mode" = 1 ]; then
+        head_has_all "$key_line" "$ini_line" "$base_line" || return 1
+    else
+        head_has_all "$key_line" "$ini_line" || return 1
+    fi
+}
+
+# tree_newer: prints the tree folders and the tree files that are newer than the
+# page, one ./<path> line each, the root as ".". It is one find walk, with the
+# skip rules of scan_find. A folder line is not a tree file; the caller tests it
+# with [ -f ]. The status is find's, so a failed walk fails and the page is built.
+tree_newer() {
+    scan_find -newer "$abs_page" -print -o -type d -newer "$abs_page"
+}
+
+# reuse_page: the page is good. It restores the umask of the caller, opens the
+# page when do_open is 1, and exits 0.
+reuse_page() {
+    umask "$old_umask"
+    if [ "$do_open" = 1 ]; then
+        open_page "$page"
+    fi
+    exit 0
+}
+
+if [ -z "${MD_VIEW_SOURCE_ONLY:-}" ]; then
 file=
 out=
 do_open=1
@@ -1137,60 +1192,6 @@ case $page in
     *) abs_page=$(pwd)/$page ;;
 esac
 
-# head_has_all LINE...: true if every argument is a whole line of the head of the
-# page, which ends at the first </head> line. No arguments: true. An unreadable
-# page gives an empty head, so it is false.
-head_has_all() {
-    [ $# -eq 0 ] && return 0
-    want=$(printf '%s\n' "$@")
-    sed -n '1,/^<\/head>$/p' "$page" | MD_WANT="$want" awk 'BEGIN { n = split(ENVIRON["MD_WANT"], a, "\n"); for (i = 1; i <= n; i++) if (a[i] != "") want[a[i]] = 1 } ($0 in want) { delete want[$0] } END { exit length(want) ? 1 : 0 }'
-}
-
-# page_fresh: true if the cache page can be reused with no scan. The page is a
-# plain file, and no input is newer than it. The head has the key and the ini
-# state of this run. In tree mode the head also has the base line of this root,
-# so a root that moved (a .git removed with root=repo) builds the page again.
-# The tree files are checked by tree_newer, not here.
-page_fresh() {
-    [ -f "$page" ] && [ ! -L "$page" ] || return 1
-    abs_marked=$marked_js
-    case $abs_marked in
-        /*) ;;
-        *) abs_marked=$(pwd)/$abs_marked ;;
-    esac
-    set -- "$real" "$self_dir/$(basename -- "$0")" "$abs_marked"
-    for f in github-markdown-light.css github-markdown-dark.css hljs-github.min.css \
-             hljs-github-dark.min.css highlight.min.js page.js page.css; do
-        set -- "$@" "$self_dir/$f"
-    done
-    [ -f "$ini" ] && set -- "$@" "$ini"
-    newer=$(find -H "$@" -prune -newer "$page" -print 2>/dev/null) || return 1
-    [ -z "$newer" ] || return 1
-    if [ "$tree_mode" = 1 ]; then
-        head_has_all "$key_line" "$ini_line" "$base_line" || return 1
-    else
-        head_has_all "$key_line" "$ini_line" || return 1
-    fi
-}
-
-# tree_newer: prints the tree folders and the tree files that are newer than the
-# page, one ./<path> line each, the root as ".". It is one find walk, with the
-# skip rules of scan_find. A folder line is not a tree file; the caller tests it
-# with [ -f ]. The status is find's, so a failed walk fails and the page is built.
-tree_newer() {
-    scan_find -newer "$abs_page" -print -o -type d -newer "$abs_page"
-}
-
-# reuse_page: the page is good. It restores the umask of the caller, opens the
-# page when do_open is 1, and exits 0.
-reuse_page() {
-    umask "$old_umask"
-    if [ "$do_open" = 1 ]; then
-        open_page "$page"
-    fi
-    exit 0
-}
-
 # The fast check. In one-file mode page_fresh is the whole check. In tree mode
 # tree_newer lists what changed since the page. Nothing listed: reuse. Only
 # folders listed: head_ok is 1, and the scan below decides. A tree file listed, or
@@ -1430,3 +1431,4 @@ if [ "$do_open" = 1 ]; then
     open_page "$page"
 fi
 exit 0
+fi
