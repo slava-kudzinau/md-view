@@ -16,8 +16,8 @@ description: The list of md-view stories in build order, with the status of each
 | 6 | diagram-laser-pointer | S | retired | - |
 | 7 | [line-anchor-nav](line-anchor-nav/story.md) | M | done | diagram-laser-pointer |
 | 8 | [tree-panel-compact-resize](tree-panel-compact-resize/story.md) | M | planned | - |
-| 9 | [tree-scan-speed](tree-scan-speed/story.md) | S | in-review | line-anchor-nav |
-| 10 | [bake-pages](bake-pages/story.md) | S | done | - |
+| 9 | tree-scan-speed | S | retired | line-anchor-nav |
+| 10 | [bake-pages](bake-pages/story.md) | M | done | - |
 
 ## Build order
 

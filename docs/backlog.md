@@ -22,6 +22,9 @@ Open items that do not block a shipped story. Each names the story that left it.
 - Test that the palette layer wins the cascade (a hand check covered 108 elements). (story themes-tokyo-night)
 - Extend accent coloring to class, state and other diagram types beyond flowchart and sequence. (story mermaid-accent-coloring)
 - Hover / click focus on diagram shapes. (story mermaid-accent-coloring)
+- Add a `find`-call shim row that counts `find` calls on the scan path (`scan_tree`), and a row for an unreadable file over 1 MiB (or a spec "except" line). (story tree-scan-speed)
+- No test covers a scan failure (`cannot read the file tree`, exit 2). Older than the story. (story tree-scan-speed)
+- `cache_tree_grown_big` passes the mutant "every line of `tree_newer` is a folder" (F-2, accepted). Strengthen the row or accept it explicitly. (story tree-scan-speed)
 
 ## Manual checks
 
