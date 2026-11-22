@@ -18,3 +18,4 @@ description: One row for each retired story, with its size, its cost against the
 | tree-scan-speed | S | none | 15 | d9357ed | `1aba21a` | $8.00 | $10.00 | $4.28 | $3.01 | $7.29 | ok | C0 I1 M10 | 2026-11-21 | verdict on the subtree only |
 | line-anchor-nav | M | contract, security | 10 | 4d766ba | `f98a7ae` | $10.37 | $15.37 | $5.91 | $5.93 | $11.83 | ok | C0 I5 M7 | 2026-11-21 | verdict on the subtree only |
 | tree-panel-compact-resize | M | contract | 13 | 761bf0c | `90c619a` | - | - | - | - | - | - | C1 I0 M1 | 2026-11-21 | no cost record |
+| mermaid-text-selection | S | - | 20 | 15669c7 | `a36bfab` | $8.00 | $10.00 | $0.00 | $0.00 | $0.00 | ok | C0 I0 M1 | 2026-11-22 | - |
