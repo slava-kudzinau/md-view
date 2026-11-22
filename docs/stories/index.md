@@ -18,7 +18,7 @@ description: The list of md-view stories in build order, with the status of each
 | 8 | tree-panel-compact-resize | M | retired | - |
 | 9 | tree-scan-speed | S | retired | line-anchor-nav |
 | 10 | [bake-pages](bake-pages/story.md) | M | done | - |
-| 11 | [md-view-script-hygiene](md-view-script-hygiene/story.md) | M | planned | bake-pages |
+| 11 | [md-view-script-hygiene](md-view-script-hygiene/story.md) | M | in-review | bake-pages |
 
 ## Build order
 

@@ -54,8 +54,32 @@ _Terms: `MD_VIEW_SOURCE_ONLY` gates the executable flow so sourcing loads helper
 
 ### What was built
 
+Everything the Before-build page planned. `url_escape` is the one file:// escape recipe; `file_url` and `base_url` call it. `head_has` is deleted; `head_has_all LINE...` reads the head once (up to the first `^</head>$` line) in one sed + one awk pass, wanted lines via `ENVIRON`. The executable flow sits inside the `MD_VIEW_SOURCE_ONLY=1` guard; `tests/unit-helpers.sh` (43 `ok` rows) is the fifth `make check` test. `make check` exit 0, no skips; `sh tests/bench.sh` new 0.43 s / cached 0.12 s (gate 0.55 / 0.15). The written pages and the `<base href>` line are `cmp` clean against `origin/main`. The only durable-doc change is the owner-approved one line in `md-view.spec.md` (four tests to five tests) plus the `AGENTS.md` rows naming the fifth test.
+
+One addition beyond the plan: the new unit tests cover `url_escape` and `head_has_all`, which the fixed case list did not name (wanted by the verifier for visibility, recorded in the Before-build decisions table).
+
 ### Decisions changed during the build
+
+| Decision | Changed to | Why |
+|---|---|---|
+| Wrap everything from `file=` to EOF in one `if` (plan T3) | The flow is guarded; the four function defs that lived below that line (`head_has_all`, `page_fresh`, `tree_newer`, `reuse_page`) were hoisted above the guard | As written, `MD_VIEW_SOURCE_ONLY=1` would leave those functions undefined and the unit tests would fail |
+| Byte-identity enforced at review time | Enforced by `cmp` at an `origin/main` worktree vs the branch (fixture parent holds spaces, `%`, `#`, trailing newline); pages and `<base href>` clean | Inspection cannot catch a one-byte escape regression; comparison can |
+| Reviews by `task-reviewer-critical` / `final-reviewer` as configured | Reviews ran as the bundled `reviewer` agent with the full critical brief; `task-reviewer-critical`/`final-reviewer` roles are not dispatchable in this session; recorded as ledger rulings | G2-design was waived by the owner (2026-11-22); no dispatchable delivery model existed |
+| `enc_path` UTF-8 spec row | Soft spot, not fixed: macOS `/usr/bin/awk` is UTF-8 aware, so `a<C3 A9>` encodes to `a%E9`, not the spec's `a%C3%A9`; the test asserts the byte-oriented result only when a byte awk is detected, else prints `skip` | The story forbids fixes for defects found through the new unit tests; the hard byte-identical constraint governs |
+| T4 review | None per task; the final review covered T4 | Per the plan's Order section |
 
 ### What the reviews caught
 
+One Important: the implementer skipped the bench once; the orchestrator reran it (0.45 s / 0.11 s), no code change. Minors: a stale `file_url` comment pointer (fixed in `44972a8`); `enc_path_utf8` soft spot (not fixed, see above); `head_has_all ""` returns 0 while reading nothing (plan-mandated, no caller passes an empty line); a review-yield heading-shape undercount (T1 scored 0/0/0; hand count T1 0/0/1). Final review approved (0 Critical / 0 Important / 2 Minor); both minors fixed and re-reviewed ADDRESSED. No reviewer ever found Critical or Important in code.
+
 ### Run it
+
+```
+cd .worktrees/md-view-script-hygiene
+make check          # five tests pass in order; the fifth is tests/unit-helpers.sh
+sh tests/bench.sh   # new page: 0.43 s   cached page: 0.12 s
+MD_VIEW_SOURCE_ONLY=1 sh lib/md-view </dev/null; echo $?   # prints 0, writes nothing
+MD_VIEW_SOURCE_ONLY=1 sh -c '. ./lib/md-view; num_val 70 90; echo "num=$num"'   # num=70
+```
+
+The byte-identity proof (fixture parent with spaces, `%`, `#`, trailing newline): pages built at `origin/main` and at the branch `cmp` clean, as does the `<base href>` line.

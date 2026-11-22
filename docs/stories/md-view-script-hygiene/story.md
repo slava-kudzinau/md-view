@@ -1,6 +1,6 @@
 ---
 description: Dedup the file:// escape recipe, make the head check one pass, and add a source-only seam with unit tests for the pure helpers in the script.
-status: in-progress
+status: in-review
 size: M
 risk: contract
 refs: ADR-001
