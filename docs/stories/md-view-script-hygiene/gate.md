@@ -22,7 +22,7 @@ flowchart LR
 
 ### Contracts, data and runtime
 
-None new. The head lines (`<base href>`, the key meta, the ini state line, the tree state comment) keep their exact bytes. No flag, key, format or config value changes. No spec, README, ADR or invariants change.
+None new. The head lines (`<base href>`, the key meta, the ini state line, the tree state comment) keep their exact bytes. No flag, key, format or config value changes. No spec change beyond the owner-approved md-view.spec.md `make check` line (four tests to five tests, owner 2026-11-22). No README, ADR or invariants change.
 
 ### Decisions the model made
 

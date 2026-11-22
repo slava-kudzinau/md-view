@@ -122,6 +122,7 @@ page="$tmp/head.html"
 printf '<head>\n<meta name="a">\n</head>\n<body>\n' > "$page" || exit 1
 head_has_all '<head>' '<meta name="a">' '</head>' && mk_ok head_has_all_present || mk_fail head_has_all_present
 head_has_all '<head>' '<meta name="missing">' && mk_fail head_has_all_missing || mk_ok head_has_all_missing
+head_has_all '<meta name="a"' && mk_fail head_has_all_substring || mk_ok head_has_all_substring
 
 [ "$fails" -eq 0 ] || exit 1
 exit 0
