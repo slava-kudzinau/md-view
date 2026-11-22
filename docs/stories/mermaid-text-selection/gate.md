@@ -44,11 +44,11 @@ The story adds a Shift modifier to md-view's full-screen diagram viewer so a rea
 
 ### What was built
 
-Same as "What it builds": Shift+drag selects label text, Shift shows the I-beam cursor, plain drag pans. No scope moved.
+Same as "What it builds": Shift+drag selects label text, Shift shows the I-beam cursor, plain drag pans. No scope moved. One extra commit fixes two rows for the toolchain update: Chrome 158 keeps the BOM in `textContent`, and uutils `sed` 0.1.1 parses the old bracket class. See closeout.md.
 
 ### Decisions changed during the build
 
-One row added: the new test row gates select mode on `userSelect !== 'none'` (headless Chrome normalizes `text`), per the plan's stated contingency. See closeout.md.
+The new test row gates select mode on `userSelect === 'text'`; the headless run confirms Chrome reports `text`.
 
 ### What the reviews caught
 

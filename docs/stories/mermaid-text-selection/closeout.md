@@ -2,12 +2,13 @@
 
 Result: Shift+drag selects label text in the diagram viewer; holding Shift shows the text cursor. Check: `make check` exit 0 (all suites, no skips).
 
-Commits: 6df66d6 page code (T1); 6973240 tests and docs (T2).
+Commits: 6df66d6 page code (T1); 6973240 tests and docs (T2); cc8d4be toolchain fixes for two unrelated rows.
 
 ## Decisions made in the build
 
-1. Gate the new test row on `getComputedStyle(box).userSelect !== 'none'` for select mode, per the plan's contingency: headless Chrome normalizes the value. The plain-`user-select` end check keeps `=== 'none'`.
-2. Keep the `md-select` clear in `endDrag` only (not on the dialog): see the minor finding.
+1. Gate the new test row on `getComputedStyle(box).userSelect === 'text'` for select mode; the headless run confirms Chrome reports `text`. The plain-`user-select` end check keeps `=== 'none'`.
+2. Toolchain fix commit `cc8d4be`: Chrome 158 keeps the leading BOM in `textContent`, so strip it in `unescapeText`; split the `far2l-escape.sed` bracket class in three commands so BSD, GNU and uutils `sed` 0.1.1 all parse it. Unrelated to the feature.
+3. Keep the `md-select` clear in `endDrag` only (not on the dialog): see the minor finding.
 
 ## Minor findings not fixed
 
