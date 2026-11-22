@@ -9,6 +9,7 @@ Commits: 6df66d6 page code (T1); 6973240 tests and docs (T2); cc8d4be toolchain 
 1. Gate the new test row on `getComputedStyle(box).userSelect === 'text'` for select mode; the headless run confirms Chrome reports `text`. The plain-`user-select` end check keeps `=== 'none'`.
 2. Toolchain fix commit `cc8d4be`: Chrome 158 keeps the leading BOM in `textContent`, so strip it in `unescapeText`; split the `far2l-escape.sed` bracket class in three commands so BSD, GNU and uutils `sed` 0.1.1 all parse it. Unrelated to the feature.
 3. Keep the `md-select` clear in `endDrag` only (not on the dialog): see the minor finding.
+4. After a real-browser check, the owner switched mermaid labels to HTML (`htmlLabels: true`, commit 61036d3): SVG `<text>` selection anchors at the nearest glyph in layout order, so a Shift+click started far from the clicked word. HTML labels give caret and word granularity; the select row gates on `foreignObject` too.
 
 ## Minor findings not fixed
 
