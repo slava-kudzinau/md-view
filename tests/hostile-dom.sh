@@ -609,6 +609,16 @@ palette_close_page() {
 }
 net_check "viewer: a palette change closes the viewer" palette_close_page
 
+# The select row: keydown Shift shows the text cursor on the box, keyup restores
+# the grab cursor, Shift+drag puts the box in select mode (no capture), and the
+# pointerup ends it: the class is gone, user-select is none, and a plain drag
+# pans again. The title is select=all ok when every check passes.
+select_page() {
+    viewer_page select "${WHEN_BAR}document.querySelector('.md-dbar button').click();var d=document.querySelector('dialog');var box=d.querySelector('.md-vbox');var key=function(k){d.dispatchEvent(new KeyboardEvent('keydown',{key:k,bubbles:true}))};var keyup=function(k){d.dispatchEvent(new KeyboardEvent('keyup',{key:k,bubbles:true}))};for(var i=0;i<20&&(box.scrollWidth<=box.clientWidth+100||box.scrollHeight<=box.clientHeight+100);i++)key('+');var pe=function(t,x,y,sh){box.dispatchEvent(new PointerEvent(t,{pointerId:1,button:0,buttons:1,pointerType:'mouse',shiftKey:!!sh,clientX:x,clientY:y,bubbles:true}))};var r=[];var ok=function(){return r.join('').indexOf('0')<0?'all ok':r.join('')};document.title='select=0';(function tick(){if(!(box.scrollWidth>box.clientWidth+100&&box.scrollHeight>box.clientHeight+100)){document.title='select=0';setTimeout(tick,50);return;}r.push(box.querySelector('foreignObject')?1:0);key('Shift');r.push(box.classList.contains('md-shift')&&getComputedStyle(box).cursor==='text'?1:0);keyup('Shift');r.push(!box.classList.contains('md-shift')&&getComputedStyle(box).cursor==='grab'?1:0);key('Shift');var b=box.getBoundingClientRect();var X=b.left+b.width/2,Y=b.top+b.height/2;pe('pointerdown',X,Y,1);r.push(box.classList.contains('md-select')&&getComputedStyle(box).userSelect==='text'?1:0);pe('pointerup',X,Y,1);r.push(box.classList.contains('md-select')&&getComputedStyle(box).userSelect==='text'?1:0);var sl=box.scrollLeft;pe('pointerdown',X,Y);pe('pointermove',X-20,Y-20);r.push(!box.classList.contains('md-select')&&getComputedStyle(box).userSelect==='none'?1:0);pe('pointerup',X-20,Y-20);r.push(Math.abs(box.scrollLeft-sl)>10?1:0);document.title='select='+ok();})();$WHEN_BAR_END" &&
+        grep -F -q '<title>select=all ok</title>' "$tmp/select.dom"
+}
+net_check "viewer: shift preview and select mode" select_page
+
 # Row: a BOM and CRLF are accepted.
 bom_page() {
     printf '\357\273\277# Bom head\r\n\r\ntext\r\n' > "$tmp/bom.md" &&
@@ -680,7 +690,9 @@ check "association: entry with *.md and the Alt+F3 command, !.! unquoted" assoc_
 # far2l escapes a file name before the shell reads the Alt+F3 command
 # (fnparce.cpp EscapeSpace, the QuotedSymbols default). The sed copies that step.
 cat > "$tmp/far2l-escape.sed" <<'EOF'
-s/[][ $&()`{};|*?!"'\\]/\\&/g
+s/[ $&()`{};|*?!"'\\]/\\&/g
+s/]/\\&/g
+s/[[]/\\&/g
 EOF
 
 # Row: a hostile name runs no command. The name holds a command substitution;

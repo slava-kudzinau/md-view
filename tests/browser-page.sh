@@ -898,8 +898,8 @@ case_page_keys_guard() {
     fresh
     md --tree off --no-open --out "$page" "$sample"
     [ "$rc" = 0 ] || bad "exit $rc"
-    [ "$(grep -c -F "addEventListener('keydown'" "$page")" = 1 ] || bad "want one keydown listener"
-    grep -qF "addEventListener('keyup'" "$page" && bad "the keys do not use keydown"
+    [ "$(grep -c -F "addEventListener('keydown'" "$page")" = 2 ] || bad "want two keydown listeners"
+    [ "$(grep -c -F "addEventListener('keyup'" "$page")" = 1 ] || bad "want one keyup listener"
     grep -qF "document.addEventListener('click', function (e) {" "$page" || bad "no click outside handler"
     line_of 'if (e.ctrlKey || e.altKey || e.metaKey) return;'; g_mod=$ln
     line_of "if (tag === 'input' || tag === 'textarea' || tag === 'select' || (tg && tg.isContentEditable)) return;"; g_tag=$ln
@@ -3015,7 +3015,7 @@ case_page_tree_key_guard() {
     mkdir proj || bad "mkdir"
     printf '# A\n' > proj/o.md || bad "write"
     tpage proj/o.md
-    [ "$(grep -c -F "addEventListener('keydown'" "$page")" = 1 ] || bad "want one keydown listener"
+    [ "$(grep -c -F "addEventListener('keydown'" "$page")" = 2 ] || bad "want two keydown listeners"
     line_of 'if (e.ctrlKey || e.altKey || e.metaKey) return;'; g_mod=$ln
     line_of "if (tag === 'input' || tag === 'textarea' || tag === 'select' || (tg && tg.isContentEditable)) return;"; g_tag=$ln
     line_of "else if (e.key === 'b') toggleTree();"; k_b=$ln

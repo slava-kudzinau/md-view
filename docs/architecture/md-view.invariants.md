@@ -33,6 +33,7 @@ Rules that always hold for md-view. Format: `- **[area]**: rule (Learned from: s
 
 - **[tests]**: The page script stamps `data-line` and `id` on every rendered block, list item and table row. A test that greps the rendered markup must match the element and its text, not a full tag with a fixed attribute list. (Learned from: story line-anchor-nav, `tests/hostile-dom.sh`, 2026-11-18)
 - **[style]**: A page rule that paints a background over rendered Markdown must win over the even table-row stripe and the Tokyo palette rules. A test of such a rule paints an even row and a Tokyo page. (Learned from: story line-anchor-nav, final review, 2026-11-18)
+- **[tests]**: New viewer rules in `lib/page.css` stay between the `.md-dbar { position: absolute` line and the `.md-vbox > svg { flex: none; margin: auto }` line. `viewer_map` in `tests/browser-page.sh` deletes that range when it compares the page style with the base page. (Learned from: story mermaid-text-selection, plan, 2026-11-22)
 
 ## Repo
 
