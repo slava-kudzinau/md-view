@@ -55,7 +55,7 @@ The page goes to `${XDG_CACHE_HOME:-$HOME/.cache}/md-view/` and md-view reuses i
 
 A diagram needs internet, because mermaid loads from a CDN. Without it, the page shows the source of the diagram.
 
-Each drawn diagram has an Expand button in its top right corner. Click the button, or click the diagram, to open the diagram in a view that fills the window. The view opens in Fit. Press `+` or `-` to zoom, `0` to fit the window again and `1` to show the actual size. The mouse wheel zooms at the pointer. A drag with the mouse moves the diagram. Hold Shift to select label text. Press `Esc` or `×` to close the view.
+Each drawn diagram has an Expand button in its top right corner. Click the button, or click the diagram, to open the diagram in a view that fills the window. The view opens in Fit. Press `+` or `-` to zoom, `0` to fit the window again and `1` to show the actual size. The mouse wheel zooms at the pointer. A drag with the mouse moves the diagram. Hold Shift and drag to select label text, word by word. Press `Esc` or `×` to close the view.
 
 ## Palettes
 
