@@ -44,16 +44,16 @@ The story adds a Shift modifier to md-view's full-screen diagram viewer so a rea
 
 ### What was built
 
-Same as "What it builds": Shift+drag selects label text, Shift shows the I-beam cursor, plain drag pans. No scope moved. One extra commit fixes two rows for the toolchain update: Chrome 158 keeps the BOM in `textContent`, and uutils `sed` 0.1.1 parses the old bracket class. See closeout.md.
+Same as "What it builds": Shift+drag selects label text, Shift shows the I-beam cursor, plain drag pans. No scope moved. Three extra commits: the toolchain fixes (Chrome 158 BOM in `textContent`, uutils `sed` 0.1.1 bracket class), mermaid `htmlLabels: true` (labels as HTML, word-level selection), and the select-mode clear moved to the first pointermove of a plain drag so the selection stays visible. See closeout.md.
 
 ### Decisions changed during the build
 
-The new test row gates select mode on `userSelect === 'text'`; the headless run confirms Chrome reports `text`.
+The new test row gates select mode on `userSelect === 'text'` and on a `foreignObject` label; the headless run confirms Chrome reports `text`. After a shift drag the box keeps select mode; the next plain drag's first move clears it and pans. A CDP mouse drag on a real tab confirmed: the selection runs from the pressed point to the release point inside the labels it crosses, survives pointerup, and a plain drag pans by the pointer delta. Chromium 150 gives no click caret and no double-click word select inside `foreignObject` (measured with and without capture).
 
 ### What the reviews caught
 
-Nothing that changed code. One Minor: a shift-drag released over the toolbar leaves select mode on until the next pointerup on the box; it self-heals.
+Nothing that changed code. One Minor: a shift-drag released over the toolbar leaves select mode on until the next plain drag; it self-heals.
 
 ### Run it
 
-Run `bin/md-view docs/architecture/md-view.spec.md` and click a mermaid diagram. A plain drag pans. Hold Shift, and the cursor turns to an I-beam. Shift+drag over node labels highlights text. Cmd/Ctrl+C copies it. `make check` exits 0.
+Run `bin/md-view tests/fixtures/diagram.md` and click the diagram to expand it. A plain drag pans. Hold Shift, and the cursor turns to an I-beam. Shift+drag over the node label highlights text, word by word. Cmd/Ctrl+C copies it. The selection stays visible until the next plain drag. `make check` exits 0.
