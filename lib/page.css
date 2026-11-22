@@ -23,6 +23,9 @@ pre.mermaid:hover .md-dbar, .md-dbar:focus-within { opacity: 1 }
 .md-vbox { flex: 1; overflow: auto; display: flex; cursor: grab; -webkit-user-select: none; user-select: none }
 .md-drag { cursor: grabbing }
 .md-viewer.md-laser-on .md-vbox { cursor: none }
+.md-vbox.md-shift { cursor: text }
+.md-viewer.md-laser-on .md-vbox.md-shift { cursor: text }
+.md-vbox.md-select { cursor: text; -webkit-user-select: text; user-select: text }
 .md-laser { display: none; position: absolute; z-index: 1; width: 18px; height: 18px; margin: -9px 0 0 -9px; border-radius: 50%; pointer-events: none; background: radial-gradient(circle, rgba(255,0,0,.95) 0, rgba(255,0,0,.5) 5px, rgba(255,0,0,.12) 12px); }
 .md-viewer.md-laser-on .md-laser { display: block }
 .md-vbox > svg { flex: none; margin: auto }
