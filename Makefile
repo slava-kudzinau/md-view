@@ -1,5 +1,5 @@
 # md-view: the tests, install and uninstall.
-#   make check                        runs the four tests in order; stops at the first failure
+#   make check                        runs the five tests in order; stops at the first failure
 #   make install PREFIX=/usr/local    copies md-view under PREFIX (default /usr/local)
 #   make uninstall PREFIX=/usr/local  removes the files that install wrote
 # PREFIX must be an absolute path and must not hold a single quote: the installed
@@ -29,6 +29,7 @@ check:
 	sh tests/browser-links-dom.sh
 	sh tests/hostile-dom.sh
 	sh tests/launcher.sh
+	sh tests/unit-helpers.sh
 
 # install writes the launcher to a temp file, then install replaces BINDIR/md-view.
 # A symlink at BINDIR/md-view is replaced, and its target is not written.

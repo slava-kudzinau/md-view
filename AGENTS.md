@@ -12,7 +12,7 @@ There is no build step. Run these commands from the repo root.
 
 | Command | Result |
 |---|---|
-| `make check` | Runs `tests/browser-page.sh`, `tests/browser-links-dom.sh`, `tests/hostile-dom.sh` and `tests/launcher.sh`. It stops at the first failure. |
+| `make check` | Runs `tests/browser-page.sh`, `tests/browser-links-dom.sh`, `tests/hostile-dom.sh`, `tests/launcher.sh` and `tests/unit-helpers.sh`. It stops at the first failure. |
 | `make install PREFIX=$p` | Writes `$p/share/md-view/` (the script, `page.js`, `page.css` and nine vendored files) and `$p/bin/md-view`. Default `PREFIX` is `/usr/local`. |
 | `make uninstall PREFIX=$p` | Removes the files that install wrote. |
 
@@ -30,7 +30,7 @@ Use a temporary `PREFIX` to test the install. `PREFIX` must be absolute and must
 | `lib/page.js`, `lib/page.css` | The page script and the main page style. They are md-view code, not vendored. |
 | other `lib/*.js` and `lib/*.css`, `lib/*.LICENSE.md` | The nine vendored files and their licenses. |
 | `bin/md-view` | The launcher of the checkout. |
-| `tests/` | The four tests, `fixtures/` and `browser-page/`. Also `bench.sh`, outside `make check`: it prints the time of a new and a cached tree page. |
+| `tests/` | The five tests, `fixtures/` and `browser-page/`. Also `bench.sh`, outside `make check`: it prints the time of a new and a cached tree page. |
 | `README.md` | Install, usage, config keys, far2l and Midnight Commander, the move from far2l. |
 | `docs/architecture/md-view.spec.md` | The behavior contract. |
 | `docs/architecture/md-view.invariants.md` | Rules that always hold. |
